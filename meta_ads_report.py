@@ -232,7 +232,7 @@ def obtener_paginas(creatives):
 
             batch.append({
                 "method": "GET",
-                "relative_url": f"{cid}?fields=object_story_spec,actor_id,effective_object_story_id"
+                "relative_url": f"{cid}?fields=page_id,object_story_spec,actor_id,effective_object_story_id"
             })
 
         r = requests.post(
@@ -263,22 +263,34 @@ def obtener_paginas(creatives):
 
             cid = body.get("id")
 
-            oss = body.get("object_story_spec", {})
+            # Intentar obtener page_id de varias fuentes
+            page_id = body.get("page_id")
 
-            page_id = oss.get("page_id") or oss.get("page", {}).get("id")
+            if not page_id:
+                oss = body.get("object_story_spec", {})
+                page_id = oss.get("page_id") or oss.get("page", {}).get("id")
+
+                if not page_id:
+                    # Buscar en link_data o video_data si existen
+                    link_data = oss.get("link_data", {})
+                    page_id = link_data.get("page_id")
+
+                    if not page_id:
+                        video_data = oss.get("video_data", {})
+                        page_id = video_data.get("page_id")
 
             actor_id = body.get("actor_id")
 
             post_id = body.get("effective_object_story_id")
 
-            if not page_id and post_id:
+            if not page_id and post_id and "_" in post_id:
                 page_id = post_id.split("_")[0]
 
             if page_id:
-                page_map[cid] = page_id
+                page_map[cid] = str(page_id)
 
             elif actor_id:
-                page_map[cid] = actor_id
+                page_map[cid] = str(actor_id)
 
         time.sleep(0.3)
 
@@ -327,7 +339,8 @@ def obtener_nombres_paginas(page_ids):
         for resp in responses:
 
             if resp.get("code") != 200:
-                # Si falla, intentamos otra vez con actor_id o simplemente ignoramos
+                # Si falla, imprimimos el error para diagnóstico
+                print(f"Error al obtener nombre de página: {resp}")
                 continue
 
             body = json.loads(resp.get("body", "{}"))
@@ -337,6 +350,9 @@ def obtener_nombres_paginas(page_ids):
 
             if pid and name:
                 names[pid] = name
+            elif pid:
+                # Si tenemos ID pero no nombre, intentamos buscarlo en campos alternativos
+                names[pid] = body.get("username") or body.get("about") or "Sin Nombre"
 
         time.sleep(0.3)
 
