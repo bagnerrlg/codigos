@@ -144,8 +144,7 @@ VENDEDOR_MAP = {
 
 API_VERSION_OPPS = "2023-02-21"
 API_VERSION_CONTACTS = "2021-07-28"
-ANUNCIO_REGEX = re.compile(r"([A-Z]\d{3}[A-Z]\d{3})", re.IGNORECASE)
-SECUENCIA_REGEX = re.compile(r"([A-Z]\d\.\d)", re.IGNORECASE)
+ANUNCIO_REGEX = re.compile(r"[A-Z]\d{3,4}[A-Z]\d+", re.IGNORECASE)
 GUATEMALA_TZ = pytz.timezone("America/Guatemala")
 
 # ---------------------------
@@ -341,55 +340,32 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
             dt_local = dt_utc.astimezone(GUATEMALA_TZ)
             date_fmt = f"{dt_local.day}/{dt_local.month:02d}/{dt_local.year}"
 
-        secuencia_raw = ""
-        anuncio_raw = ""
+        secuencia = ""
+        anuncio = ""
         primer_mensaje_texto = ""
         for cf in c.get("customFields", []):
             cid = cf.get("id")
             val = get_custom_value(cf)
             if cid == sec_cf:
-                secuencia_raw = val.strip()
+                secuencia = val.strip()
             elif cid == anu_cf:
-                anuncio_raw = val.strip()
+                match = ANUNCIO_REGEX.search(val)
+                if match: anuncio = match.group(0)
             elif cid == pm_cf:
                 primer_mensaje_texto = val.strip()
 
-        # Logic to extract Anuncio and tipo_post
-        anuncio = ""
-        tipo_post = ""
-
-        # Try finding in anuncio_raw first
-        match_anu = ANUNCIO_REGEX.search(anuncio_raw) if anuncio_raw else None
-        source_used = anuncio_raw
-
-        # If not found or invalid format in anuncio_raw, try primer_mensaje_texto
-        if not match_anu and primer_mensaje_texto:
-            match_anu = ANUNCIO_REGEX.search(primer_mensaje_texto)
-            source_used = primer_mensaje_texto
-
-        if match_anu:
-            anuncio = match_anu.group(1)
-            # Look for tipo_post: character after a dot following the ad code
-            # Example: A001A013.C.4999 -> C
-            pattern_tipo = re.escape(anuncio) + r"\.([^.]+)"
-            match_tipo = re.search(pattern_tipo, source_used, re.IGNORECASE)
-            if match_tipo:
-                tipo_post = match_tipo.group(1)
-
-        # Logic to extract secuencia (campaign format: Letra Numero Punto Numero)
-        secuencia = ""
-        if secuencia_raw:
-            match_sec = SECUENCIA_REGEX.search(secuencia_raw)
-            if match_sec:
-                secuencia = match_sec.group(1)
+        # Backup logic: If anuncio not found or empty, search in primer_mensaje_texto
+        if not anuncio and primer_mensaje_texto:
+            match = ANUNCIO_REGEX.search(primer_mensaje_texto)
+            if match:
+                anuncio = match.group(0)
 
         formatted_contacts.append({
             "id": c.get("id", ""),
             "dateAdded": date_fmt,
             "assignedToName": assigned_name,
             "secuencia": secuencia,
-            "Anuncio": anuncio,
-            "tipo_post": tipo_post
+            "Anuncio": anuncio
         })
 
     log_callback(f"  - {acc_name}: {len(formatted_contacts)} contactos encontrados.")
@@ -698,7 +674,7 @@ class App(cctk.CTk):
             df_v = df_v[v_cols]
 
         df_c = pd.DataFrame(res_c)
-        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "Anuncio", "tipo_post"]
+        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "Anuncio"]
         if not df_c.empty:
             for c in c_cols:
                 if c not in df_c.columns: df_c[c] = ""
