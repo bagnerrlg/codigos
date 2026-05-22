@@ -207,7 +207,7 @@ def obtener_creatives(ad_ids):
             creative_id = body.get("creative", {}).get("id")
 
             if ad_id and creative_id:
-                creative_map[ad_id] = creative_id
+                creative_map[str(ad_id)] = str(creative_id)
 
         time.sleep(0.3)
 
@@ -287,10 +287,10 @@ def obtener_paginas(creatives):
                 page_id = post_id.split("_")[0]
 
             if page_id:
-                page_map[cid] = str(page_id)
+                page_map[str(cid)] = str(page_id)
 
             elif actor_id:
-                page_map[cid] = str(actor_id)
+                page_map[str(cid)] = str(actor_id)
 
         time.sleep(0.3)
 
@@ -345,7 +345,7 @@ def obtener_nombres_paginas(page_ids):
 
             body = json.loads(resp.get("body", "{}"))
 
-            pid = body.get("id")
+            pid = str(body.get("id")) if body.get("id") else None
             name = body.get("name")
 
             if pid and name:
@@ -381,12 +381,13 @@ for account in AD_ACCOUNTS:
     page_map = obtener_paginas(creative_ids)
 
     page_ids = list(set(page_map.values()))
+    print(f"Total de IDs de página únicos para buscar nombres: {len(page_ids)}")
 
     page_names = obtener_nombres_paginas(page_ids)
 
     for ins in insights:
 
-        ad_id = ins.get("ad_id")
+        ad_id = str(ins.get("ad_id"))
 
         creative_id = creative_map.get(ad_id)
 
