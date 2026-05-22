@@ -144,7 +144,7 @@ VENDEDOR_MAP = {
 
 API_VERSION_OPPS = "2023-02-21"
 API_VERSION_CONTACTS = "2021-07-28"
-ANUNCIO_REGEX = re.compile(r"[A-Z]\d{4}[A-Z]\d+", re.IGNORECASE)
+ANUNCIO_REGEX = re.compile(r"[A-Z]\d{3,4}[A-Z]\d+", re.IGNORECASE)
 GUATEMALA_TZ = pytz.timezone("America/Guatemala")
 
 # ---------------------------
@@ -365,7 +365,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
             "dateAdded": date_fmt,
             "assignedToName": assigned_name,
             "secuencia": secuencia,
-            "ANUNCIO": anuncio
+            "Anuncio": anuncio
         })
 
     log_callback(f"  - {acc_name}: {len(formatted_contacts)} contactos encontrados.")
@@ -674,7 +674,7 @@ class App(cctk.CTk):
             df_v = df_v[v_cols]
 
         df_c = pd.DataFrame(res_c)
-        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "ANUNCIO"]
+        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "Anuncio"]
         if not df_c.empty:
             for c in c_cols:
                 if c not in df_c.columns: df_c[c] = ""
