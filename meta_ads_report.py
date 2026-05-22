@@ -238,7 +238,7 @@ def obtener_paginas(creatives):
 
             batch.append({
                 "method": "GET",
-                "relative_url": f"{cid}?fields=object_story_spec,actor_id,actor_name,effective_object_story_id"
+                "relative_url": f"{cid}?fields=object_story_spec,actor_id,actor_name,page,effective_object_story_id"
             })
 
         r = requests.post(
@@ -272,7 +272,9 @@ def obtener_paginas(creatives):
 
             # Intentar obtener el ID de la página de varias fuentes dentro del creative
             oss = body.get("object_story_spec", {})
-            page_id = oss.get("page_id") or oss.get("page", {}).get("id")
+            page_obj = body.get("page", {})
+
+            page_id = oss.get("page_id") or oss.get("page", {}).get("id") or page_obj.get("id")
 
             if not page_id:
                 # Buscar en link_data o video_data si existen
@@ -284,7 +286,7 @@ def obtener_paginas(creatives):
                     page_id = video_data.get("page_id")
 
             actor_id = body.get("actor_id")
-            actor_name = body.get("actor_name")
+            actor_name = body.get("actor_name") or page_obj.get("name")
 
             post_id = body.get("effective_object_story_id")
 
