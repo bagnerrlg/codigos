@@ -222,11 +222,10 @@ def obtener_creatives(ad_ids):
 def obtener_paginas(creatives):
 
     page_map = {}
-    page_names_from_creative = {}
 
     if not creatives:
         print("DEBUG - No hay Creative IDs para procesar en obtener_paginas")
-        return page_map, page_names_from_creative
+        return page_map
 
     for i in range(0, len(creatives), 50):
 
@@ -238,7 +237,7 @@ def obtener_paginas(creatives):
 
             batch.append({
                 "method": "GET",
-                "relative_url": f"{cid}?fields=object_story_spec,actor_id,actor_name,effective_object_story_id"
+                "relative_url": f"{cid}?fields=object_story_spec,actor_id,effective_object_story_id"
             })
 
         r = requests.post(
@@ -284,7 +283,6 @@ def obtener_paginas(creatives):
                     page_id = video_data.get("page_id")
 
             actor_id = body.get("actor_id")
-            actor_name = body.get("actor_name")
 
             post_id = body.get("effective_object_story_id")
 
@@ -298,12 +296,10 @@ def obtener_paginas(creatives):
 
             if final_page_id:
                 page_map[str(cid)] = final_page_id
-                if actor_name:
-                    page_names_from_creative[final_page_id] = actor_name
 
         time.sleep(0.3)
 
-    return page_map, page_names_from_creative
+    return page_map
 
 
 # ---------------------------------------------------
@@ -369,6 +365,40 @@ def obtener_nombres_paginas(page_ids):
 
 
 # ---------------------------------------------------
+# OBTENER PAGINAS AUTORIZADAS (ME/ACCOUNTS)
+# ---------------------------------------------------
+
+def obtener_paginas_autorizadas():
+
+    print("DEBUG - Consultando lista de páginas autorizadas (/me/accounts)...")
+    names = {}
+    url = f"{BASE_URL}/me/accounts"
+    params = {"limit": 100}
+
+    while True:
+        r = requests.get(url, params={**params, "access_token": ACCESS_TOKEN})
+        js = r.json()
+
+        if "data" not in js:
+            print("DEBUG - Error al consultar /me/accounts:", js)
+            break
+
+        for item in js["data"]:
+            pid = str(item.get("id"))
+            pname = item.get("name")
+            if pid and pname:
+                names[pid] = pname
+
+        if "paging" in js and "next" in js["paging"]:
+            url = js["paging"]["next"]
+            params = {}
+        else:
+            break
+
+    return names
+
+
+# ---------------------------------------------------
 # MAIN
 # ---------------------------------------------------
 
@@ -376,6 +406,10 @@ print("Ingrese fecha reporte YYYY-MM-DD")
 fecha = input("Fecha: ")
 
 rows = []
+
+# Obtener nombres de páginas desde /me/accounts (Pre-emptive fallback)
+me_page_names = obtener_paginas_autorizadas()
+print(f"DEBUG - Páginas autorizadas encontradas: {len(me_page_names)}")
 
 for account in AD_ACCOUNTS:
 
@@ -390,20 +424,18 @@ for account in AD_ACCOUNTS:
     creative_ids = list(set(creative_map.values()))
     print(f"DEBUG - Creative IDs únicos: {len(creative_ids)}")
 
-    page_map, creative_page_names = obtener_paginas(creative_ids)
+    page_map = obtener_paginas(creative_ids)
     print(f"DEBUG - Mapping Creative -> Page: {len(page_map)}")
 
     page_ids = list(set(page_map.values()))
     print(f"DEBUG - Page IDs únicos encontrados: {len(page_ids)}")
 
-    page_names = obtener_nombres_paginas(page_ids)
+    # Intentar obtener nombres vía API directa (para las que falten o todas)
+    page_names_api = obtener_nombres_paginas(page_ids)
 
-    # Combinar con nombres obtenidos de creatives (fallback)
-    for pid, name in creative_page_names.items():
-        if pid not in page_names:
-            page_names[pid] = name
-
-    print(f"DEBUG - Nombres de página totales (Creative + API): {len(page_names)}")
+    # Combinar todas las fuentes: /me/accounts + Direct API
+    final_page_names = {**me_page_names, **page_names_api}
+    print(f"DEBUG - Nombres de página totales unificados: {len(final_page_names)}")
 
     for ins in insights:
 
@@ -413,7 +445,7 @@ for account in AD_ACCOUNTS:
 
         page_id = page_map.get(creative_id)
 
-        page_name = page_names.get(page_id)
+        page_name = final_page_names.get(page_id)
 
         contacts = next(
             (a["value"] for a in ins.get("actions", [])
