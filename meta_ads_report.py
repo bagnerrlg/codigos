@@ -119,7 +119,7 @@ def obtener_secuencia(campaña):
 
 def obtener_insights(account, fecha):
 
-    print("Descargando insights:", account)
+    print(f"Descargando insights para cuenta: {account} en la fecha: {fecha}")
 
     url = f"{BASE_URL}/{account}/insights"
 
@@ -194,6 +194,7 @@ def obtener_creatives(ad_ids):
         for resp in responses:
 
             if resp.get("code") != 200:
+                print(f"DEBUG - Error creative para bloque: {resp}")
                 continue
 
             body = resp.get("body")
@@ -222,6 +223,10 @@ def obtener_paginas(creatives):
 
     page_map = {}
 
+    if not creatives:
+        print("DEBUG - No hay Creative IDs para procesar en obtener_paginas")
+        return page_map
+
     for i in range(0, len(creatives), 50):
 
         block = creatives[i:i+50]
@@ -232,7 +237,7 @@ def obtener_paginas(creatives):
 
             batch.append({
                 "method": "GET",
-                "relative_url": f"{cid}?fields=page_id,object_story_spec,actor_id,effective_object_story_id"
+                "relative_url": f"{cid}?fields=object_story_spec,actor_id,effective_object_story_id"
             })
 
         r = requests.post(
@@ -252,6 +257,7 @@ def obtener_paginas(creatives):
         for resp in responses:
 
             if resp.get("code") != 200:
+                print(f"DEBUG - Error al obtener Page ID para creative: {resp}")
                 continue
 
             body = resp.get("body")
@@ -263,21 +269,18 @@ def obtener_paginas(creatives):
 
             cid = body.get("id")
 
-            # Intentar obtener page_id de varias fuentes
-            page_id = body.get("page_id")
+            # Intentar obtener el ID de la página de varias fuentes dentro del creative
+            oss = body.get("object_story_spec", {})
+            page_id = oss.get("page_id") or oss.get("page", {}).get("id")
 
             if not page_id:
-                oss = body.get("object_story_spec", {})
-                page_id = oss.get("page_id") or oss.get("page", {}).get("id")
+                # Buscar en link_data o video_data si existen
+                link_data = oss.get("link_data", {})
+                page_id = link_data.get("page_id")
 
                 if not page_id:
-                    # Buscar en link_data o video_data si existen
-                    link_data = oss.get("link_data", {})
-                    page_id = link_data.get("page_id")
-
-                    if not page_id:
-                        video_data = oss.get("video_data", {})
-                        page_id = video_data.get("page_id")
+                    video_data = oss.get("video_data", {})
+                    page_id = video_data.get("page_id")
 
             actor_id = body.get("actor_id")
 
@@ -373,17 +376,22 @@ for account in AD_ACCOUNTS:
     insights = obtener_insights(account, fecha)
 
     ad_ids = list({i["ad_id"] for i in insights if "ad_id" in i})
+    print(f"DEBUG - Ad IDs encontrados: {len(ad_ids)}")
 
     creative_map = obtener_creatives(ad_ids)
+    print(f"DEBUG - Mapping Ads -> Creative: {len(creative_map)}")
 
     creative_ids = list(set(creative_map.values()))
+    print(f"DEBUG - Creative IDs únicos: {len(creative_ids)}")
 
     page_map = obtener_paginas(creative_ids)
+    print(f"DEBUG - Mapping Creative -> Page: {len(page_map)}")
 
     page_ids = list(set(page_map.values()))
-    print(f"Total de IDs de página únicos para buscar nombres: {len(page_ids)}")
+    print(f"DEBUG - Page IDs únicos encontrados: {len(page_ids)}")
 
     page_names = obtener_nombres_paginas(page_ids)
+    print(f"DEBUG - Nombres de página recuperados: {len(page_names)}")
 
     for ins in insights:
 
