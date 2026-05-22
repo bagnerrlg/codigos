@@ -144,7 +144,7 @@ VENDEDOR_MAP = {
 
 API_VERSION_OPPS = "2023-02-21"
 API_VERSION_CONTACTS = "2021-07-28"
-ANUNCIO_REGEX = re.compile(r"[A-Z]\d{4}[A-Z]\d+")
+ANUNCIO_REGEX = re.compile(r"[A-Z]\d{4}[A-Z]\d+", re.IGNORECASE)
 GUATEMALA_TZ = pytz.timezone("America/Guatemala")
 
 # ---------------------------
@@ -186,10 +186,14 @@ def calculate_nit(nit, tel1, ghl_phone):
 def get_custom_value(field):
     if not field or not isinstance(field, dict): return ""
     if "fieldValueDate" in field and field["fieldValueDate"]: return format_date_ghl(field["fieldValueDate"])
-    if "fieldValueString" in field and field["fieldValueString"]: return field["fieldValueString"]
-    if "fieldValue" in field:
+    if "fieldValueString" in field and field["fieldValueString"]: return str(field["fieldValueString"])
+    if "fieldValue" in field and field["fieldValue"] is not None:
         v = field["fieldValue"]
         if isinstance(v, (int, float)) and v > 1000000000000: return format_date_ghl(v)
+        return str(v)
+    if "value" in field and field["value"] is not None:
+        v = field["value"]
+        if isinstance(v, list): return ", ".join(map(str, v))
         return str(v)
     return ""
 
@@ -341,14 +345,14 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
         primer_mensaje_texto = ""
         for cf in c.get("customFields", []):
             cid = cf.get("id")
+            val = get_custom_value(cf)
             if cid == sec_cf:
-                secuencia = (cf.get("value") or "").strip()
+                secuencia = val.strip()
             elif cid == anu_cf:
-                text = cf.get("value") or ""
-                match = ANUNCIO_REGEX.search(text)
+                match = ANUNCIO_REGEX.search(val)
                 if match: anuncio = match.group(0)
             elif cid == pm_cf:
-                primer_mensaje_texto = (cf.get("value") or "").strip()
+                primer_mensaje_texto = val.strip()
 
         # Backup logic: If anuncio not found or empty, search in primer_mensaje_texto
         if not anuncio and primer_mensaje_texto:
@@ -361,7 +365,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
             "dateAdded": date_fmt,
             "assignedToName": assigned_name,
             "secuencia": secuencia,
-            "Anuncio": anuncio
+            "ANUNCIO": anuncio
         })
 
     log_callback(f"  - {acc_name}: {len(formatted_contacts)} contactos encontrados.")
@@ -670,7 +674,7 @@ class App(cctk.CTk):
             df_v = df_v[v_cols]
 
         df_c = pd.DataFrame(res_c)
-        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "Anuncio"]
+        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "ANUNCIO"]
         if not df_c.empty:
             for c in c_cols:
                 if c not in df_c.columns: df_c[c] = ""
