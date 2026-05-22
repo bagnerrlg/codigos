@@ -152,7 +152,7 @@ FB_BASE_URL = f"https://graph.facebook.com/{FB_API_VERSION}"
 FB_FIELDS_INSIGHTS = "ad_id,ad_name,adset_name,campaign_name,impressions,spend,clicks,actions,date_start,date_stop"
 
 # Regex para extracción
-ANUNCIO_REGEX = re.compile(r"([A-Z]\d{3}[A-Z]\d{3})", re.IGNORECASE)
+ANUNCIO_REGEX = re.compile(r"([A-Z]\d{3,4}[A-Z]\d{3})", re.IGNORECASE)
 SECUENCIA_REGEX = re.compile(r"([A-Z]\d\.\d)", re.IGNORECASE)
 
 # ---------------------------
