@@ -117,9 +117,9 @@ def obtener_secuencia(campaña):
 # OBTENER INSIGHTS
 # ---------------------------------------------------
 
-def obtener_insights(account, fecha):
+def obtener_insights(account, fecha_desde, fecha_hasta):
 
-    print(f"Descargando insights para cuenta: {account} en la fecha: {fecha}")
+    print(f"Descargando insights para cuenta: {account} desde {fecha_desde} hasta {fecha_hasta}")
 
     url = f"{BASE_URL}/{account}/insights"
 
@@ -128,8 +128,8 @@ def obtener_insights(account, fecha):
         "level": "ad",
         "limit": 500,
         "time_range": json.dumps({
-            "since": fecha,
-            "until": fecha
+            "since": fecha_desde,
+            "until": fecha_hasta
         }),
         "time_increment": 1,
         "filtering": '[{"field":"spend","operator":"GREATER_THAN","value":0}]'
@@ -402,8 +402,9 @@ def obtener_paginas_autorizadas():
 # MAIN
 # ---------------------------------------------------
 
-print("Ingrese fecha reporte YYYY-MM-DD")
-fecha = input("Fecha: ")
+print("Ingrese rango de fechas YYYY-MM-DD")
+fecha_desde = input("Desde (Inicio): ")
+fecha_hasta = input("Hasta (Fin): ")
 
 rows = []
 
@@ -413,7 +414,7 @@ print(f"DEBUG - Páginas autorizadas encontradas: {len(me_page_names)}")
 
 for account in AD_ACCOUNTS:
 
-    insights = obtener_insights(account, fecha)
+    insights = obtener_insights(account, fecha_desde, fecha_hasta)
 
     ad_ids = list({i["ad_id"] for i in insights if "ad_id" in i})
     print(f"DEBUG - Ad IDs encontrados: {len(ad_ids)}")
