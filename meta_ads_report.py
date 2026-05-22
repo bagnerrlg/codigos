@@ -42,7 +42,8 @@ def extraer_codigo(nombre):
     if not isinstance(nombre, str):
         return None
 
-    m = re.search(r'[A-Z]\d{4}[A-Z]\d{3}', nombre)
+    # Nueva regex: una letra, tres números, una letra y tres números (ej: A001A013)
+    m = re.search(r'[A-Z]\d{3}[A-Z]\d{3}', nombre)
 
     if m:
         return m.group(0)
@@ -76,7 +77,8 @@ def extraer_tipo(nombre):
     if not isinstance(nombre, str):
         return None
 
-    m = re.search(r'[ .]([A-Z])$', nombre)
+    # Extraer la letra entre los dos puntos (ej: A001A013.C.4999 -> C)
+    m = re.search(r'\.([A-Z])\.', nombre)
 
     if m:
         return m.group(1)
@@ -95,20 +97,11 @@ def obtener_secuencia(campaña):
 
     campaña = campaña.upper()
 
-    if "VICTORIA" in campaña:
-        return "A02-A"
+    # Extraer "Letra numero punto numero" (ej: R1.1 de R1.1.CAMAS)
+    m = re.search(r'[A-Z]\d\.\d', campaña)
 
-    if "DIEGO" in campaña:
-        return "A03-A"
-
-    if "ANGEL" in campaña:
-        return "A07-A"
-
-    if "TIENDAS" in campaña:
-        return "A04-A"
-
-    if "ALCANCE" in campaña:
-        return "TIENDAS"
+    if m:
+        return m.group(0)
 
     return None
 
