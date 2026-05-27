@@ -295,7 +295,7 @@ def cargar_metas(filepath):
     try:
         df = pd.read_excel(filepath)
         # Limpieza similar a Power Query
-        for col in df.select_dtypes(include=['object']).columns:
+        for col in df.select_dtypes(include=['object', 'str']).columns:
             df[col] = df[col].astype(str).str.strip().str.upper().replace("NAN", "").replace("NONE", "")
         # Normalizar nombres de columnas (SUB ANILLO -> SUB_ANILLO para JS)
         df.columns = [c.replace(" ", "_") for c in df.columns]
@@ -732,7 +732,7 @@ class App(cctk.CTk):
             const gerentes = [...new Set(rawData.metas.map(m => m.GERENTE))].filter(Boolean).sort();
             const marcas = [...new Set(rawData.metas.map(m => m.MARCA))].filter(Boolean).sort();
             const vendedores = [...new Set(rawData.oportunidades.map(o => o.asignado))].filter(Boolean).sort();
-            const meses = [...new Set(rawData.oportunidades.map(o => o.Mes))].filter(Boolean).sort((a,b) => a-b);
+            const meses = [...new Set(rawData.oportunidades.map(o => o.Mes || o.MES))].filter(Boolean).sort((a,b) => a-b);
 
             const populate = (id, list) => {{
                 const el = document.getElementById(id);
@@ -771,9 +771,9 @@ class App(cctk.CTk):
             // Filtrado de Oportunidades
             let f_o = rawData.oportunidades.filter(o => {{
                 const matchGerente = (g === 'ALL' || (seqMap[o.secuencia] && seqMap[o.secuencia].gerentes.has(g)));
-                const matchMarca = (m === 'ALL' || o.MARCA === m);
+                const matchMarca = (m === 'ALL' || o.MARCA === m || (seqMap[o.secuencia] && seqMap[o.secuencia].marcas.has(m)));
                 const matchVendedor = (v === 'ALL' || o.asignado === v);
-                const matchMes = (mes === 'ALL' || o.Mes == mes);
+                const matchMes = (mes === 'ALL' || (o.Mes || o.MES) == mes);
                 return matchGerente && matchMarca && matchVendedor && matchMes;
             }});
 
@@ -839,7 +839,13 @@ class App(cctk.CTk):
 
             // Marcas Pie
             const marcaMap = f_o.reduce((acc, curr) => {{
-                acc[curr.MARCA] = (acc[curr.MARCA] || 0) + (parseFloat(curr['Valor del cliente potencial']) || 0);
+                let marca = curr.MARCA;
+                if (!marca && seqMap[curr.secuencia]) {{
+                    marca = Array.from(seqMap[curr.secuencia].marcas)[0];
+                }}
+                if (marca) {{
+                    acc[marca] = (acc[marca] || 0) + (parseFloat(curr['Valor del cliente potencial']) || 0);
+                }}
                 return acc;
             }}, {{}});
             const traceMarca = {{
