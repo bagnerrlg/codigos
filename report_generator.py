@@ -298,7 +298,7 @@ def cargar_metas(filepath):
         for col in df.select_dtypes(include=['object', 'str']).columns:
             df[col] = df[col].astype(str).str.strip().str.upper().replace("NAN", "").replace("NONE", "")
         # Normalizar nombres de columnas (SUB ANILLO -> SUB_ANILLO para JS)
-        df.columns = [c.replace(" ", "_") for c in df.columns]
+        df.columns = [c.replace(" ", "_").replace("/", "_").replace("%", "PORC") for c in df.columns]
         return df
     except Exception as e:
         print(f"Error cargando metas: {e}")
@@ -674,9 +674,9 @@ class App(cctk.CTk):
         </div>
 
         <!-- KPIs Principales -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
             <div class="card text-center">
-                <div class="kpi-label">Gasto Total</div>
+                <div class="kpi-label">Gasto Total (GTO)</div>
                 <div id="kpi-gasto" class="kpi-val">Q 0.00</div>
             </div>
             <div class="card text-center">
@@ -688,16 +688,67 @@ class App(cctk.CTk):
                 <div id="kpi-venta" class="kpi-val">Q 0.00</div>
             </div>
             <div class="card text-center">
-                <div class="kpi-label">Costo por Lead</div>
+                <div class="kpi-label">Costo por Lead (CPL)</div>
                 <div id="kpi-cpl" class="kpi-val">Q 0.00</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">% Cumplimiento</div>
-                <div id="kpi-cumplimiento" class="kpi-val">0%</div>
             </div>
             <div class="card text-center">
                 <div class="kpi-label">ROAS</div>
                 <div id="kpi-roas" class="kpi-val">0.0</div>
+            </div>
+             <div class="card text-center">
+                <div class="kpi-label">% Cumplimiento</div>
+                <div id="kpi-cumplimiento" class="kpi-val">0%</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">CPA (Costo/Venta)</div>
+                <div id="kpi-cpa" class="kpi-val">Q 0.00</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">% Conversión</div>
+                <div id="kpi-conversion" class="kpi-val">0%</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">Asesores Activos</div>
+                <div id="kpi-asesores" class="kpi-val">0</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">Prom. Venta Diaria</div>
+                <div id="kpi-prom-vt" class="kpi-val">Q 0.00</div>
+            </div>
+        </div>
+
+        <!-- Métricas Avanzadas (Efficiency & Reach) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            <div class="card text-center">
+                <div class="kpi-label">Venta Digital</div>
+                <div id="kpi-venta-digital" class="kpi-val">Q 0.00</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">Venta No Digital</div>
+                <div id="kpi-venta-nodigital" class="kpi-val">Q 0.00</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">% FBVT+BO (GTO/VT)</div>
+                <div id="kpi-gto-vt" class="kpi-val">0%</div>
+            </div>
+             <div class="card text-center">
+                <div class="kpi-label">Códigos Activos</div>
+                <div id="kpi-codigos" class="kpi-val">0</div>
+                <div id="sub-codigos" class="text-xs text-gray-500">Meta: 0</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">Plataformas</div>
+                <div id="kpi-plataformas" class="kpi-val">0</div>
+                <div id="sub-plataformas" class="text-xs text-gray-500">Meta: 0 | Alc: 0%</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">Formatos</div>
+                <div id="kpi-formatos" class="kpi-val">0</div>
+                <div id="sub-formatos" class="text-xs text-gray-500">Meta: 0 | Alc: 0%</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">% Alcance Prom.</div>
+                <div id="kpi-alcance-prom" class="kpi-val">0%</div>
             </div>
         </div>
 
@@ -762,9 +813,11 @@ class App(cctk.CTk):
 
             // Tabla de mapeo Secuencia -> Gerente/Marca basada en metas
             const seqMap = rawData.metas.reduce((acc, curr) => {{
-                if (!acc[curr.SUB_ANILLO]) acc[curr.SUB_ANILLO] = {{ gerentes: new Set(), marcas: new Set() }};
-                acc[curr.SUB_ANILLO].gerentes.add(curr.GERENTE);
-                acc[curr.SUB_ANILLO].marcas.add(curr.MARCA);
+                const seq = curr.SUB_ANILLO || curr.SUB_ANILLO_ || "";
+                if (!seq) return acc;
+                if (!acc[seq]) acc[seq] = {{ gerentes: new Set(), marcas: new Set() }};
+                if (curr.GERENTE) acc[seq].gerentes.add(curr.GERENTE);
+                if (curr.MARCA) acc[seq].marcas.add(curr.MARCA);
                 return acc;
             }}, {{}});
 
@@ -781,7 +834,8 @@ class App(cctk.CTk):
             let f_fb = rawData.facebook.filter(f => {{
                 const matchGerente = (g === 'ALL' || (seqMap[f.SECUENCIA] && seqMap[f.SECUENCIA].gerentes.has(g)));
                 const matchMarca = (m === 'ALL' || (seqMap[f.SECUENCIA] && seqMap[f.SECUENCIA].marcas.has(m)));
-                const matchMes = (mes === 'ALL' || (f.Día && parseInt(f.Día.split('-')[1]) == mes));
+                const d = f['Día'] || f.Día || "";
+                const matchMes = (mes === 'ALL' || (d && parseInt(d.split('-')[1]) == mes));
                 return matchGerente && matchMarca && matchMes;
             }});
 
@@ -789,8 +843,8 @@ class App(cctk.CTk):
             let f_metas = rawData.metas.filter(met =>
                 (g === 'ALL' || met.GERENTE === g) &&
                 (m === 'ALL' || met.MARCA === m) &&
-                (v === 'ALL' || met.VENDEDOR === v) &&
-                (mes === 'ALL' || met.MES == mes)
+                (v === 'ALL' || met.VENDEDOR === v || met.ASESOR === v) &&
+                (mes === 'ALL' || (met.MES || met.Mes) == mes)
             );
 
             // Cálculos KPIs
@@ -799,12 +853,76 @@ class App(cctk.CTk):
             const totalVenta = f_o.reduce((acc, curr) => acc + (parseFloat(curr['Valor del cliente potencial']) || 0), 0);
             const totalMeta = f_metas.reduce((acc, curr) => acc + (parseFloat(curr['META']) || 0), 0);
 
+            // Métricas de Alcance Reales
+            const codigosActivos = new Set(f_fb.filter(f => (parseFloat(f['Importe gastado']) || 0) > 0).map(f => f.codigo || f['ID del anuncio'])).size;
+            const plataformasActivas = new Set(f_fb.map(f => f['Nombre de la página'] || f['ID de la página'])).size;
+            const formatosActivos = new Set(f_fb.map(f => f.tipo_post)).size;
+
+            // Metas de Alcance (desde la tabla Metas)
+            const metaCodigos = f_metas.reduce((acc, curr) => acc + (parseInt(curr.codigo) || 0), 0);
+            const metaPlataformas = f_metas.reduce((acc, curr) => acc + (parseInt(curr.Plataforma) || 4), 0); // Default 4
+            const metaTipos = f_metas.reduce((acc, curr) => acc + (parseInt(curr.tipo_post) || 5), 0); // Default 5
+
             document.getElementById('kpi-gasto').textContent = 'Q ' + totalGasto.toLocaleString(undefined, {{minimumFractionDigits: 2}});
             document.getElementById('kpi-leads').textContent = totalLeads.toLocaleString();
             document.getElementById('kpi-venta').textContent = 'Q ' + totalVenta.toLocaleString(undefined, {{minimumFractionDigits: 2}});
             document.getElementById('kpi-cpl').textContent = 'Q ' + (totalLeads > 0 ? (totalGasto/totalLeads).toFixed(2) : '0.00');
+
+            const isDigital = (o) => o.TIPO === 'DIGITAL' || o.tipo === 'DIGITAL' || (o.secuencia && o.secuencia.startsWith('A')) || (seqMap[o.secuencia] && Array.from(seqMap[o.secuencia].gerentes).some(g => g === 'DIEGO SANTA CRUZ' || g === 'NOHEMI MACHA'));
+
+            const totalVentaDigital = f_o.filter(o => isDigital(o)).reduce((acc, curr) => acc + (parseFloat(curr['Valor del cliente potencial']) || 0), 0);
+            const totalVentaNoDigital = totalVenta - totalVentaDigital;
+
             document.getElementById('kpi-cumplimiento').textContent = (totalMeta > 0 ? ((totalVenta/totalMeta)*100).toFixed(1) : '0') + '%';
             document.getElementById('kpi-roas').textContent = (totalGasto > 0 ? (totalVenta/totalGasto).toFixed(1) : '0.0');
+            document.getElementById('kpi-cpa').textContent = 'Q ' + (f_o.length > 0 ? (totalGasto / f_o.length).toFixed(2) : '0.00');
+            document.getElementById('kpi-conversion').textContent = (totalLeads > 0 ? ((f_o.length / totalLeads) * 100).toFixed(1) : '0') + '%';
+
+            document.getElementById('kpi-venta-digital').textContent = 'Q ' + totalVentaDigital.toLocaleString(undefined, {{minimumFractionDigits: 2}});
+            document.getElementById('kpi-venta-nodigital').textContent = 'Q ' + totalVentaNoDigital.toLocaleString(undefined, {{minimumFractionDigits: 2}});
+            document.getElementById('kpi-gto-vt').textContent = (totalVenta > 0 ? ((totalGasto / totalVenta) * 100).toFixed(1) : '0') + '%';
+
+            // Asesores Activos (con leads)
+            const asesoresActivos = new Set(f_o.filter(o => parseFloat(o['Valor del cliente potencial']) > 0 || true).map(o => o.asignado)).size;
+            document.getElementById('kpi-asesores').textContent = asesoresActivos;
+
+            // Promedio Venta Diaria
+            const uniqueDays = new Set(f_o.map(o => o.Día || o['Día'])).size || 1;
+            document.getElementById('kpi-prom-vt').textContent = 'Q ' + (totalVenta / uniqueDays).toLocaleString(undefined, {{minimumFractionDigits: 2}});
+
+            // Metas Diarias
+            const metaVTDiaria = f_metas.reduce((acc, curr) => acc + (parseFloat(curr.META_VT_DIA) || 0), 0);
+            const metaMSJDiaria = f_metas.reduce((acc, curr) => acc + (parseFloat(curr.META_MSJ_DIA) || 0), 0);
+
+            // Reutilizar o inyectar nuevos elementos si es necesario
+            if (!document.getElementById('kpi-meta-vt-dia')) {{
+                const kpiContainer = document.getElementById('kpi-prom-vt').parentNode.parentNode;
+                const newKpi1 = document.createElement('div');
+                newKpi1.className = 'card text-center';
+                newKpi1.innerHTML = '<div class="kpi-label">Meta VT Día</div><div id="kpi-meta-vt-dia" class="kpi-val">Q 0.00</div>';
+                kpiContainer.appendChild(newKpi1);
+                const newKpi2 = document.createElement('div');
+                newKpi2.className = 'card text-center';
+                newKpi2.innerHTML = '<div class="kpi-label">Meta Msj Día</div><div id="kpi-meta-msj-dia" class="kpi-val">0</div>';
+                kpiContainer.appendChild(newKpi2);
+            }}
+            document.getElementById('kpi-meta-vt-dia').textContent = 'Q ' + metaVTDiaria.toLocaleString(undefined, {{minimumFractionDigits: 2}});
+            document.getElementById('kpi-meta-msj-dia').textContent = metaMSJDiaria.toLocaleString();
+
+            document.getElementById('kpi-codigos').textContent = codigosActivos;
+            const brechaCodigos = Math.max(0, metaCodigos - codigosActivos);
+            document.getElementById('sub-codigos').textContent = 'Meta: ' + metaCodigos + ' | Brecha: ' + brechaCodigos;
+
+            document.getElementById('kpi-plataformas').textContent = plataformasActivas;
+            const alcPlat = metaPlataformas > 0 ? (plataformasActivas / metaPlataformas * 100).toFixed(1) : '0';
+            document.getElementById('sub-plataformas').textContent = 'Meta: ' + metaPlataformas + ' | Alc: ' + alcPlat + '%';
+
+            document.getElementById('kpi-formatos').textContent = formatosActivos;
+            const alcForm = metaTipos > 0 ? (formatosActivos / metaTipos * 100).toFixed(1) : '0';
+            document.getElementById('sub-formatos').textContent = 'Meta: ' + metaTipos + ' | Alc: ' + alcForm + '%';
+
+            const alcanceProm = metaCodigos > 0 ? (codigosActivos / metaCodigos * 100).toFixed(1) : '0';
+            document.getElementById('kpi-alcance-prom').textContent = alcanceProm + '%';
 
             renderCharts(f_o, f_fb, totalVenta, totalMeta);
         }}
@@ -868,9 +986,32 @@ class App(cctk.CTk):
                 x: vends.map(v => vendMap[v]),
                 type: 'bar',
                 orientation: 'h',
-                marker: {{color: '#76933C'}}
+                marker: {{color: '#76933C'}},
+                text: vends.map(v => 'Q ' + vendMap[v].toLocaleString()),
+                textposition: 'auto',
             }};
             Plotly.newPlot('chart-vendedores', [traceVend], {{margin: {{t: 10, b: 40, l: 150, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'}});
+
+            // Gasto por plataforma (Pie)
+            const platMap = f_fb.reduce((acc, curr) => {{
+                acc[curr['Nombre de la página']] = (acc[curr['Nombre de la página']] || 0) + (parseFloat(curr['Importe gastado']) || 0);
+                return acc;
+            }}, {{}});
+            const tracePlat = {{
+                labels: Object.keys(platMap),
+                values: Object.values(platMap),
+                type: 'pie',
+                hole: .4
+            }};
+            // Crear div si no existe
+            if (!document.getElementById('chart-plataformas')) {{
+                const container = document.getElementById('chart-marcas-pie').parentNode.parentNode;
+                const newCard = document.createElement('div');
+                newCard.className = 'card';
+                newCard.innerHTML = '<h3 class="text-lg font-semibold mb-4">Gasto por Plataforma</h3><div id="chart-plataformas" style="height: 350px;"></div>';
+                container.appendChild(newCard);
+            }}
+            Plotly.newPlot('chart-plataformas', [tracePlat], {{margin: {{t: 10, b: 10, l: 10, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)'}});
         }}
 
         initFilters();
