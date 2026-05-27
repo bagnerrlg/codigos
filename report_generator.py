@@ -151,6 +151,11 @@ FB_AD_ACCOUNTS = ["act_622689460111355"]
 FB_BASE_URL = f"https://graph.facebook.com/{FB_API_VERSION}"
 FB_FIELDS_INSIGHTS = "ad_id,ad_name,adset_name,campaign_name,impressions,spend,clicks,actions,date_start,date_stop"
 
+# ---------------------------
+# CONFIG: Archivos Locales
+# ---------------------------
+PATH_METAS = "metas.xlsx"
+
 # Regex para extracción
 ANUNCIO_REGEX = re.compile(r"([A-Z]\d{3,4}[A-Z]\d{3})", re.IGNORECASE)
 SECUENCIA_REGEX = re.compile(r"([A-Z]\d\.\d)", re.IGNORECASE)
@@ -284,6 +289,21 @@ def make_utc_range(start_date, end_date):
     end_local = GUATEMALA_TZ.localize(datetime.combine(end_date, dt_time.max))
     return start_local.astimezone(pytz.UTC).isoformat().replace("+00:00", "Z"), end_local.astimezone(pytz.UTC).isoformat().replace("+00:00", "Z")
 
+def cargar_metas(filepath):
+    if not os.path.exists(filepath):
+        return pd.DataFrame()
+    try:
+        df = pd.read_excel(filepath)
+        # Limpieza similar a Power Query
+        for col in df.select_dtypes(include=['object']).columns:
+            df[col] = df[col].astype(str).str.strip().str.upper().replace("NAN", "").replace("NONE", "")
+        # Normalizar nombres de columnas (SUB ANILLO -> SUB_ANILLO para JS)
+        df.columns = [c.replace(" ", "_") for c in df.columns]
+        return df
+    except Exception as e:
+        print(f"Error cargando metas: {e}")
+        return pd.DataFrame()
+
 # ---------------------------
 # Backend Functions: GHL
 # ---------------------------
@@ -390,6 +410,30 @@ def fb_api_get(url, params):
     params["access_token"] = FB_ACCESS_TOKEN
     try: r = requests.get(url, params=params, timeout=30); return r.json()
     except: return {}
+
+def mapping_secuencia_gasto(camp):
+    camp = str(camp).upper()
+    if camp.startswith("DIEGOA01C1.PAGINA M"): return "A03-A"
+    if camp.startswith("DIEGO"): return "A03-A"
+    if camp.startswith("VICTORIAA02C1"): return "A02-A"
+    if camp.startswith("VICTORIA"): return "A02-A"
+    if camp.startswith("NOHEA02C1"): return "A02-A"
+    if camp.startswith("NOHEA02C2"): return "A07-A"
+    if camp.startswith("NOHE"): return "A07-A"
+    if camp.startswith("ANGEL"): return "A07-A"
+    if camp.startswith("2510"): return "TIENDAS"
+    if camp.startswith("RRHH"): return "RRHH"
+    if camp.startswith("TIENDAS"): return "A04-A"
+    if camp.startswith("BOT2"): return "A02-C3"
+    if camp.startswith("R2.2"): return "R2.2"
+    if camp.startswith("R2.1"): return "R2.1"
+    if camp.startswith("R1.1"): return "R1.1"
+    if camp.startswith("R1.2"): return "R1.2"
+    if camp.startswith("R1.3"): return "R1.3"
+    if camp.startswith("R2.3"): return "R2.3"
+    if camp.startswith("R3.2"): return "R3.2"
+    if camp.startswith("ALCANCE"): return "TIENDAS"
+    return "OTRO"
 
 def obtener_insights(account, fecha_desde, fecha_hasta, log_callback):
     log_callback(f"Extraer Insights FB: {account}...")
@@ -552,11 +596,292 @@ class App(cctk.CTk):
                                 pid = p_map.get(creative_map.get(aid)); pname = all_page_names.get(pid)
                                 conv = next((a["value"] for a in ins.get("actions", []) if a["action_type"] == "onsite_conversion.messaging_conversation_started_7d"), 0)
                                 anu, tpost = extraer_datos_anuncio(ad_n)
-                                res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del conjunto": ins.get("adset_name"), "Nombre del anuncio": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": extraer_secuencia(camp), "Día": ins.get("date_start"), "Contactos mensajes nuevos": conv, "Importe gastado": ins.get("spend"), "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop")})
-            if res_o or res_c or res_fb: self.generate_excel(res_o, res_v, res_c, res_fb)
+                                res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del conjunto": ins.get("adset_name"), "Nombre del anuncio": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": mapping_secuencia_gasto(camp), "Día": ins.get("date_start"), "Contactos mensajes nuevos": conv, "Importe gastado": ins.get("spend"), "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop")})
+
+            df_metas = cargar_metas(PATH_METAS)
+            if res_o or res_c or res_fb:
+                self.generate_excel(res_o, res_v, res_c, res_fb)
+                self.generate_dashboard_html(res_o, res_v, res_c, res_fb, df_metas)
             else: self.log("Sin datos.")
         except Exception as e: self.log(f"Error: {str(e)}")
         finally: self.after(0, lambda: self.generate_btn.configure(state="normal", text="🚀 GENERAR EXCEL"))
+
+    def generate_dashboard_html(self, res_o, res_v, res_c, res_fb, df_metas):
+        self.log("Generando Dashboard HTML...")
+        df_o = pd.DataFrame(res_o)
+        df_v = pd.DataFrame(res_v)
+        df_c = pd.DataFrame(res_c)
+        df_fb = pd.DataFrame(res_fb)
+
+        # Consolidar datos para el Dashboard
+        # Convertir todo a JSON para el frontend
+        data_json = {
+            "oportunidades": df_o.to_dict(orient="records") if not df_o.empty else [],
+            "ventas": df_v.to_dict(orient="records") if not df_v.empty else [],
+            "contactos": df_c.to_dict(orient="records") if not df_c.empty else [],
+            "facebook": df_fb.to_dict(orient="records") if not df_fb.empty else [],
+            "metas": df_metas.to_dict(orient="records") if not df_metas.empty else []
+        }
+
+        html_template = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard DUPAZA PRO</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card {{ background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 16px; }}
+        .kpi-val {{ font-size: 24px; font-weight: bold; color: #76933C; }}
+        .kpi-label {{ font-size: 14px; color: #666; }}
+    </style>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">📊 DUPAZA DASHBOARD</h1>
+            <div class="text-sm text-gray-500">Última actualización: {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
+        </header>
+
+        <!-- Filtros -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 card">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Gerente</label>
+                <select id="filter-gerente" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    <option value="ALL">Todos</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Marca</label>
+                <select id="filter-marca" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    <option value="ALL">Todas</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Mes</label>
+                <select id="filter-mes" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    <option value="ALL">Todos</option>
+                </select>
+            </div>
+             <div>
+                <label class="block text-sm font-medium text-gray-700">Vendedor</label>
+                <select id="filter-vendedor" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    <option value="ALL">Todos</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- KPIs Principales -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            <div class="card text-center">
+                <div class="kpi-label">Gasto Total</div>
+                <div id="kpi-gasto" class="kpi-val">Q 0.00</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">Leads (Msjs)</div>
+                <div id="kpi-leads" class="kpi-val">0</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">Venta Total (VT)</div>
+                <div id="kpi-venta" class="kpi-val">Q 0.00</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">Costo por Lead</div>
+                <div id="kpi-cpl" class="kpi-val">Q 0.00</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">% Cumplimiento</div>
+                <div id="kpi-cumplimiento" class="kpi-val">0%</div>
+            </div>
+            <div class="card text-center">
+                <div class="kpi-label">ROAS</div>
+                <div id="kpi-roas" class="kpi-val">0.0</div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="card">
+                <h3 class="text-lg font-semibold mb-4">Ventas vs Meta</h3>
+                <div id="chart-ventas-meta" style="height: 350px;"></div>
+            </div>
+            <div class="card">
+                <h3 class="text-lg font-semibold mb-4">Leads por Día</h3>
+                <div id="chart-leads-dia" style="height: 350px;"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+             <div class="card">
+                <h3 class="text-lg font-semibold mb-4">Distribución por Marca</h3>
+                <div id="chart-marcas-pie" style="height: 350px;"></div>
+            </div>
+            <div class="card">
+                <h3 class="text-lg font-semibold mb-4">Eficiencia por Vendedor (VT)</h3>
+                <div id="chart-vendedores" style="height: 350px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rawData = {json.dumps(data_json)};
+
+        function initFilters() {{
+            const gerentes = [...new Set(rawData.metas.map(m => m.GERENTE))].filter(Boolean).sort();
+            const marcas = [...new Set(rawData.metas.map(m => m.MARCA))].filter(Boolean).sort();
+            const vendedores = [...new Set(rawData.oportunidades.map(o => o.asignado))].filter(Boolean).sort();
+            const meses = [...new Set(rawData.oportunidades.map(o => o.Mes))].filter(Boolean).sort((a,b) => a-b);
+
+            const populate = (id, list) => {{
+                const el = document.getElementById(id);
+                list.forEach(item => {{
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    opt.textContent = item;
+                    el.appendChild(opt);
+                }});
+            }};
+
+            populate('filter-gerente', gerentes);
+            populate('filter-marca', marcas);
+            populate('filter-vendedor', vendedores);
+            populate('filter-mes', meses);
+
+            document.querySelectorAll('select').forEach(el => {{
+                el.addEventListener('change', updateDashboard);
+            }});
+        }}
+
+        function updateDashboard() {{
+            const g = document.getElementById('filter-gerente').value;
+            const m = document.getElementById('filter-marca').value;
+            const v = document.getElementById('filter-vendedor').value;
+            const mes = document.getElementById('filter-mes').value;
+
+            // Tabla de mapeo Secuencia -> Gerente/Marca basada en metas
+            const seqMap = rawData.metas.reduce((acc, curr) => {{
+                if (!acc[curr.SUB_ANILLO]) acc[curr.SUB_ANILLO] = {{ gerentes: new Set(), marcas: new Set() }};
+                acc[curr.SUB_ANILLO].gerentes.add(curr.GERENTE);
+                acc[curr.SUB_ANILLO].marcas.add(curr.MARCA);
+                return acc;
+            }}, {{}});
+
+            // Filtrado de Oportunidades
+            let f_o = rawData.oportunidades.filter(o => {{
+                const matchGerente = (g === 'ALL' || (seqMap[o.secuencia] && seqMap[o.secuencia].gerentes.has(g)));
+                const matchMarca = (m === 'ALL' || o.MARCA === m);
+                const matchVendedor = (v === 'ALL' || o.asignado === v);
+                const matchMes = (mes === 'ALL' || o.Mes == mes);
+                return matchGerente && matchMarca && matchVendedor && matchMes;
+            }});
+
+            // Filtrado de Facebook (Gasto)
+            let f_fb = rawData.facebook.filter(f => {{
+                const matchGerente = (g === 'ALL' || (seqMap[f.SECUENCIA] && seqMap[f.SECUENCIA].gerentes.has(g)));
+                const matchMarca = (m === 'ALL' || (seqMap[f.SECUENCIA] && seqMap[f.SECUENCIA].marcas.has(m)));
+                const matchMes = (mes === 'ALL' || (f.Día && parseInt(f.Día.split('-')[1]) == mes));
+                return matchGerente && matchMarca && matchMes;
+            }});
+
+            // Filtrado de Metas
+            let f_metas = rawData.metas.filter(met =>
+                (g === 'ALL' || met.GERENTE === g) &&
+                (m === 'ALL' || met.MARCA === m) &&
+                (v === 'ALL' || met.VENDEDOR === v) &&
+                (mes === 'ALL' || met.MES == mes)
+            );
+
+            // Cálculos KPIs
+            const totalGasto = f_fb.reduce((acc, curr) => acc + (parseFloat(curr['Importe gastado']) || 0), 0);
+            const totalLeads = f_fb.reduce((acc, curr) => acc + (parseInt(curr['Contactos mensajes nuevos']) || 0), 0);
+            const totalVenta = f_o.reduce((acc, curr) => acc + (parseFloat(curr['Valor del cliente potencial']) || 0), 0);
+            const totalMeta = f_metas.reduce((acc, curr) => acc + (parseFloat(curr['META']) || 0), 0);
+
+            document.getElementById('kpi-gasto').textContent = 'Q ' + totalGasto.toLocaleString(undefined, {{minimumFractionDigits: 2}});
+            document.getElementById('kpi-leads').textContent = totalLeads.toLocaleString();
+            document.getElementById('kpi-venta').textContent = 'Q ' + totalVenta.toLocaleString(undefined, {{minimumFractionDigits: 2}});
+            document.getElementById('kpi-cpl').textContent = 'Q ' + (totalLeads > 0 ? (totalGasto/totalLeads).toFixed(2) : '0.00');
+            document.getElementById('kpi-cumplimiento').textContent = (totalMeta > 0 ? ((totalVenta/totalMeta)*100).toFixed(1) : '0') + '%';
+            document.getElementById('kpi-roas').textContent = (totalGasto > 0 ? (totalVenta/totalGasto).toFixed(1) : '0.0');
+
+            renderCharts(f_o, f_fb, totalVenta, totalMeta);
+        }}
+
+        function renderCharts(f_o, f_fb, totalVenta, totalMeta) {{
+            // Ventas vs Meta
+            const trace1 = {{
+                x: ['Real', 'Meta'],
+                y: [totalVenta, totalMeta],
+                type: 'bar',
+                marker: {{color: ['#76933C', '#E2E8F0']}},
+                text: [totalVenta.toLocaleString(), totalMeta.toLocaleString()],
+                textposition: 'auto',
+            }};
+            Plotly.newPlot('chart-ventas-meta', [trace1], {{margin: {{t: 10, b: 40, l: 60, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'}});
+
+            // Leads por día
+            const leadsByDay = f_fb.reduce((acc, curr) => {{
+                acc[curr.Día] = (acc[curr.Día] || 0) + (parseInt(curr['Contactos mensajes nuevos']) || 0);
+                return acc;
+            }}, {{}});
+            const days = Object.keys(leadsByDay).sort();
+            const traceLeads = {{
+                x: days,
+                y: days.map(d => leadsByDay[d]),
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: {{color: '#1890ff', width: 3}},
+                fill: 'tozeroy'
+            }};
+            Plotly.newPlot('chart-leads-dia', [traceLeads], {{margin: {{t: 10, b: 40, l: 40, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'}});
+
+            // Marcas Pie
+            const marcaMap = f_o.reduce((acc, curr) => {{
+                acc[curr.MARCA] = (acc[curr.MARCA] || 0) + (parseFloat(curr['Valor del cliente potencial']) || 0);
+                return acc;
+            }}, {{}});
+            const traceMarca = {{
+                labels: Object.keys(marcaMap),
+                values: Object.values(marcaMap),
+                type: 'pie',
+                hole: .4,
+                marker: {{colors: ['#76933C', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#e74c3c']}}
+            }};
+            Plotly.newPlot('chart-marcas-pie', [traceMarca], {{margin: {{t: 10, b: 10, l: 10, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)'}});
+
+            // Vendedores
+            const vendMap = f_o.reduce((acc, curr) => {{
+                acc[curr.asignado] = (acc[curr.asignado] || 0) + (parseFloat(curr['Valor del cliente potencial']) || 0);
+                return acc;
+            }}, {{}});
+            const vends = Object.keys(vendMap).sort((a,b) => vendMap[a] - vendMap[b]);
+            const traceVend = {{
+                y: vends,
+                x: vends.map(v => vendMap[v]),
+                type: 'bar',
+                orientation: 'h',
+                marker: {{color: '#76933C'}}
+            }};
+            Plotly.newPlot('chart-vendedores', [traceVend], {{margin: {{t: 10, b: 40, l: 150, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'}});
+        }}
+
+        initFilters();
+        updateDashboard();
+    </script>
+</body>
+</html>
+        """
+        fn_html = f"dashboard_Dupaza_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+        with open(fn_html, "w", encoding="utf-8") as f:
+            f.write(html_template)
+
+        # También crear un index.html estático para github pages
+        with open("index.html", "w", encoding="utf-8") as f:
+            f.write(html_template)
+
+        self.log(f"Dashboard generado: {fn_html}")
 
     def generate_excel(self, res_o, res_v, res_c, res_fb):
         self.log("Compilando..."); df_o, df_v, df_c, df_fb = pd.DataFrame(res_o), pd.DataFrame(res_v), pd.DataFrame(res_c), pd.DataFrame(res_fb)
