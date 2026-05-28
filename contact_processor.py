@@ -66,6 +66,27 @@ ANUNCIO_REGEX = re.compile(r"([A-Z]\d{3,4}[A-Z]\d{3})", re.IGNORECASE)
 SECUENCIA_REGEX = re.compile(r"([A-Z]\d\.\d)", re.IGNORECASE)
 
 # ---------------------------
+# CONFIG: Lógica de Negocio
+# ---------------------------
+LISTA_VENDEDORES_FREELANCE = [
+    "YESSICA ALEJANDRA CARRERA PINEDA",
+    "YARELIN BARRAZA ARIAS",
+    "YOSELIN EUFEMIA BARRAZA ARIAS",
+    "WALTER NEHEMIAS GUERRA",
+    "YENDY MIREYA CUMAR CASTRO"
+]
+
+MAPEO_SECUENCIA_PAGINA = {
+    "A02-A": "LA MUEBLERÍA GUATEMALA",
+    "A07-A": "LA MUEBLERÍA GUATEMALA",
+    "A03-A": "LA MUEBLERIA.",
+    "A01-A": "LA MUEBLERIA.",
+    # Agrega aquí más mapeos según necesites: "Secuencia": "Nombre de Página"
+}
+
+DEFAULT_PAGINA = "LA MUEBLERIA."
+
+# ---------------------------
 # Backend Functions
 # ---------------------------
 def get_custom_value(field):
@@ -254,17 +275,30 @@ class App(cctk.CTk):
             df['VacíoFila'] = df.groupby(['FECHA', 'Secuencia', 'IsVacío']).cumcount() + 1
             df.loc[df['IsVacío'] == 0, 'VacíoFila'] = None
 
-            nombres_base = ["YESSICA ALEJANDRA CARRERA PINEDA", "YARELIN BARRAZA ARIAS", "YOSELIN EUFEMIA BARRAZA ARIAS", "WALTER NEHEMIAS GUERRA", "YENDY MIREYA CUMAR CASTRO"]
             def assign_final(row):
                 if pd.notna(row['Anuncio1']) and row['Anuncio1'] != "": return row['Anuncio1']
-                excluidos = nombres_base if row['AÑO'] < 2025 or (row['AÑO'] == 2025 and row['MES'] < 11) else [n for n in nombres_base if n not in ["YARELIN BARRAZA ARIAS", "YOSELIN EUFEMIA BARRAZA ARIAS"]]
-                if row['Assigned'] in excluidos: return None
+
+                # Exclusiones Freelance dinámicas
+                # Si es antes de Nov 2025, se usan todos los nombres de la lista.
+                # Si es Nov 2025 en adelante, se quitan YARELIN y YOSELIN de la exclusión freelance (según PQ)
+                if row['AÑO'] < 2025 or (row['AÑO'] == 2025 and row['MES'] < 11):
+                    excluidos = LISTA_VENDEDORES_FREELANCE
+                else:
+                    excluidos = [n for n in LISTA_VENDEDORES_FREELANCE if n not in ["YARELIN BARRAZA ARIAS", "YOSELIN EUFEMIA BARRAZA ARIAS"]]
+
+                # Si el asesor está en la lista de excluidos, se asigna "FREELANCE"
+                if row['Assigned'] in excluidos:
+                    return "FREELANCE"
+
+                # Si NO es excluido, repartimos los anuncios del ranking (1, 2, 3)
                 r_list = [row[f'Ranking{i}'] for i in range(1, 4) if pd.notna(row.get(f'Ranking{i}')) and row.get(f'Ranking{i}') != ""]
-                if pd.notna(row['VacíoFila']) and r_list: return r_list[int((row['VacíoFila'] - 1) % len(r_list))]
-                return None
+                if pd.notna(row['VacíoFila']) and r_list:
+                    return r_list[int((row['VacíoFila'] - 1) % len(r_list))]
+
+                return "FREELANCE" # Fallback final
 
             df['AnuncioF'] = df.apply(assign_final, axis=1)
-            df['AnuncioF'] = df['AnuncioF'].replace("B1221A981C", "B1221A981").fillna("FREELANCE")
+            df['AnuncioF'] = df['AnuncioF'].replace("B1221A981C", "B1221A981")
             df.loc[df['AnuncioF'] == "", 'AnuncioF'] = "FREELANCE"
 
             # Quitar zona horaria para compatibilidad con Excel
@@ -277,8 +311,8 @@ class App(cctk.CTk):
 
             def assign_pagina(row):
                 if row['AnuncioF'] == "FREELANCE": return "FREELANCE"
-                if row['Secuencia'] in ["A02-A", "A07-A"]: return "LA MUEBLERÍA GUATEMALA"
-                return "LA MUEBLERIA."
+                # Buscar en el mapeo configurable
+                return MAPEO_SECUENCIA_PAGINA.get(row['Secuencia'], DEFAULT_PAGINA)
             df['Pagina'] = df.apply(assign_pagina, axis=1)
 
             # Export
