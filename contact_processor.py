@@ -266,6 +266,11 @@ class App(cctk.CTk):
             df['AnuncioF'] = df.apply(assign_final, axis=1)
             df['AnuncioF'] = df['AnuncioF'].replace("B1221A981C", "B1221A981").fillna("FREELANCE")
             df.loc[df['AnuncioF'] == "", 'AnuncioF'] = "FREELANCE"
+
+            # Quitar zona horaria para compatibilidad con Excel
+            if 'Fecha' in df.columns:
+                df['Fecha'] = pd.to_datetime(df['Fecha']).dt.tz_localize(None)
+
             df['Mensajes'] = 1
             df['ANUNCIOSECUENCIA'] = df['AnuncioF'].astype(str) + df['Secuencia'].astype(str)
             df['ClaveDinamica'] = df['Assigned'].astype(str) + "-" + pd.to_datetime(df['FECHA']).dt.strftime('%m-%Y')
@@ -288,7 +293,14 @@ class App(cctk.CTk):
 
     def generate_html(self, df):
         self.log("Generando Dashboard...")
-        data_json = df.to_dict(orient="records")
+        # Convertir fechas a string para serialización JSON
+        df_json = df.copy()
+        for col in df_json.columns:
+            if pd.api.types.is_datetime64_any_dtype(df_json[col]) or pd.api.types.is_object_dtype(df_json[col]):
+                # Intentar convertir objetos date/datetime a string
+                df_json[col] = df_json[col].apply(lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x) if x is not None else "")
+
+        data_json = df_json.to_dict(orient="records")
         html = f"""
 <!DOCTYPE html>
 <html lang="es">
@@ -354,3 +366,7 @@ class App(cctk.CTk):
 </html>
 """
         with open("dashboard_contactos.html", "w", encoding="utf-8") as f: f.write(html)
+
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()

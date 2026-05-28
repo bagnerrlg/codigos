@@ -613,14 +613,22 @@ class App(cctk.CTk):
         df_c = pd.DataFrame(res_c)
         df_fb = pd.DataFrame(res_fb)
 
+        # Convertir fechas a string para serialización JSON
+        def prepare_json(df_in):
+            if df_in.empty: return []
+            d = df_in.copy()
+            for col in d.columns:
+                if pd.api.types.is_datetime64_any_dtype(d[col]) or pd.api.types.is_object_dtype(d[col]):
+                    d[col] = d[col].apply(lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x) if x is not None else "")
+            return d.to_dict(orient="records")
+
         # Consolidar datos para el Dashboard
-        # Convertir todo a JSON para el frontend
         data_json = {
-            "oportunidades": df_o.to_dict(orient="records") if not df_o.empty else [],
-            "ventas": df_v.to_dict(orient="records") if not df_v.empty else [],
-            "contactos": df_c.to_dict(orient="records") if not df_c.empty else [],
-            "facebook": df_fb.to_dict(orient="records") if not df_fb.empty else [],
-            "metas": df_metas.to_dict(orient="records") if not df_metas.empty else []
+            "oportunidades": prepare_json(df_o),
+            "ventas": prepare_json(df_v),
+            "contactos": prepare_json(df_c),
+            "facebook": prepare_json(df_fb),
+            "metas": prepare_json(df_metas)
         }
 
         html_template = f"""
@@ -1032,6 +1040,12 @@ class App(cctk.CTk):
 
     def generate_excel(self, res_o, res_v, res_c, res_fb):
         self.log("Compilando..."); df_o, df_v, df_c, df_fb = pd.DataFrame(res_o), pd.DataFrame(res_v), pd.DataFrame(res_c), pd.DataFrame(res_fb)
+
+        # Quitar zonas horarias para Excel en todos los DataFrames
+        for df in [df_o, df_v, df_c, df_fb]:
+            if not df.empty:
+                for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns, America/Guatemala]']).columns:
+                    df[col] = df[col].dt.tz_localize(None)
         head = ["secuencia", "fase", "Valor del cliente potencial", "asignado", "Creado", "Ultimo Actualizado", "Seguidores", "Notas", "etiquetas", "estado", "Fecha de Venta", "NIT", "Camas y Combos SKU", "Cantidad Camas y Combo SKU", "Camas y Combos SKU1", "Cantidad Camas y Combo SKU1", "Cocinas SKU", "Cantidad Cocinas SKU", "Cocinas SKU1", "Cantidad Cocinas SKU1", "Salas SKU", "Cantidad Salas SKU", "Salas SKU1", "Cantidad Salas SKU1"]
         tail = ["", "Departamento", "Municipio", "Telefono 1", "Telefono 2", "MARCA", "ANILLO", "UBICACION", "ID de oportunidad", "ID de contacto", "Cliente", "Mes", "Cod", "DataVenta", "Fecha"]
         if not df_o.empty:
