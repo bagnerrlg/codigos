@@ -1,0 +1,18 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mock Gasto FB</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 p-6">
+    <div id="kpi-gasto" class="text-2xl font-bold">Q 0.00</div>
+    <div id="chart-secuencias" style="height: 400px;"></div>
+    <script>
+        const rawData = [{"Pagina": "P1", "Secuencia": "S1", "Campa\u00f1a": "C1", "Gasto": 500, "Mensajes1": 10, "Fecha": "2026-05-28T19:11:20.552935", "Anuncio1": "A1"}];
+        document.getElementById('kpi-gasto').textContent = 'Q ' + rawData.reduce((acc, curr) => acc + (parseFloat(curr.Gasto) || 0), 0).toLocaleString();
+    </script>
+</body>
+</html>

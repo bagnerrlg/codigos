@@ -168,6 +168,7 @@ def clean_html(raw_html):
     return unescape(re.sub(r'<[^>]+>', '', raw_html)).strip()
 
 def format_date_ghl(val):
+    """Retorna DD/MM/YYYY para Excel."""
     if not val: return ""
     if isinstance(val, (int, float)):
         try: return datetime.fromtimestamp(val / 1000, tz=timezone.utc).strftime("%d/%m/%Y")
@@ -175,9 +176,12 @@ def format_date_ghl(val):
     s = str(val).strip()
     if len(s) >= 10 and s[4] == "-" and s[7] == "-":
         return f"{s[8:10]}/{s[5:7]}/{s[0:4]}"
+    if len(s) >= 10 and s[2] == "/" and s[5] == "/":
+        return s[:10]
     return s
 
 def get_yyyy_mm_dd(val):
+    """Retorna YYYY-MM-DD para comparación."""
     if not val: return ""
     if isinstance(val, (int, float)):
         try: return datetime.fromtimestamp(val / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -185,6 +189,8 @@ def get_yyyy_mm_dd(val):
     s = str(val).strip()
     if len(s) >= 10 and s[4] == "-" and s[7] == "-":
         return s[:10]
+    if len(s) >= 10 and s[2] == "/" and s[5] == "/":
+        return f"{s[6:10]}-{s[3:5]}-{s[0:2]}"
     return ""
 
 def calculate_nit(nit, tel1, ghl_phone):

@@ -66,11 +66,28 @@ GUATEMALA_TZ = pytz.timezone("America/Guatemala")
 # ---------------------------
 # Backend Functions
 # ---------------------------
+def format_date_ghl(val):
+    """Normaliza fechas a YYYY-MM-DD para comparaciones."""
+    if not val: return ""
+    if isinstance(val, (int, float)):
+        try: return datetime.fromtimestamp(val / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+        except: return str(val)
+    s = str(val).strip()
+    # Caso YYYY-MM-DD...
+    if len(s) >= 10 and s[4] == "-" and s[7] == "-": return s[:10]
+    # Caso DD/MM/YYYY...
+    if len(s) >= 10 and s[2] == "/" and s[5] == "/":
+        return f"{s[6:10]}-{s[3:5]}-{s[0:2]}"
+    return s
+
 def get_custom_value(field):
     if not field or not isinstance(field, dict): return ""
     v = field.get("fieldValueDate") or field.get("fieldValueString") or field.get("fieldValue") or field.get("value")
-    if isinstance(val := v, list): return ", ".join(map(str, val))
-    return str(val) if val is not None else ""
+    # Si parece un timestamp de GHL, formatearlo
+    if isinstance(v, (int, float)) and v > 1000000000000:
+        return format_date_ghl(v)
+    if isinstance(v, list): return ", ".join(map(str, v))
+    return str(v) if v is not None else ""
 
 def get_custom_fields_map(location_id, token):
     url = f"https://services.leadconnectorhq.com/locations/{location_id}/customFields?model=opportunity"
@@ -124,27 +141,37 @@ def fetch_sales_for_account(acc, start_date_iso, end_date_iso, log_callback):
             ]
         }
         res = safe_post(url, token, payload, API_VERSION_OPPS)
-        if not res or (isinstance(res, dict) and res.get("__error_status")): break
+        if not res: break
+        if isinstance(res, dict) and res.get("__error_status"):
+            log_callback(f"  [Error API {res['__error_status']}] {res.get('__error_text')[:100]}")
+            break
         opps = res.get("opportunities", [])
         if not opps: break
         all_opps.extend(opps)
         page += 1
         if len(opps) < 100: break
 
-    rows = []
+    rows, filtered_out = [], 0
+    log_callback(f"Se encontraron {len(all_opps)} oportunidades ganadas totales en {acc_name}.")
+
     for op in all_opps:
         opp_cfs = op.get("customFields") or op.get("custom_fields") or []
         sale_date_iso, cf_data = "", {}
         for cf in opp_cfs:
-            fid, val = cf.get("id"), get_custom_value(cf)
+            fid = cf.get("id")
+            # Extraer valor usando lógica robusta de fechas si es el campo de venta
             if fid == cfield:
-                # Intentar parsear fecha de venta
-                if val: sale_date_iso = val[:10]
+                raw_v = cf.get("fieldValueDate") or cf.get("fieldValue") or cf.get("fieldValueString") or cf.get("value")
+                sale_date_iso = format_date_ghl(raw_v)
+
+            val = get_custom_value(cf)
             fname = cf_names.get(fid, fid)
             cf_data[fname] = val
 
         # Filtrado exacto por fecha de venta
-        if not sale_date_iso or not (start_date_iso <= sale_date_iso <= end_date_iso): continue
+        if not sale_date_iso or not (start_date_iso <= sale_date_iso <= end_date_iso):
+            filtered_out += 1
+            continue
 
         row = {
             "secuencia": acc_name,
@@ -162,6 +189,9 @@ def fetch_sales_for_account(acc, start_date_iso, end_date_iso, log_callback):
         }
         row.update(cf_data)
         rows.append(row)
+
+    if filtered_out > 0:
+        log_callback(f"  ({filtered_out} op. quedaron fuera del rango de fechas {start_date_iso} a {end_date_iso})")
     return rows
 
 # ---------------------------
