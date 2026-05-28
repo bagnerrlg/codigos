@@ -68,6 +68,7 @@ SECUENCIA_REGEX = re.compile(r"([A-Z]\d\.\d)", re.IGNORECASE)
 # ---------------------------
 # CONFIG: Lógica de Negocio
 # ---------------------------
+# Lista de asesores que siempre serán "FREELANCE" si el anuncio está vacío
 LISTA_VENDEDORES_FREELANCE = [
     "YESSICA ALEJANDRA CARRERA PINEDA",
     "YARELIN BARRAZA ARIAS",
@@ -76,12 +77,14 @@ LISTA_VENDEDORES_FREELANCE = [
     "YENDY MIREYA CUMAR CASTRO"
 ]
 
+# Mapeo de Secuencia a Nombre de Página
 MAPEO_SECUENCIA_PAGINA = {
     "A02-A": "LA MUEBLERÍA GUATEMALA",
     "A07-A": "LA MUEBLERÍA GUATEMALA",
     "A03-A": "LA MUEBLERIA.",
     "A01-A": "LA MUEBLERIA.",
-    # Agrega aquí más mapeos según necesites: "Secuencia": "Nombre de Página"
+    "R2.1": "LA MUEBLERIA.",
+    # Agrega aquí más mapeos: "Secuencia": "Nombre de Página"
 }
 
 DEFAULT_PAGINA = "LA MUEBLERIA."
@@ -91,13 +94,9 @@ DEFAULT_PAGINA = "LA MUEBLERIA."
 # ---------------------------
 def get_custom_value(field):
     if not field or not isinstance(field, dict): return ""
-    if "fieldValueDate" in field and field["fieldValueDate"]: return str(field["fieldValueDate"])
-    if "fieldValueString" in field and field["fieldValueString"]: return str(field["fieldValueString"])
-    if "fieldValue" in field and field["fieldValue"] is not None: return str(field["fieldValue"])
-    if "value" in field and field["value"] is not None:
-        v = field["value"]
-        return ", ".join(map(str, v)) if isinstance(v, list) else str(v)
-    return ""
+    val = field.get("fieldValueDate") or field.get("fieldValueString") or field.get("fieldValue") or field.get("value")
+    if isinstance(val, list): return ", ".join(map(str, val))
+    return str(val) if val is not None else ""
 
 def get_users_by_location(location_id, token):
     url = f"https://services.leadconnectorhq.com/users/?locationId={location_id}"
@@ -107,17 +106,6 @@ def get_users_by_location(location_id, token):
         if r.status_code != 200: return {}
         return {u.get("id"): f"{u.get('firstName','') or ''} {u.get('lastName','') or ''}".strip() or u.get("email", "Desconocido") for u in r.json().get("users", [])}
     except: return {}
-
-def safe_post(url, token, payload, version):
-    headers = {"Authorization": f"Bearer {token}", "Version": version, "Content-Type": "application/json"}
-    for attempt in range(1, 6):
-        try:
-            r = requests.post(url, headers=headers, json=payload, timeout=30)
-            if r.status_code in (200, 201): return r.json()
-            if r.status_code == 429: time.sleep(attempt * 2); continue
-            return {"__error_status": r.status_code, "__error_text": r.text}
-        except: time.sleep(attempt * 1.5); continue
-    return {}
 
 def make_utc_range(start_date, end_date):
     start_local = GUATEMALA_TZ.localize(datetime.combine(start_date, dt_time.min))
@@ -145,24 +133,28 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
     sec_cf, anu_cf, pm_cf = acc["secuencia_cf"], acc["anuncio_cf"], acc["primer_mensaje_cf"]
     log_callback(f"Extraer GHL: {acc_name}...")
     u_map = get_users_by_location(loc, token)
-    all_contacts, page, limit = [], 1, 100
+    all_contacts, page = [], 1
     url = "https://services.leadconnectorhq.com/contacts/search"
     while True:
-        payload = {"locationId": loc, "page": page, "pageLimit": limit, "filters": [{"field": "dateAdded", "operator": "range", "value": {"gt": start_utc, "lt": end_utc}}]}
-        res = safe_post(url, token, payload, API_VERSION_CONTACTS)
-        if not res or (isinstance(res, dict) and res.get("__error_status")): break
-        contacts = res.get("contacts", [])
-        if not isinstance(contacts, list) or not contacts: break
-        all_contacts.extend(contacts); page += 1
-        if len(contacts) < limit: break
+        payload = {"locationId": loc, "page": page, "pageLimit": 100, "filters": [{"field": "dateAdded", "operator": "range", "value": {"gt": start_utc, "lt": end_utc}}]}
+        headers = {"Authorization": f"Bearer {token}", "Version": API_VERSION_CONTACTS, "Content-Type": "application/json"}
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=30)
+            res = r.json()
+            contacts = res.get("contacts", [])
+            if not contacts: break
+            all_contacts.extend(contacts)
+            page += 1
+            if len(contacts) < 100: break
+        except: break
 
     formatted = []
     for c in all_contacts:
         uid = c.get("assignedTo")
         assigned_name = u_map.get(uid, "") if uid else ""
-        date_iso, date_dt = c.get("dateAdded"), None
-        if date_iso:
-            date_dt = datetime.fromisoformat(date_iso.replace("Z", "+00:00")).astimezone(GUATEMALA_TZ)
+        date_iso = c.get("dateAdded")
+        date_dt = datetime.fromisoformat(date_iso.replace("Z", "+00:00")).astimezone(GUATEMALA_TZ) if date_iso else None
+
         secuencia_raw, anuncio_raw, primer_mensaje_texto = "", "", ""
         for cf in c.get("customFields", []):
             cid, val = cf.get("id"), get_custom_value(cf)
@@ -228,7 +220,7 @@ class App(cctk.CTk):
         self.range_picker = FloatingRangePicker(body, "PERIODO DE EXTRACCIÓN"); self.range_picker.grid(row=0, column=0, pady=10, sticky="ew")
         self.process_btn = cctk.CTkButton(self, text="🚀 PROCESAR CONTACTOS", height=45, font=("Segoe UI", 14, "bold"), corner_radius=10, command=self.start_process); self.process_btn.grid(row=2, column=0, pady=20, padx=30, sticky="ew")
         logs_frame = cctk.CTkFrame(self, height=120, corner_radius=10); logs_frame.grid(row=3, column=0, sticky="ew", padx=20, pady=(0,20))
-        self.console = cctk.CTkTextbox(logs_frame, height=100, font=("Consolas", 10)); self.console.pack(fill="both", expand=True, padx=5, pady=5); self.log("LISTO.")
+        self.console = cctk.CTkTextbox(logs_frame, height=100, font=("Consolas", 10)); self.console.pack(fill="both", expand=True, padx=5, pady=5); self.log("SISTEMA LISTO.")
 
     def log(self, txt):
         hour = datetime.now().strftime("%H:%M:%S")
@@ -250,7 +242,7 @@ class App(cctk.CTk):
             if not all_raw:
                 self.log("Sin datos."); self.after(0, lambda: self.process_btn.configure(state="normal", text="🚀 PROCESAR CONTACTOS")); return
 
-            self.log("Procesando logic de Power Query...")
+            self.log("Transformando datos (Lógica PQ)...")
             df = pd.DataFrame(all_raw)
             df['Contact Id'] = df['Contact Id'].astype(str).str.strip()
             df['Assigned'] = df['Assigned'].astype(str).str.strip().str.upper()
@@ -260,13 +252,13 @@ class App(cctk.CTk):
             df['AÑO'] = pd.to_datetime(df['FECHA']).dt.year
             df['MES'] = pd.to_datetime(df['FECHA']).dt.month
 
-            # Ranking
+            # Lógica de Rankings para llenar vacíos
             df_val = df[df['Anuncio1'].notna() & (df['Anuncio1'] != "")]
             rnk_base = df_val.groupby(['FECHA', 'Secuencia', 'Anuncio1']).size().reset_index(name='CntAnun')
             rnk_base = rnk_base.sort_values(['FECHA', 'Secuencia', 'CntAnun'], ascending=[True, True, False])
             rnk_base['Index'] = rnk_base.groupby(['FECHA', 'Secuencia']).cumcount() + 1
             rankings = rnk_base[rnk_base['Index'] <= 3].pivot(index=['FECHA', 'Secuencia'], columns='Index', values='Anuncio1').reset_index()
-            rankings.columns = ['FECHA', 'Secuencia'] + [f'Ranking{i}' for i in rankings.columns if isinstance(i, int)]
+            rankings.columns = ['FECHA', 'Secuencia'] + [f'Ranking{i}' for i in rankings.columns if isinstance(i, (int, float))]
             for r in ['Ranking1', 'Ranking2', 'Ranking3']:
                 if r not in rankings.columns: rankings[r] = None
 
@@ -275,27 +267,25 @@ class App(cctk.CTk):
             df['VacíoFila'] = df.groupby(['FECHA', 'Secuencia', 'IsVacío']).cumcount() + 1
             df.loc[df['IsVacío'] == 0, 'VacíoFila'] = None
 
+            # Exclusiones y Asignación Final
             def assign_final(row):
                 if pd.notna(row['Anuncio1']) and row['Anuncio1'] != "": return row['Anuncio1']
 
                 # Exclusiones Freelance dinámicas
-                # Si es antes de Nov 2025, se usan todos los nombres de la lista.
-                # Si es Nov 2025 en adelante, se quitan YARELIN y YOSELIN de la exclusión freelance (según PQ)
                 if row['AÑO'] < 2025 or (row['AÑO'] == 2025 and row['MES'] < 11):
                     excluidos = LISTA_VENDEDORES_FREELANCE
                 else:
                     excluidos = [n for n in LISTA_VENDEDORES_FREELANCE if n not in ["YARELIN BARRAZA ARIAS", "YOSELIN EUFEMIA BARRAZA ARIAS"]]
 
-                # Si el asesor está en la lista de excluidos, se asigna "FREELANCE"
                 if row['Assigned'] in excluidos:
                     return "FREELANCE"
 
-                # Si NO es excluido, repartimos los anuncios del ranking (1, 2, 3)
-                r_list = [row[f'Ranking{i}'] for i in range(1, 4) if pd.notna(row.get(f'Ranking{i}')) and row.get(f'Ranking{i}') != ""]
+                # Reparto cíclico por ranking
+                r_list = [row.get(f'Ranking{i}') for i in range(1, 4) if pd.notna(row.get(f'Ranking{i}')) and row.get(f'Ranking{i}') != ""]
                 if pd.notna(row['VacíoFila']) and r_list:
                     return r_list[int((row['VacíoFila'] - 1) % len(r_list))]
 
-                return "FREELANCE" # Fallback final
+                return "FREELANCE"
 
             df['AnuncioF'] = df.apply(assign_final, axis=1)
             df['AnuncioF'] = df['AnuncioF'].replace("B1221A981C", "B1221A981")
@@ -311,15 +301,14 @@ class App(cctk.CTk):
 
             def assign_pagina(row):
                 if row['AnuncioF'] == "FREELANCE": return "FREELANCE"
-                # Buscar en el mapeo configurable
                 return MAPEO_SECUENCIA_PAGINA.get(row['Secuencia'], DEFAULT_PAGINA)
             df['Pagina'] = df.apply(assign_pagina, axis=1)
 
-            # Export
-            fn = f"contactos_final_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-            df.to_excel(fn, index=False); self.log(f"Excel: {fn}")
+            # Exportación Excel
+            fn = f"contactos_procesados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            df.to_excel(fn, index=False); self.log(f"Excel generado: {fn}")
             self.generate_html(df)
-            self.log("EXITO."); self.after(0, lambda: messagebox.showinfo("EXITO", "Proceso completado."))
+            self.log("ÉXITO TOTAL."); self.after(0, lambda: messagebox.showinfo("ÉXITO", "Proceso completado."))
         except Exception as e:
             self.log(f"Error: {str(e)}")
         finally:
@@ -327,11 +316,9 @@ class App(cctk.CTk):
 
     def generate_html(self, df):
         self.log("Generando Dashboard...")
-        # Convertir fechas a string para serialización JSON
         df_json = df.copy()
         for col in df_json.columns:
             if pd.api.types.is_datetime64_any_dtype(df_json[col]) or pd.api.types.is_object_dtype(df_json[col]):
-                # Intentar convertir objetos date/datetime a string
                 df_json[col] = df_json[col].apply(lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x) if x is not None else "")
 
         data_json = df_json.to_dict(orient="records")
@@ -390,7 +377,6 @@ class App(cctk.CTk):
             const vM = data.reduce((a, c) => {{ const v = c.Assigned || 'SIN ASIGNAR'; a[v] = (a[v] || 0) + 1; return a; }}, {{}});
             const vS = Object.entries(vM).sort((a, b) => a[1] - b[1]);
             Plotly.newPlot('chart-v', [{{ y: vS.map(x => x[0]), x: vS.map(x => x[1]), type: 'bar', orientation: 'h', marker: {{color: '#76933C'}} }}], {{margin: {{t:0, l:150}}}});
-
             const pM = data.reduce((a, c) => {{ const p = c.Pagina || 'OTRO'; a[p] = (a[p] || 0) + 1; return a; }}, {{}});
             Plotly.newPlot('chart-p', [{{ labels: Object.keys(pM), values: Object.values(pM), type: 'pie', hole: .4 }}], {{margin: {{t:0}}}});
         }}
