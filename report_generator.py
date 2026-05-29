@@ -20,59 +20,70 @@ import os
 # ---------------------------
 ACCOUNTS = [
     {
-        "name": "DELCAM",
-        "location_id": "xr5u7XYR7rI3m9JNlJm7",
-        "stage_id": "8577c7cd-5d39-42b4-8edb-ab9bad534119",
-        "custom_field": "zUnROtV5c6XbRM4ijUQ1", # Fecha de Venta
-        "dataventa_id": "3poEeFSMyn2tPoCKe0Bl",
-        "token": "pit-4f8ddf96-7153-4904-a9a9-8434abf9fd83",
-        "secuencia_cf": "jn9YrPWrdPdP8XmPVk0T",
-        "anuncio_cf": "ampRBMHMXgNhxJMRHl6v",
-        "primer_mensaje_cf": "Os7V8p7EFy94syDxUMAx"
+        "name": "R2.1",
+        "location_id": "gPO6FiXFjyul3qojXQKh",
+        "stage_id": "dea2dacb-97d4-4165-b95b-5a02f6a87155",
+        "custom_field": "fydz3DjQN2pib2axnFZe",
+        "dataventa_id": "7veOYT8o670WKCIbRd92",
+        "token": "pit-aa32ae57-f021-4345-9c17-599788ca222d",
+        "secuencia_cf": "CDP7RyHYQIhVRNtmuYOX",
+        "anuncio_cf": "EsjAWJ6IbHmCB47SbGTe",
+        "primer_mensaje_cf": "ILBHzfqHvQpVXZqOqPTt"
     },
     {
-        "name": "DHOGDOR",
-        "location_id": "qLHT26aMDEKaZ3jGKF9F",
-        "stage_id": "bea54a62-b0e8-48e6-a64d-8626319602c8",
-        "custom_field": "2uieal4jZiRz3i32fmdr", # Fecha de Venta
-        "dataventa_id": "GlbnwixnmUXj8CnEs9sG",
-        "token": "pit-a8703b19-ab78-4354-90b8-ed4ab6bfe56e",
-        "secuencia_cf": "HHf1OJLjyeqh0xxPf16y",
-        "anuncio_cf": "y45Yu0N6yovQFgAS6nG3",
-        "primer_mensaje_cf": "n7q6BIlpfvTJm0MBe7VD"
+        "name": "R2.2",
+        "location_id": "HK2q1x0usZEQbnuJCD6B",
+        "stage_id": "a5b50462-e82e-4256-b83d-d613ad20abcd",
+        "custom_field": "U6OdqsQDVQTUDxxNBtvp",
+        "dataventa_id": "1L7km8XXq3V1kDMRyvCC",
+        "token": "pit-c8f89986-1a34-4178-9064-6f678a697a01",
+        "secuencia_cf": "deDXbK9Nw5khnuk679CM",
+        "anuncio_cf": "vzIYG6B7mypHxXM9kLGi",
+        "primer_mensaje_cf": "gMCJJq0vMZYN0cz1BnUj"
     },
     {
-        "name": "DLIQF",
-        "location_id": "xnCU3r4IN7gVAuZYx5JO",
-        "stage_id": "374add3c-e3c3-4b86-a503-9040c407e4e8",
-        "custom_field": "a2BH3MSK8ohUszAbW1OO", # Fecha de Venta
-        "dataventa_id": "HUuNkuMdON8KJhm4PtAN",
-        "token": "pit-7dade6f9-ef3e-4ffc-b6b6-9cdebd93289e",
-        "secuencia_cf": "2Ttu4OQ9Fk4qovroFPRN",
-        "anuncio_cf": "QovmsXeWCad6fFcDchsM",
-        "primer_mensaje_cf": "iIw3cwaAyqt32YwLdAKq"
+        "name": "R2.3",
+        "location_id": "jXN4id73HVqpa75YOR1N",
+        "stage_id": "d94817e9-a7fb-4ea3-bed0-d1f117001825",
+        "custom_field": "xftnXlHb41aDvIx8N26d",
+        "dataventa_id": "JJYIQaDMKpMMekORmcqy",
+        "token": "pit-cfd6cb24-6fee-441d-b01f-415160eb6f7b",
+        "secuencia_cf": "ENXxDMYOkFK7XnjzrdOU",
+        "anuncio_cf": "r8sOhHm5PKNtXv65jSaN",
+        "primer_mensaje_cf": "vphhYZkFfAiaSrgfTiA3"
     },
     {
-        "name": "DFULLS",
-        "location_id": "H3rzWYlQxzBlq3gDRhcC",
-        "stage_id": "e576e613-1682-4266-8bfe-d6f86b32d97c",
-        "custom_field": "Ek5F3WOOOe7X50a60R0O", # Fecha de Venta
-        "dataventa_id": "TO0YPfPJWwaocuiCgbZg",
-        "token": "pit-2f261215-2278-4f05-9205-fc9f9bb52681",
-        "secuencia_cf": "jsWRYUovvEYgAKddWPly",
-        "anuncio_cf": "kRzUfj5Hj43lH6yQdSXh",
-        "primer_mensaje_cf": "m2js5X7kAHgjfBjqQhMI"
+        "name": "R1.1",
+        "location_id": "GmvsWG2a09UJjYwzFwN7",
+        "stage_id": "c8d3a128-f03d-4bce-b61d-50593b7c4ebc",
+        "custom_field": "k6xXzN1ksd16i1n68o4P",
+        "dataventa_id": "kHdjdcIduLvTr3nL6DgZ",
+        "token": "pit-cc6a4560-665e-4063-b12e-7dd3ec412570",
+        "secuencia_cf": "rG3qADV2DReag3vE4LnZ",
+        "anuncio_cf": "hN5VqUs4cgWP4tNEdnTI",
+        "primer_mensaje_cf": "at9WccT1xJ4tJRm5KpbK"
     },
     {
-        "name": "DDOR",
-        "location_id": "iT9FHUMSHYmFeGicxlwJ",
-        "stage_id": "eeaee2fb-518f-4c78-a696-7cf815414c10",
-        "custom_field": "jnAsOVx6j5wxeCHmz0q6", # Fecha de Venta
-        "dataventa_id": "kiuo9rQwFoJDf2cEaUJz",
-        "token": "pit-404b2e86-443d-46d4-9d89-63da57482598",
-        "secuencia_cf": "QfBoKX5vsilncCaDejWU",
-        "anuncio_cf": "dpzuI8cV2N9c85NRH5p4",
-        "primer_mensaje_cf": "LMVWgaR6LDBdqr6K1rPE"
+        "name": "R1.2",
+        "location_id": "9rHHeTsNpfJuiUkOoLdM",
+        "stage_id": "59f6eff0-f06b-4f5a-b2ae-21f50ec8af32",
+        "custom_field": "o7giXoy1LK8KMuzH2FNi",
+        "dataventa_id": "DeNNFP4LihWoLaIpG0B2",
+        "token": "pit-51105ced-165a-437d-bf76-37c9ec75f00e",
+        "secuencia_cf": "AAYTXtJX7jRHPn0VDqVH",
+        "anuncio_cf": "IELF1xRsnl1nWvoHBRHY",
+        "primer_mensaje_cf": "uEKcNGLJvv7znfVJb2Z4"
+    },
+    {
+        "name": "R1.3",
+        "location_id": "riT0De9iiwhd84gSRco3",
+        "stage_id": "3b346e40-01ea-416e-98ff-60ee147aded1",
+        "custom_field": "f310g4Z4A1OxHl3KYLRv",
+        "dataventa_id": "4tDKaHgodZXQ4ewzjJyh",
+        "token": "pit-58f93f09-e7a8-40d0-8ce6-32bf2f2b87b4",
+        "secuencia_cf": "7s52aRnEuz8T3v0H3IlN",
+        "anuncio_cf": "Vki3QtqsNJtYcRC4Fkzt",
+        "primer_mensaje_cf": "78eH2yy4INV88QguossT"
     }
 ]
 
@@ -135,6 +146,7 @@ VENDEDOR_MAP = {
     "ROSALINDA EUSEBIA RAMIREZ TEZEN": "Rosalinda Ramirez",
     "JULIO ALEJANDRO AJXUP GIL": "Julio Ajxup",
     "JOCARI ANASOL LOPEZ SICAL": "Jocari Lopez",
+    "DIEGO SANTA CRUZ": "DIEGO SANTACRUZ",
     "ODILIA NINETTE CALEL CARAU": "ODILIA NINETH CALEL",
 }
 
@@ -145,11 +157,14 @@ GUATEMALA_TZ = pytz.timezone("America/Guatemala")
 # ---------------------------
 # CONFIG: Facebook Ads
 # ---------------------------
-FB_ACCESS_TOKEN = "" # <--- Token de FB
+FB_ACCESS_TOKEN = "EAAQlsSqsOJkBQ8ELEZCLxm0CPEiqaUSoYw0oHB7ML7xvufZBn2B6t1bizlxBtv8gjc1r4bHiqlV0AHtbI9FDLTRhivFwpDr2xMzk7Waj8htSHanBW63gZCOPwPoVOgZBuNurP2ZB6vegJGxYRAmIR2Wp2JbPZAn9u4CVdHZC06TzaIngYeZAh3n4iaMtw3SyZA7XsNAZDZD"
 FB_API_VERSION = "v19.0"
-FB_AD_ACCOUNTS = ["act_622689460111355"]
+FB_AD_ACCOUNTS = ["act_622689460111355", "act_934171589566820"]
+FB_USD_ACCOUNTS = ["act_934171589566820"]
+USD_TO_GTQ = 7.8
 FB_BASE_URL = f"https://graph.facebook.com/{FB_API_VERSION}"
-FB_FIELDS_INSIGHTS = "ad_id,ad_name,adset_name,campaign_name,impressions,spend,clicks,actions,date_start,date_stop"
+# Se agregó account_id para aplicar la conversión a GTQ según la cuenta
+FB_FIELDS_INSIGHTS = "account_id,ad_id,ad_name,adset_name,campaign_name,impressions,spend,clicks,actions,date_start,date_stop"
 
 # ---------------------------
 # CONFIG: Archivos Locales
@@ -612,10 +627,17 @@ class App(cctk.CTk):
                             all_page_names = {**me_pages, **obtener_nombres_paginas(list(set(p_map.values())))}
                             for ins in insights:
                                 aid, ad_n, camp = str(ins.get("ad_id")), ins.get("ad_name", ""), ins.get("campaign_name", "")
+                                acc_id = str(ins.get("account_id"))
                                 pid = p_map.get(creative_map.get(aid)); pname = all_page_names.get(pid)
                                 conv = next((a["value"] for a in ins.get("actions", []) if a["action_type"] == "onsite_conversion.messaging_conversation_started_7d"), 0)
                                 anu, tpost = extraer_datos_anuncio(ad_n)
-                                res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del conjunto": ins.get("adset_name"), "Nombre del anuncio": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": mapping_secuencia_gasto(camp), "Día": ins.get("date_start"), "Contactos mensajes nuevos": conv, "Importe gastado": ins.get("spend"), "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop")})
+
+                                # Aplicar conversión USD -> GTQ si la cuenta está en la lista de USD
+                                spend = float(ins.get("spend", 0))
+                                if f"act_{acc_id}" in FB_USD_ACCOUNTS or acc_id in FB_USD_ACCOUNTS:
+                                    spend *= USD_TO_GTQ
+
+                                res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del conjunto": ins.get("adset_name"), "Nombre del anuncio": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": mapping_secuencia_gasto(camp), "Día": ins.get("date_start"), "Contactos mensajes mueros": conv, "Importe gastado": spend, "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop")})
 
             df_metas = cargar_metas(PATH_METAS)
             if res_o or res_c or res_fb:
@@ -1032,7 +1054,7 @@ class App(cctk.CTk):
                 type: 'pie',
                 hole: .4
             }};
-            // Crear div si no existe
+            # Crear div si no existe
             if (!document.getElementById('chart-plataformas')) {{
                 const container = document.getElementById('chart-marcas-pie').parentNode.parentNode;
                 const newCard = document.createElement('div');
