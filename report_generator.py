@@ -310,11 +310,13 @@ def make_utc_range(start_date, end_date):
     end_local = GUATEMALA_TZ.localize(datetime.combine(end_date, dt_time.max))
     return start_local.astimezone(pytz.UTC).isoformat().replace("+00:00", "Z"), end_local.astimezone(pytz.UTC).isoformat().replace("+00:00", "Z")
 
-def cargar_metas(filepath):
+def cargar_metas(filepath, log_callback=None):
     if not os.path.exists(filepath):
+        if log_callback: log_callback(f"Advertencia: No se encontró {filepath}")
         return pd.DataFrame()
     try:
         df = pd.read_excel(filepath)
+        if log_callback: log_callback(f"Metas cargadas: {len(df)} registros desde {filepath}")
         # Limpieza similar a Power Query
         for col in df.select_dtypes(include=['object', 'str']).columns:
             df[col] = df[col].astype(str).str.strip().str.upper().replace("NAN", "").replace("NONE", "")
@@ -656,7 +658,7 @@ class App(cctk.CTk):
 
                                 res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del conjunto": ins.get("adset_name"), "Nombre del anuncio": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": mapping_secuencia_gasto(camp), "Día": ins.get("date_start"), "Contactos mensajes nuevos": conv, "Importe gastado": spend, "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop")})
 
-            df_metas = cargar_metas(PATH_METAS)
+            df_metas = cargar_metas(PATH_METAS, self.log)
             if res_o or res_c or res_fb:
                 self.log(f"Total extraído: {len(res_o)} ventas, {len(res_c)} contactos, {len(res_fb)} líneas de gasto.")
                 # Unir Contactos y Gasto de Facebook antes de generar reportes
@@ -667,37 +669,39 @@ class App(cctk.CTk):
         except Exception as e: self.log(f"Error: {str(e)}")
         finally: self.after(0, lambda: self.generate_btn.configure(state="normal", text="🚀 GENERAR EXCEL"))
 
+
     def generate_dashboard_html(self, res_o, res_v, res_c, res_fb, df_metas):
         self.log("Generando Dashboard HTML...")
-        df_o = pd.DataFrame(res_o)
-        df_v = pd.DataFrame(res_v)
-        df_c = pd.DataFrame(res_c)
-        df_fb = pd.DataFrame(res_fb)
+        import json
 
-        # Convertir fechas a string para serialización JSON y limpiar NaNs
         def prepare_json(df_in):
+            if df_in is None: return []
+            if isinstance(df_in, list):
+                if not df_in: return []
+                df_in = pd.DataFrame(df_in)
             if df_in.empty: return []
+
             d = df_in.copy()
-            # Tratar NaNs primero
-            d = d.fillna("")
+            d = d.loc[:, ~d.columns.duplicated()]
+
             for col in d.columns:
-                if pd.api.types.is_datetime64_any_dtype(d[col]):
-                    d[col] = d[col].apply(lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x))
-                elif pd.api.types.is_object_dtype(d[col]):
-                    d[col] = d[col].astype(str)
+                if pd.api.types.is_numeric_dtype(d[col]):
+                    d[col] = pd.to_numeric(d[col], errors="coerce").fillna(0)
+                elif pd.api.types.is_datetime64_any_dtype(d[col]):
+                    d[col] = d[col].apply(lambda x: x.isoformat() if hasattr(x, "isoformat") else str(x))
+                else:
+                    d[col] = d[col].fillna("").astype(str)
             return d.to_dict(orient="records")
 
-        # Consolidar datos para el Dashboard
         data_json = {
-            "oportunidades": prepare_json(df_o),
-            "ventas": prepare_json(df_v),
-            "contactos": prepare_json(df_c),
-            "facebook": prepare_json(df_fb),
+            "oportunidades": prepare_json(pd.DataFrame(res_o)),
+            "ventas": prepare_json(pd.DataFrame(res_v)),
+            "contactos": prepare_json(pd.DataFrame(res_c)),
+            "facebook": prepare_json(pd.DataFrame(res_fb)),
             "metas": prepare_json(df_metas)
         }
 
-        html_template = f"""
-<!DOCTYPE html>
+        html_base = """<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -706,19 +710,21 @@ class App(cctk.CTk):
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .card {{ background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 16px; }}
-        .kpi-val {{ font-size: 24px; font-weight: bold; color: #76933C; }}
-        .kpi-label {{ font-size: 14px; color: #666; }}
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 16px; }
+        .kpi-val { font-size: 24px; font-weight: bold; color: #76933C; }
+        .kpi-label { font-size: 14px; color: #666; }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-6">
             <h1 class="text-3xl font-bold text-gray-800">📊 DUPAZA DASHBOARD</h1>
-            <div class="text-sm text-gray-500">Última actualización: {datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
+            <div>
+                <div id="status-msg" class="text-sm text-blue-600 font-medium text-right"></div>
+                <div class="text-xs text-gray-400">Última actualización: TIMESTAMP_HERE</div>
+            </div>
         </header>
 
-        <!-- Filtros -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 card">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Gerente</label>
@@ -746,377 +752,209 @@ class App(cctk.CTk):
             </div>
         </div>
 
-        <!-- KPIs Principales -->
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
-            <div class="card text-center">
-                <div class="kpi-label">Gasto Total (GTO)</div>
-                <div id="kpi-gasto" class="kpi-val">Q 0.00</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">Leads (Msjs)</div>
-                <div id="kpi-leads" class="kpi-val">0</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">Venta Total (VT)</div>
-                <div id="kpi-venta" class="kpi-val">Q 0.00</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">Costo por Lead (CPL)</div>
-                <div id="kpi-cpl" class="kpi-val">Q 0.00</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">ROAS</div>
-                <div id="kpi-roas" class="kpi-val">0.0</div>
-            </div>
-             <div class="card text-center">
-                <div class="kpi-label">% Cumplimiento</div>
-                <div id="kpi-cumplimiento" class="kpi-val">0%</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">CPA (Costo/Venta)</div>
-                <div id="kpi-cpa" class="kpi-val">Q 0.00</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">% Conversión</div>
-                <div id="kpi-conversion" class="kpi-val">0%</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">Asesores Activos</div>
-                <div id="kpi-asesores" class="kpi-val">0</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">Prom. Venta Diaria</div>
-                <div id="kpi-prom-vt" class="kpi-val">Q 0.00</div>
-            </div>
+            <div class="card text-center"><div class="kpi-label">Gasto Total (GTO)</div><div id="kpi-gasto" class="kpi-val">Q 0.00</div></div>
+            <div class="card text-center"><div class="kpi-label">Leads (Msjs)</div><div id="kpi-leads" class="kpi-val">0</div></div>
+            <div class="card text-center"><div class="kpi-label">Venta Total (VT)</div><div id="kpi-venta" class="kpi-val">Q 0.00</div></div>
+            <div class="card text-center"><div class="kpi-label">Costo por Lead (CPL)</div><div id="kpi-cpl" class="kpi-val">Q 0.00</div></div>
+            <div class="card text-center"><div class="kpi-label">ROAS</div><div id="kpi-roas" class="kpi-val">0.0</div></div>
+            <div class="card text-center"><div class="kpi-label">% Cumplimiento</div><div id="kpi-cumplimiento" class="kpi-val">0%</div></div>
+            <div class="card text-center"><div class="kpi-label">CPA (Costo/Venta)</div><div id="kpi-cpa" class="kpi-val">Q 0.00</div></div>
+            <div class="card text-center"><div class="kpi-label">% Conversión</div><div id="kpi-conversion" class="kpi-val">0%</div></div>
+            <div class="card text-center"><div class="kpi-label">Asesores Activos</div><div id="kpi-asesores" class="kpi-val">0</div></div>
+            <div class="card text-center"><div class="kpi-label">Prom. Venta Diaria</div><div id="kpi-prom-vt" class="kpi-val">Q 0.00</div></div>
         </div>
 
-        <!-- Métricas Avanzadas (Efficiency & Reach) -->
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-            <div class="card text-center">
-                <div class="kpi-label">Venta Digital</div>
-                <div id="kpi-venta-digital" class="kpi-val">Q 0.00</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">Venta No Digital</div>
-                <div id="kpi-venta-nodigital" class="kpi-val">Q 0.00</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">% FBVT+BO (GTO/VT)</div>
-                <div id="kpi-gto-vt" class="kpi-val">0%</div>
-            </div>
-             <div class="card text-center">
-                <div class="kpi-label">Códigos Activos</div>
-                <div id="kpi-codigos" class="kpi-val">0</div>
-                <div id="sub-codigos" class="text-xs text-gray-500">Meta: 0</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">Plataformas</div>
-                <div id="kpi-plataformas" class="kpi-val">0</div>
-                <div id="sub-plataformas" class="text-xs text-gray-500">Meta: 0 | Alc: 0%</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">Formatos</div>
-                <div id="kpi-formatos" class="kpi-val">0</div>
-                <div id="sub-formatos" class="text-xs text-gray-500">Meta: 0 | Alc: 0%</div>
-            </div>
-            <div class="card text-center">
-                <div class="kpi-label">% Alcance Prom.</div>
-                <div id="kpi-alcance-prom" class="kpi-val">0%</div>
-            </div>
-        </div>
-
-        <!-- Gráficos -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="card">
-                <h3 class="text-lg font-semibold mb-4">Ventas vs Meta</h3>
-                <div id="chart-ventas-meta" style="height: 350px;"></div>
-            </div>
-            <div class="card">
-                <h3 class="text-lg font-semibold mb-4">Leads por Día</h3>
-                <div id="chart-leads-dia" style="height: 350px;"></div>
-            </div>
+            <div class="card text-center"><div class="kpi-label">Venta Digital</div><div id="kpi-venta-digital" class="kpi-val">Q 0.00</div></div>
+            <div class="card text-center"><div class="kpi-label">Venta No Digital</div><div id="kpi-venta-nodigital" class="kpi-val">Q 0.00</div></div>
+            <div class="card text-center"><div class="kpi-label">% FBVT+BO (GTO/VT)</div><div id="kpi-gto-vt" class="kpi-val">0%</div></div>
+            <div class="card text-center"><div class="kpi-label">Códigos Activos</div><div id="kpi-codigos" class="kpi-val">0</div><div id="sub-codigos" class="text-xs text-gray-500">Meta: 0</div></div>
+            <div class="card text-center"><div class="kpi-label">Plataformas</div><div id="kpi-plataformas" class="kpi-val">0</div></div>
+            <div class="card text-center"><div class="kpi-label">Formatos</div><div id="kpi-formatos" class="kpi-val">0</div></div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-             <div class="card">
-                <h3 class="text-lg font-semibold mb-4">Distribución por Marca</h3>
-                <div id="chart-marcas-pie" style="height: 350px;"></div>
-            </div>
-            <div class="card">
-                <h3 class="text-lg font-semibold mb-4">Eficiencia por Vendedor (VT)</h3>
-                <div id="chart-vendedores" style="height: 350px;"></div>
-            </div>
+            <div class="card"><h3 class="text-lg font-semibold mb-4">Ventas vs Meta</h3><div id="chart-ventas-meta" style="height: 350px;"></div></div>
+            <div class="card"><h3 class="text-lg font-semibold mb-4">Leads por Día</h3><div id="chart-leads-dia" style="height: 350px;"></div></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+             <div class="card"><h3 class="text-lg font-semibold mb-4">Distribución por Marca</h3><div id="chart-marcas-pie" style="height: 350px;"></div></div>
+            <div class="card"><h3 class="text-lg font-semibold mb-4">Eficiencia por Vendedor (VT)</h3><div id="chart-vendedores" style="height: 350px;"></div></div>
+        </div>
+
+        <div class="card mt-10 opacity-30 hover:opacity-100 transition-opacity">
+            <h3 class="text-sm font-bold text-gray-400 mb-2">PANEL DE DIAGNÓSTICO</h3>
+            <pre id="debug-panel" class="text-[10px] text-gray-500 overflow-auto max-h-40"></pre>
         </div>
     </div>
 
     <script>
-        const rawData = {json.dumps(data_json)};
-        console.log("Datos cargados:", {
-            oportunidades: rawData.oportunidades.length,
-            facebook: rawData.facebook.length,
-            contactos: rawData.contactos.length,
-            metas: rawData.metas.length
-        });
+        let rawData;
+        try {
+            rawData = JSON_DATA_HERE;
+            const debugPanel = document.getElementById("debug-panel");
+            debugPanel.textContent = "CONTEOS:\n" +
+                "- Oportunidades: " + (rawData.oportunidades ? rawData.oportunidades.length : 0) + "\n" +
+                "- Facebook: " + (rawData.facebook ? rawData.facebook.length : 0) + "\n" +
+                "- Metas: " + (rawData.metas ? rawData.metas.length : 0) + "\n" +
+                "- Ventas: " + (rawData.ventas ? rawData.ventas.length : 0) + "\n" +
+                "- Contactos: " + (rawData.contactos ? rawData.contactos.length : 0);
+        } catch (e) {
+            console.error("Error fatal:", e);
+            document.body.innerHTML = "<div class='p-10 text-red-600 font-bold'>ERROR AL CARGAR DATOS.</div>";
+        }
 
-        function initFilters() {{
-            if (rawData.oportunidades.length === 0 && rawData.facebook.length === 0) {{
-                alert("Aviso: No se encontraron datos para el periodo seleccionado.");
-            }}
+        function initFilters() {
+            if (!rawData) return;
             const gerentes = [...new Set(rawData.metas.map(m => m.GERENTE))].filter(Boolean).sort();
             const marcas = [...new Set(rawData.metas.map(m => m.MARCA))].filter(Boolean).sort();
             const vendedores = [...new Set(rawData.oportunidades.map(o => o.asignado))].filter(Boolean).sort();
             const meses = [...new Set(rawData.oportunidades.map(o => o.Mes || o.MES))].filter(Boolean).sort((a,b) => a-b);
 
-            const populate = (id, list) => {{
+            const populate = (id, list) => {
                 const el = document.getElementById(id);
-                list.forEach(item => {{
-                    const opt = document.createElement('option');
-                    opt.value = item;
-                    opt.textContent = item;
+                list.forEach(item => {
+                    const opt = document.createElement("option");
+                    opt.value = item; opt.textContent = item;
                     el.appendChild(opt);
-                }});
-            }};
+                });
+            };
 
-            populate('filter-gerente', gerentes);
-            populate('filter-marca', marcas);
-            populate('filter-vendedor', vendedores);
-            populate('filter-mes', meses);
+            populate("filter-gerente", gerentes);
+            populate("filter-marca", marcas);
+            populate("filter-vendedor", vendedores);
+            populate("filter-mes", meses);
 
-            document.querySelectorAll('select').forEach(el => {{
-                el.addEventListener('change', updateDashboard);
-            }});
-        }}
+            document.querySelectorAll("select").forEach(el => {
+                el.addEventListener("change", updateDashboard);
+            });
+            updateDashboard();
+        }
 
-        function updateDashboard() {{
-            const g = document.getElementById('filter-gerente').value;
-            const m = document.getElementById('filter-marca').value;
-            const v = document.getElementById('filter-vendedor').value;
-            const mes = document.getElementById('filter-mes').value;
+        function updateDashboard() {
+            if (!rawData) return;
+            const g = document.getElementById("filter-gerente").value;
+            const m = document.getElementById("filter-marca").value;
+            const v = document.getElementById("filter-vendedor").value;
+            const mes = document.getElementById("filter-mes").value;
 
-            // Tabla de mapeo Secuencia -> Gerente/Marca basada en metas
-            const seqMap = rawData.metas.reduce((acc, curr) => {{
-                const seq = curr.SUB_ANILLO || curr.SUB_ANILLO_ || "";
+            const seqMap = (rawData.metas || []).reduce((acc, curr) => {
+                const seq = (curr.SUB_ANILLO || curr.SUB_ANILLO_ || "").toString().trim().toUpperCase();
                 if (!seq) return acc;
-                if (!acc[seq]) acc[seq] = {{ gerentes: new Set(), marcas: new Set() }};
-                if (curr.GERENTE) acc[seq].gerentes.add(curr.GERENTE);
-                if (curr.MARCA) acc[seq].marcas.add(curr.MARCA);
+                if (!acc[seq]) acc[seq] = { gerentes: new Set(), marcas: new Set() };
+                if (curr.GERENTE) acc[seq].gerentes.add(curr.GERENTE.toString().trim().toUpperCase());
+                if (curr.MARCA) acc[seq].marcas.add(curr.MARCA.toString().trim().toUpperCase());
                 return acc;
-            }}, {{}});
+            }, {});
 
-            // Filtrado de Oportunidades
-            let f_o = rawData.oportunidades.filter(o => {{
-                const matchGerente = (g === 'ALL' || (seqMap[o.secuencia] && seqMap[o.secuencia].gerentes.has(g)));
-                const matchMarca = (m === 'ALL' || o.MARCA === m || (seqMap[o.secuencia] && seqMap[o.secuencia].marcas.has(m)));
-                const matchVendedor = (v === 'ALL' || o.asignado === v);
-                const matchMes = (mes === 'ALL' || (o.Mes || o.MES) == mes);
-                return matchGerente && matchMarca && matchVendedor && matchMes;
-            }});
+            let f_o = rawData.oportunidades.filter(o => {
+                const s = (o.secuencia || "").toString().trim().toUpperCase();
+                const mMarca = (m === "ALL" || o.MARCA === m || (seqMap[s] && seqMap[s].marcas.has(m.toUpperCase())));
+                const mGer = (g === "ALL" || (seqMap[s] && seqMap[s].gerentes.has(g.toUpperCase())));
+                const mVend = (v === "ALL" || o.asignado === v);
+                const mMes = (mes === "ALL" || (o.Mes || o.MES) == mes);
+                return mMarca && mGer && mVend && mMes;
+            });
 
-            // Filtrado de Facebook (Gasto)
-            let f_fb = rawData.facebook.filter(f => {{
-                const matchGerente = (g === 'ALL' || (seqMap[f.SECUENCIA] && seqMap[f.SECUENCIA].gerentes.has(g)));
-                const matchMarca = (m === 'ALL' || (seqMap[f.SECUENCIA] && seqMap[f.SECUENCIA].marcas.has(m)));
-                const d = f['Día'] || f.Día || "";
-                const matchMes = (mes === 'ALL' || (d && parseInt(d.split('-')[1]) == mes));
-                return matchGerente && matchMarca && matchMes;
-            }});
+            let f_fb = rawData.facebook.filter(f => {
+                const s = (f.SECUENCIA || "").toString().trim().toUpperCase();
+                const mGer = (g === "ALL" || (seqMap[s] && seqMap[s].gerentes.has(g.toUpperCase())));
+                const mMarca = (m === "ALL" || (seqMap[s] && seqMap[s].marcas.has(m.toUpperCase())));
+                const d = f["Día"] || f.Día || "";
+                const mMes = (mes === "ALL" || (d && parseInt(d.split("-")[1]) == mes));
+                return mGer && mMarca && mMes;
+            });
 
-            // Si no hay oportunidades pero hay facebook, permitimos ver KPIs de gasto
-            if (f_o.length === 0 && f_fb.length > 0) {{
-                console.log("No hay oportunidades en el filtro actual, mostrando solo datos de Facebook.");
-            }}
-
-            // Filtrado de Metas
             let f_metas = rawData.metas.filter(met =>
-                (g === 'ALL' || met.GERENTE === g) &&
-                (m === 'ALL' || met.MARCA === m) &&
-                (v === 'ALL' || met.VENDEDOR === v || met.ASESOR === v) &&
-                (mes === 'ALL' || (met.MES || met.Mes) == mes)
+                (g === "ALL" || met.GERENTE === g) &&
+                (m === "ALL" || met.MARCA === m) &&
+                (mes === "ALL" || (met.MES || met.Mes) == mes)
             );
 
-            // Cálculos KPIs
-            const totalGasto = f_fb.reduce((acc, curr) => acc + (parseFloat(curr['Importe gastado']) || 0), 0);
-            const totalLeads = f_fb.reduce((acc, curr) => acc + (parseInt(curr['Contactos mensajes nuevos']) || 0), 0);
-            const totalVenta = f_o.reduce((acc, curr) => acc + (parseFloat(curr['Valor del cliente potencial']) || 0), 0);
-            const totalMeta = f_metas.length > 0 ? f_metas.reduce((acc, curr) => acc + (parseFloat(curr['META']) || 0), 0) : 0;
+            const totalGasto = f_fb.reduce((acc, curr) => acc + Number(curr["Importe gastado"] || 0), 0);
+            const totalLeads = f_fb.reduce((acc, curr) => acc + Number(curr["Contactos mensajes nuevos"] || 0), 0);
+            const totalVenta = f_o.reduce((acc, curr) => acc + Number(curr["Valor del cliente potencial"] || 0), 0);
+            const totalMeta = f_metas.reduce((acc, curr) => acc + Number(curr["META"] || 0), 0);
 
-            // Métricas de Alcance Reales
-            const codigosActivos = new Set(f_fb.filter(f => (parseFloat(f['Importe gastado']) || 0) > 0).map(f => f.codigo || f['ID del anuncio'])).size;
-            const plataformasActivas = new Set(f_fb.map(f => f['Nombre de la página'] || f['ID de la página'])).size;
-            const formatosActivos = new Set(f_fb.map(f => f.tipo_post)).size;
+            document.getElementById("kpi-gasto").textContent = "Q " + totalGasto.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById("kpi-leads").textContent = totalLeads.toLocaleString();
+            document.getElementById("kpi-venta").textContent = "Q " + totalVenta.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById("kpi-cpl").textContent = "Q " + (totalLeads > 0 ? (totalGasto/totalLeads).toFixed(2) : "0.00");
+            document.getElementById("kpi-cumplimiento").textContent = (totalMeta > 0 ? ((totalVenta/totalMeta)*100).toFixed(1) : "0") + "%";
+            document.getElementById("kpi-roas").textContent = (totalGasto > 0 ? (totalVenta/totalGasto).toFixed(1) : "0.0");
+            document.getElementById("kpi-cpa").textContent = "Q " + (f_o.length > 0 ? (totalGasto / f_o.length).toFixed(2) : "0.00");
+            document.getElementById("kpi-conversion").textContent = (totalLeads > 0 ? ((f_o.length / totalLeads) * 100).toFixed(1) : "0") + "%";
+            document.getElementById("kpi-asesores").textContent = new Set(f_o.map(o => o.asignado)).size;
 
-            // Metas de Alcance (desde la tabla Metas)
-            const metaCodigos = f_metas.reduce((acc, curr) => acc + (parseInt(curr.codigo) || 0), 0);
-            const metaPlataformas = f_metas.reduce((acc, curr) => acc + (parseInt(curr.Plataforma) || 4), 0); // Default 4
-            const metaTipos = f_metas.reduce((acc, curr) => acc + (parseInt(curr.tipo_post) || 5), 0); // Default 5
+            const isDigital = (o) => {
+                const s = (o.secuencia || "").toString().toUpperCase();
+                return o.TIPO === "DIGITAL" || o.tipo === "DIGITAL" || s.startsWith("A") || s.startsWith("R") ||
+                       (seqMap[s] && Array.from(seqMap[s].gerentes).some(ger => ger === "DIEGO SANTA CRUZ" || ger === "NOHEMI MACHA"));
+            };
+            const vDig = f_o.filter(isDigital).reduce((acc, curr) => acc + Number(curr["Valor del cliente potencial"] || 0), 0);
+            document.getElementById("kpi-venta-digital").textContent = "Q " + vDig.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById("kpi-venta-nodigital").textContent = "Q " + (totalVenta - vDig).toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById("kpi-gto-vt").textContent = (totalVenta > 0 ? ((totalGasto / totalVenta) * 100).toFixed(1) : "0") + "%";
 
-            document.getElementById('kpi-gasto').textContent = 'Q ' + totalGasto.toLocaleString(undefined, {{minimumFractionDigits: 2}});
-            document.getElementById('kpi-leads').textContent = totalLeads.toLocaleString();
-            document.getElementById('kpi-venta').textContent = 'Q ' + totalVenta.toLocaleString(undefined, {{minimumFractionDigits: 2}});
-            document.getElementById('kpi-cpl').textContent = 'Q ' + (totalLeads > 0 ? (totalGasto/totalLeads).toFixed(2) : '0.00');
+            const cActivos = new Set(f_fb.filter(f => Number(f["Importe gastado"] || 0) > 0).map(f => f.codigo || f["ID del anuncio"])).size;
+            const mCodigos = f_metas.reduce((acc, curr) => acc + Number(curr.codigo || 0), 0);
+            document.getElementById("kpi-codigos").textContent = cActivos;
+            document.getElementById("sub-codigos").textContent = "Meta: " + mCodigos + " | Brecha: " + Math.max(0, mCodigos - cActivos);
 
-            const isDigital = (o) => o.TIPO === 'DIGITAL' || o.tipo === 'DIGITAL' || (o.secuencia && o.secuencia.startsWith('A')) || (seqMap[o.secuencia] && Array.from(seqMap[o.secuencia].gerentes).some(g => g === 'DIEGO SANTA CRUZ' || g === 'NOHEMI MACHA'));
+            renderCharts(f_o, f_fb, totalVenta, totalMeta, seqMap);
+        }
 
-            const totalVentaDigital = f_o.filter(o => isDigital(o)).reduce((acc, curr) => acc + (parseFloat(curr['Valor del cliente potencial']) || 0), 0);
-            const totalVentaNoDigital = totalVenta - totalVentaDigital;
+        function renderCharts(f_o, f_fb, totalVenta, totalMeta, seqMap) {
+            Plotly.newPlot("chart-ventas-meta", [{
+                x: ["Real", "Meta"], y: [totalVenta, totalMeta], type: "bar",
+                marker: {color: ["#76933C", "#E2E8F0"]}, text: [totalVenta.toLocaleString(), totalMeta.toLocaleString()], textposition: "auto"
+            }], {margin: {t: 10, b: 40, l: 60, r: 10}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"});
 
-            document.getElementById('kpi-cumplimiento').textContent = (totalMeta > 0 ? ((totalVenta/totalMeta)*100).toFixed(1) : '0') + '%';
-            document.getElementById('kpi-roas').textContent = (totalGasto > 0 ? (totalVenta/totalGasto).toFixed(1) : '0.0');
-            document.getElementById('kpi-cpa').textContent = 'Q ' + (f_o.length > 0 ? (totalGasto / f_o.length).toFixed(2) : '0.00');
-            document.getElementById('kpi-conversion').textContent = (totalLeads > 0 ? ((f_o.length / totalLeads) * 100).toFixed(1) : '0') + '%';
-
-            document.getElementById('kpi-venta-digital').textContent = 'Q ' + totalVentaDigital.toLocaleString(undefined, {{minimumFractionDigits: 2}});
-            document.getElementById('kpi-venta-nodigital').textContent = 'Q ' + totalVentaNoDigital.toLocaleString(undefined, {{minimumFractionDigits: 2}});
-            document.getElementById('kpi-gto-vt').textContent = (totalVenta > 0 ? ((totalGasto / totalVenta) * 100).toFixed(1) : '0') + '%';
-
-            // Asesores Activos (con leads)
-            const asesoresActivos = new Set(f_o.filter(o => parseFloat(o['Valor del cliente potencial']) > 0 || true).map(o => o.asignado)).size;
-            document.getElementById('kpi-asesores').textContent = asesoresActivos;
-
-            // Promedio Venta Diaria
-            const uniqueDays = new Set(f_o.map(o => o.Día || o['Día'])).size || 1;
-            document.getElementById('kpi-prom-vt').textContent = 'Q ' + (totalVenta / uniqueDays).toLocaleString(undefined, {{minimumFractionDigits: 2}});
-
-            // Metas Diarias
-            const metaVTDiaria = f_metas.reduce((acc, curr) => acc + (parseFloat(curr.META_VT_DIA) || 0), 0);
-            const metaMSJDiaria = f_metas.reduce((acc, curr) => acc + (parseFloat(curr.META_MSJ_DIA) || 0), 0);
-
-            // Reutilizar o inyectar nuevos elementos si es necesario
-            if (!document.getElementById('kpi-meta-vt-dia')) {{
-                const kpiContainer = document.getElementById('kpi-prom-vt').parentNode.parentNode;
-                const newKpi1 = document.createElement('div');
-                newKpi1.className = 'card text-center';
-                newKpi1.innerHTML = '<div class="kpi-label">Meta VT Día</div><div id="kpi-meta-vt-dia" class="kpi-val">Q 0.00</div>';
-                kpiContainer.appendChild(newKpi1);
-                const newKpi2 = document.createElement('div');
-                newKpi2.className = 'card text-center';
-                newKpi2.innerHTML = '<div class="kpi-label">Meta Msj Día</div><div id="kpi-meta-msj-dia" class="kpi-val">0</div>';
-                kpiContainer.appendChild(newKpi2);
-            }}
-            document.getElementById('kpi-meta-vt-dia').textContent = 'Q ' + metaVTDiaria.toLocaleString(undefined, {{minimumFractionDigits: 2}});
-            document.getElementById('kpi-meta-msj-dia').textContent = metaMSJDiaria.toLocaleString();
-
-            document.getElementById('kpi-codigos').textContent = codigosActivos;
-            const brechaCodigos = Math.max(0, metaCodigos - codigosActivos);
-            document.getElementById('sub-codigos').textContent = 'Meta: ' + metaCodigos + ' | Brecha: ' + brechaCodigos;
-
-            document.getElementById('kpi-plataformas').textContent = plataformasActivas;
-            const alcPlat = metaPlataformas > 0 ? (plataformasActivas / metaPlataformas * 100).toFixed(1) : '0';
-            document.getElementById('sub-plataformas').textContent = 'Meta: ' + metaPlataformas + ' | Alc: ' + alcPlat + '%';
-
-            document.getElementById('kpi-formatos').textContent = formatosActivos;
-            const alcForm = metaTipos > 0 ? (formatosActivos / metaTipos * 100).toFixed(1) : '0';
-            document.getElementById('sub-formatos').textContent = 'Meta: ' + metaTipos + ' | Alc: ' + alcForm + '%';
-
-            const alcanceProm = metaCodigos > 0 ? (codigosActivos / metaCodigos * 100).toFixed(1) : '0';
-            document.getElementById('kpi-alcance-prom').textContent = alcanceProm + '%';
-
-            renderCharts(f_o, f_fb, totalVenta, totalMeta);
-        }}
-
-        function renderCharts(f_o, f_fb, totalVenta, totalMeta) {{
-            // Ventas vs Meta
-            const trace1 = {{
-                x: ['Real', 'Meta'],
-                y: [totalVenta, totalMeta],
-                type: 'bar',
-                marker: {{color: ['#76933C', '#E2E8F0']}},
-                text: [totalVenta.toLocaleString(), totalMeta.toLocaleString()],
-                textposition: 'auto',
-            }};
-            Plotly.newPlot('chart-ventas-meta', [trace1], {{margin: {{t: 10, b: 40, l: 60, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'}});
-
-            // Leads por día
-            const leadsByDay = f_fb.reduce((acc, curr) => {{
-                acc[curr.Día] = (acc[curr.Día] || 0) + (parseInt(curr['Contactos mensajes nuevos']) || 0);
+            const leadsByDay = f_fb.reduce((acc, curr) => {
+                const d = curr["Día"] || curr.Día;
+                acc[d] = (acc[d] || 0) + Number(curr["Contactos mensajes nuevos"] || 0);
                 return acc;
-            }}, {{}});
+            }, {});
             const days = Object.keys(leadsByDay).sort();
-            const traceLeads = {{
-                x: days,
-                y: days.map(d => leadsByDay[d]),
-                type: 'scatter',
-                mode: 'lines+markers',
-                line: {{color: '#1890ff', width: 3}},
-                fill: 'tozeroy'
-            }};
-            Plotly.newPlot('chart-leads-dia', [traceLeads], {{margin: {{t: 10, b: 40, l: 40, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'}});
+            Plotly.newPlot("chart-leads-dia", [{
+                x: days, y: days.map(d => leadsByDay[d]), type: "scatter", mode: "lines+markers", line: {color: "#1890ff", width: 3}, fill: "tozeroy"
+            }], {margin: {t: 10, b: 40, l: 40, r: 10}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"});
 
-            // Marcas Pie
-            const marcaMap = f_o.reduce((acc, curr) => {{
-                let marca = curr.MARCA;
-                if (!marca && seqMap[curr.secuencia]) {{
-                    marca = Array.from(seqMap[curr.secuencia].marcas)[0];
-                }}
-                if (marca) {{
-                    acc[marca] = (acc[marca] || 0) + (parseFloat(curr['Valor del cliente potencial']) || 0);
-                }}
+            const mPie = f_o.reduce((acc, curr) => {
+                let mName = curr.MARCA;
+                if (!mName && seqMap[curr.secuencia.toUpperCase()]) mName = Array.from(seqMap[curr.secuencia.toUpperCase()].marcas)[0];
+                if (mName) acc[mName] = (acc[mName] || 0) + Number(curr["Valor del cliente potencial"] || 0);
                 return acc;
-            }}, {{}});
-            const traceMarca = {{
-                labels: Object.keys(marcaMap),
-                values: Object.values(marcaMap),
-                type: 'pie',
-                hole: .4,
-                marker: {{colors: ['#76933C', '#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#e74c3c']}}
-            }};
-            Plotly.newPlot('chart-marcas-pie', [traceMarca], {{margin: {{t: 10, b: 10, l: 10, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)'}});
+            }, {});
+            Plotly.newPlot("chart-marcas-pie", [{
+                labels: Object.keys(mPie), values: Object.values(mPie), type: "pie", hole: .4
+            }], {margin: {t: 10, b: 10, l: 10, r: 10}, paper_bgcolor: "rgba(0,0,0,0)"});
 
-            // Vendedores
-            const vendMap = f_o.reduce((acc, curr) => {{
-                acc[curr.asignado] = (acc[curr.asignado] || 0) + (parseFloat(curr['Valor del cliente potencial']) || 0);
+            const vMap = f_o.reduce((acc, curr) => {
+                acc[curr.asignado] = (acc[curr.asignado] || 0) + Number(curr["Valor del cliente potencial"] || 0);
                 return acc;
-            }}, {{}});
-            const vends = Object.keys(vendMap).sort((a,b) => vendMap[a] - vendMap[b]);
-            const traceVend = {{
-                y: vends,
-                x: vends.map(v => vendMap[v]),
-                type: 'bar',
-                orientation: 'h',
-                marker: {{color: '#76933C'}},
-                text: vends.map(v => 'Q ' + vendMap[v].toLocaleString()),
-                textposition: 'auto',
-            }};
-            Plotly.newPlot('chart-vendedores', [traceVend], {{margin: {{t: 10, b: 40, l: 150, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)'}});
-
-            // Gasto por plataforma (Pie)
-            const platMap = f_fb.reduce((acc, curr) => {{
-                const platName = curr['Nombre de la página'] || 'Desconocida';
-                acc[platName] = (acc[platName] || 0) + (parseFloat(curr['Importe gastado']) || 0);
-                return acc;
-            }}, {{}});
-            if (Object.keys(platMap).length > 0) {{
-                const tracePlat = {{
-                    labels: Object.keys(platMap),
-                    values: Object.values(platMap),
-                    type: 'pie',
-                    hole: .4
-                }};
-                // Crear div si no existe
-                if (!document.getElementById('chart-plataformas')) {{
-                    const container = document.getElementById('chart-marcas-pie').parentNode.parentNode;
-                    const newCard = document.createElement('div');
-                    newCard.className = 'card';
-                    newCard.innerHTML = '<h3 class="text-lg font-semibold mb-4">Gasto por Plataforma</h3><div id="chart-plataformas" style="height: 350px;"></div>';
-                    container.appendChild(newCard);
-                }}
-                Plotly.newPlot('chart-plataformas', [tracePlat], {{margin: {{t: 10, b: 10, l: 10, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)'}});
-            }}
+            }, {});
+            const vSorted = Object.entries(vMap).sort((a,b) => a[1] - b[1]);
+            Plotly.newPlot("chart-vendedores", [{
+                y: vSorted.map(x => x[0]), x: vSorted.map(x => x[1]), type: "bar", orientation: "h", marker: {color: "#76933C"}
+            }], {margin: {t: 10, b: 40, l: 150, r: 10}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"});
+        }
 
         initFilters();
-        updateDashboard();
     </script>
 </body>
-</html>
-        """
+</html>"""
+
+        html_final = html_base.replace("JSON_DATA_HERE", json.dumps(data_json))
+        html_final = html_final.replace("TIMESTAMP_HERE", datetime.now().strftime("%d/%m/%Y %H:%M"))
+
         fn_html = f"dashboard_Dupaza_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
         with open(fn_html, "w", encoding="utf-8") as f:
-            f.write(html_template)
-
-        # También crear un index.html estático para github pages
+            f.write(html_final)
         with open("index.html", "w", encoding="utf-8") as f:
-            f.write(html_template)
-
+            f.write(html_final)
         self.log(f"Dashboard generado: {fn_html}")
 
     def process_contact_costs(self, res_c, res_fb):
@@ -1230,7 +1068,9 @@ class App(cctk.CTk):
 
             # Llenar Hoja1 con los IDs de REPORTE para habilitar el VLOOKUP
             if not df_o.empty:
-                df_o[['ID de oportunidad']].to_excel(writer, sheet_name='Hoja1', index=False, header=False)
+                # Asegurar que los IDs son strings limpios para el VLOOKUP
+                hoja1_ids = df_o[['ID de oportunidad']].astype(str).apply(lambda x: x.str.strip())
+                hoja1_ids.to_excel(writer, sheet_name='Hoja1', index=False, header=False)
             else:
                 pd.DataFrame().to_excel(writer, sheet_name='Hoja1', index=False)
 
@@ -1245,7 +1085,12 @@ class App(cctk.CTk):
                 bg_f, cur_f = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid"), None
                 for r in range(2, ws_v.max_row + 1):
                     # T es la columna 20 que corresponde a ID Oportunidad en VENTAS
-                    if ws_v.cell(row=r, column=1).value: ws_v.cell(row=r, column=idx_bus).value = f"=VLOOKUP(T{r},Hoja1!A:A,1,FALSE)"; cur_f = bg_f if cur_f is None else None
+                    # Si la fila tiene ID (columna 1), ponemos la fórmula
+                    val_id = ws_v.cell(row=r, column=1).value
+                    if val_id and str(val_id).strip():
+                        ws_v.cell(row=r, column=idx_bus).value = f"=VLOOKUP(T{r},Hoja1!A:A,1,FALSE)"
+                        cur_f = bg_f if cur_f is None else None
+
                     if cur_f:
                         for c in range(1, idx_bus + 1): ws_v.cell(row=r, column=c).fill = cur_f
 
