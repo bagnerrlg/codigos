@@ -438,7 +438,7 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
             if not sale_date_iso or not (client_start <= sale_date_iso <= client_end):
                 filtered_count += 1
                 continue
-            vendedor_raw, gnam, opp_id_val = u_map.get(op.get("assignedTo"), ""), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
+            vendedor_raw, gnam, opp_id_val = get_mapped_vendedor(u_map.get(op.get("assignedTo"), "")), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
             dv_data = json.loads(dv_str) if dv_str else {}
             row = {"secuencia": acc_name, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
             row.update(cf_data)
@@ -673,289 +673,299 @@ class App(cctk.CTk):
     def generate_dashboard_html(self, res_o, res_v, res_c, res_fb, df_metas):
         self.log("Generando Dashboard HTML...")
         import json
+        import pandas as pd
 
-        def prepare_json(df_in):
-            if df_in is None: return []
-            if isinstance(df_in, list):
-                if not df_in: return []
-                df_in = pd.DataFrame(df_in)
-            if df_in.empty: return []
+        def prepare_json(data):
+            if not data: return []
+            df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
+            if df.empty: return []
 
-            d = df_in.copy()
-            d = d.loc[:, ~d.columns.duplicated()]
+            # Quitar columnas duplicadas
+            df = df.loc[:, ~df.columns.duplicated()]
 
-            for col in d.columns:
-                if pd.api.types.is_numeric_dtype(d[col]):
-                    d[col] = pd.to_numeric(d[col], errors="coerce").fillna(0)
-                elif pd.api.types.is_datetime64_any_dtype(d[col]):
-                    d[col] = d[col].apply(lambda x: x.isoformat() if hasattr(x, "isoformat") else str(x))
+            # Normalizar nombres de columnas: minusculas, sin espacios, sin tildes
+            def clean_name(c):
+                s = str(c).lower().strip().replace(" ", "_")
+                s = s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
+                return "".join(ch for ch in s if ch.isalnum() or ch == "_")
+
+            df.columns = [clean_name(c) for c in df.columns]
+
+            # Asegurar tipos
+            for col in df.columns:
+                if pd.api.types.is_numeric_dtype(df[col]):
+                    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+                elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                    df[col] = df[col].apply(lambda x: x.isoformat() if hasattr(x, "isoformat") else str(x))
                 else:
-                    d[col] = d[col].fillna("").astype(str)
-            return d.to_dict(orient="records")
+                    df[col] = df[col].fillna("").astype(str)
 
-        data_json = {
-            "oportunidades": prepare_json(pd.DataFrame(res_o)),
-            "ventas": prepare_json(pd.DataFrame(res_v)),
-            "contactos": prepare_json(pd.DataFrame(res_c)),
-            "facebook": prepare_json(pd.DataFrame(res_fb)),
+            return df.to_dict(orient="records")
+
+        # Consolidar datos
+        payload = {
+            "oportunidades": prepare_json(res_o),
+            "facebook": prepare_json(res_fb),
             "metas": prepare_json(df_metas)
         }
 
-        html_base = """<!DOCTYPE html>
+        # HTML Template (Plantilla limpia)
+        html_content = """<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard DUPAZA PRO</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <title>DUPAZA PRO - Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .card { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 16px; }
-        .kpi-val { font-size: 24px; font-weight: bold; color: #76933C; }
-        .kpi-label { font-size: 14px; color: #666; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 24px; border: 1px solid #f1f5f9; }
+        .kpi-val { font-size: 32px; font-weight: 800; color: #1e293b; letter-spacing: -0.02em; }
+        .kpi-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+        select { transition: all 0.2s; }
+        select:hover { border-color: #10b981; }
     </style>
 </head>
-<body class="bg-gray-100 p-4">
+<body class="bg-slate-50 p-6">
     <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">📊 DUPAZA DASHBOARD</h1>
+        <header class="flex justify-between items-center mb-10">
             <div>
-                <div id="status-msg" class="text-sm text-blue-600 font-medium text-right"></div>
-                <div class="text-xs text-gray-400">Última actualización: TIMESTAMP_HERE</div>
+                <h1 class="text-4xl font-black text-slate-900 tracking-tight">📊 DUPAZA PRO</h1>
+                <p class="text-slate-500 font-medium">Panel de Control Unificado</p>
+            </div>
+            <div class="text-right">
+                <div id="status-badge" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold inline-block mb-2">SISTEMA ACTIVO</div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Corte: TIMESTAMP_HERE</div>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 card">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Gerente</label>
-                <select id="filter-gerente" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
-                    <option value="ALL">Todos</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Marca</label>
-                <select id="filter-marca" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
-                    <option value="ALL">Todas</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Mes</label>
-                <select id="filter-mes" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
-                    <option value="ALL">Todos</option>
-                </select>
-            </div>
-             <div>
-                <label class="block text-sm font-medium text-gray-700">Vendedor</label>
-                <select id="filter-vendedor" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
-                    <option value="ALL">Todos</option>
-                </select>
-            </div>
+        <!-- Filtros Maestros -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <div><label class="block text-[10px] font-black text-slate-400 mb-2 uppercase">Gerente</label><select id="f-ger" class="w-full border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">Todos los Gerentes</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-2 uppercase">Marca</label><select id="f-mar" class="w-full border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">Todas las Marcas</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-2 uppercase">Mes</label><select id="f-mes" class="w-full border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">Todos los Meses</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-2 uppercase">Asesor</label><select id="f-ven" class="w-full border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">Todos los Asesores</option></select></div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
-            <div class="card text-center"><div class="kpi-label">Gasto Total (GTO)</div><div id="kpi-gasto" class="kpi-val">Q 0.00</div></div>
-            <div class="card text-center"><div class="kpi-label">Leads (Msjs)</div><div id="kpi-leads" class="kpi-val">0</div></div>
-            <div class="card text-center"><div class="kpi-label">Venta Total (VT)</div><div id="kpi-venta" class="kpi-val">Q 0.00</div></div>
-            <div class="card text-center"><div class="kpi-label">Costo por Lead (CPL)</div><div id="kpi-cpl" class="kpi-val">Q 0.00</div></div>
-            <div class="card text-center"><div class="kpi-label">ROAS</div><div id="kpi-roas" class="kpi-val">0.0</div></div>
+        <!-- KPIs Principales -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-6 mb-10">
+            <div class="card text-center"><div class="kpi-label">Inversión</div><div id="kpi-gasto" class="kpi-val text-blue-600">Q 0</div></div>
+            <div class="card text-center"><div class="kpi-label">Leads</div><div id="kpi-leads" class="kpi-val">0</div></div>
+            <div class="card text-center"><div class="kpi-label">Ventas Won</div><div id="kpi-venta" class="kpi-val text-emerald-600">Q 0</div></div>
+            <div class="card text-center"><div class="kpi-label">ROAS Real</div><div id="kpi-roas" class="kpi-val text-indigo-600">0.0</div></div>
             <div class="card text-center"><div class="kpi-label">% Cumplimiento</div><div id="kpi-cumplimiento" class="kpi-val">0%</div></div>
-            <div class="card text-center"><div class="kpi-label">CPA (Costo/Venta)</div><div id="kpi-cpa" class="kpi-val">Q 0.00</div></div>
+            <div class="card text-center"><div class="kpi-label">Costo x Lead</div><div id="kpi-cpl" class="kpi-val">Q 0</div></div>
+            <div class="card text-center"><div class="kpi-label">Costo x Venta</div><div id="kpi-cpa" class="kpi-val">Q 0</div></div>
             <div class="card text-center"><div class="kpi-label">% Conversión</div><div id="kpi-conversion" class="kpi-val">0%</div></div>
-            <div class="card text-center"><div class="kpi-label">Asesores Activos</div><div id="kpi-asesores" class="kpi-val">0</div></div>
-            <div class="card text-center"><div class="kpi-label">Prom. Venta Diaria</div><div id="kpi-prom-vt" class="kpi-val">Q 0.00</div></div>
+            <div class="card text-center"><div class="kpi-label">Equipo Activo</div><div id="kpi-asesores" class="kpi-val">0</div></div>
+            <div class="card text-center"><div class="kpi-label">Venta/Día</div><div id="kpi-prom-vt" class="kpi-val">Q 0</div></div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-            <div class="card text-center"><div class="kpi-label">Venta Digital</div><div id="kpi-venta-digital" class="kpi-val">Q 0.00</div></div>
-            <div class="card text-center"><div class="kpi-label">Venta No Digital</div><div id="kpi-venta-nodigital" class="kpi-val">Q 0.00</div></div>
-            <div class="card text-center"><div class="kpi-label">% FBVT+BO (GTO/VT)</div><div id="kpi-gto-vt" class="kpi-val">0%</div></div>
-            <div class="card text-center"><div class="kpi-label">Códigos Activos</div><div id="kpi-codigos" class="kpi-val">0</div><div id="sub-codigos" class="text-xs text-gray-500">Meta: 0</div></div>
-            <div class="card text-center"><div class="kpi-label">Plataformas</div><div id="kpi-plataformas" class="kpi-val">0</div></div>
-            <div class="card text-center"><div class="kpi-label">Formatos</div><div id="kpi-formatos" class="kpi-val">0</div></div>
+        <!-- Ventas Digitales -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="card text-center bg-emerald-50/50 border-emerald-100"><div class="kpi-label text-emerald-600">Venta Digital (A+R)</div><div id="kpi-v-dig" class="kpi-val">Q 0</div></div>
+            <div class="card text-center"><div class="kpi-label text-slate-400">Venta No Digital</div><div id="kpi-v-nodig" class="kpi-val">Q 0</div></div>
+            <div class="card text-center bg-blue-50/50 border-blue-100"><div class="kpi-label text-blue-600">% Inversión / VT</div><div id="kpi-eficiencia" class="kpi-val">0%</div></div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="card"><h3 class="text-lg font-semibold mb-4">Ventas vs Meta</h3><div id="chart-ventas-meta" style="height: 350px;"></div></div>
-            <div class="card"><h3 class="text-lg font-semibold mb-4">Leads por Día</h3><div id="chart-leads-dia" style="height: 350px;"></div></div>
+        <!-- Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            <div class="card h-[450px] flex flex-col">
+                <h3 class="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest border-b pb-2">Tendencia de Leads</h3>
+                <div id="ch-leads" class="flex-grow"></div>
+            </div>
+            <div class="card h-[450px] flex flex-col">
+                <h3 class="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest border-b pb-2">Rendimiento vs Meta</h3>
+                <div id="ch-meta" class="flex-grow"></div>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-             <div class="card"><h3 class="text-lg font-semibold mb-4">Distribución por Marca</h3><div id="chart-marcas-pie" style="height: 350px;"></div></div>
-            <div class="card"><h3 class="text-lg font-semibold mb-4">Eficiencia por Vendedor (VT)</h3><div id="chart-vendedores" style="height: 350px;"></div></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            <div class="card h-[500px] flex flex-col">
+                <h3 class="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest border-b pb-2">Ventas por Marca</h3>
+                <div id="ch-marca" class="flex-grow"></div>
+            </div>
+            <div class="card h-[500px] flex flex-col">
+                <h3 class="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest border-b pb-2">Top Asesores</h3>
+                <div id="ch-asesor" class="flex-grow"></div>
+            </div>
         </div>
 
-        <div class="card mt-10 opacity-30 hover:opacity-100 transition-opacity">
-            <h3 class="text-sm font-bold text-gray-400 mb-2">PANEL DE DIAGNÓSTICO</h3>
-            <pre id="debug-panel" class="text-[10px] text-gray-500 overflow-auto max-h-40"></pre>
+        <!-- Debug -->
+        <div class="bg-slate-900 p-8 rounded-3xl mb-20 shadow-2xl">
+            <h3 class="text-[10px] font-black text-slate-500 mb-6 tracking-[0.3em] uppercase">Monitor de Integridad de Datos</h3>
+            <div id="debug-grid" class="grid grid-cols-2 md:grid-cols-5 gap-6"></div>
         </div>
     </div>
 
+    <script id="data-payload" type="application/json">PAYLOAD_JSON</script>
     <script>
-        let rawData;
-        try {
-            rawData = JSON_DATA_HERE;
-            const debugPanel = document.getElementById("debug-panel");
-            debugPanel.textContent = "CONTEOS:\n" +
-                "- Oportunidades: " + (rawData.oportunidades ? rawData.oportunidades.length : 0) + "\n" +
-                "- Facebook: " + (rawData.facebook ? rawData.facebook.length : 0) + "\n" +
-                "- Metas: " + (rawData.metas ? rawData.metas.length : 0) + "\n" +
-                "- Ventas: " + (rawData.ventas ? rawData.ventas.length : 0) + "\n" +
-                "- Contactos: " + (rawData.contactos ? rawData.contactos.length : 0);
-        } catch (e) {
-            console.error("Error fatal:", e);
-            document.body.innerHTML = "<div class='p-10 text-red-600 font-bold'>ERROR AL CARGAR DATOS.</div>";
-        }
+        (function() {
+            let data = null;
+            try {
+                data = JSON.parse(document.getElementById('data-payload').textContent);
+                console.log("Dashboard: Datos cargados", data);
 
-        function initFilters() {
-            if (!rawData) return;
-            const gerentes = [...new Set(rawData.metas.map(m => m.GERENTE))].filter(Boolean).sort();
-            const marcas = [...new Set(rawData.metas.map(m => m.MARCA))].filter(Boolean).sort();
-            const vendedores = [...new Set(rawData.oportunidades.map(o => o.asignado))].filter(Boolean).sort();
-            const meses = [...new Set(rawData.oportunidades.map(o => o.Mes || o.MES))].filter(Boolean).sort((a,b) => a-b);
-
-            const populate = (id, list) => {
-                const el = document.getElementById(id);
-                list.forEach(item => {
-                    const opt = document.createElement("option");
-                    opt.value = item; opt.textContent = item;
-                    el.appendChild(opt);
+                const grid = document.getElementById('debug-grid');
+                const stats = [
+                    ["OPPORTUNITIES", data.oportunidades.length, "#10b981"],
+                    ["ADS_SPEND", data.facebook.length, "#3b82f6"],
+                    ["GOALS", data.metas.length, "#a855f7"],
+                    ["VENDEDORES", new Set(data.oportunidades.map(o => o.asignado)).size, "#f59e0b"]
+                ];
+                stats.forEach(([l, v, c]) => {
+                    grid.innerHTML += `<div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+                        <span style="color: ${c}" class="block text-[10px] font-black mb-1">${l}</span>
+                        <span class="text-2xl font-black text-white">${v}</span>
+                    </div>`;
                 });
-            };
+            } catch (e) {
+                console.error("Dashboard: Error fatal", e);
+                document.body.innerHTML = `<div class="p-20 text-center text-red-500 font-black">ERROR AL PROCESAR DATOS</div>`;
+                return;
+            }
 
-            populate("filter-gerente", gerentes);
-            populate("filter-marca", marcas);
-            populate("filter-vendedor", vendedores);
-            populate("filter-mes", meses);
+            function init() {
+                const ms = data.metas || [];
+                const os = data.oportunidades || [];
 
-            document.querySelectorAll("select").forEach(el => {
-                el.addEventListener("change", updateDashboard);
-            });
-            updateDashboard();
-        }
+                const gers = [...new Set(ms.map(x => x.gerente))].filter(Boolean).sort();
+                const marcs = [...new Set(ms.map(x => x.marca))].filter(Boolean).sort();
+                const vends = [...new Set(os.map(x => x.asignado))].filter(Boolean).sort();
+                const meses = [...new Set(os.map(x => x.mes))].filter(Boolean).sort((a,b) => a-b);
 
-        function updateDashboard() {
-            if (!rawData) return;
-            const g = document.getElementById("filter-gerente").value;
-            const m = document.getElementById("filter-marca").value;
-            const v = document.getElementById("filter-vendedor").value;
-            const mes = document.getElementById("filter-mes").value;
+                const pop = (id, list) => {
+                    const el = document.getElementById(id);
+                    list.forEach(i => { const o = document.createElement("option"); o.value = i; o.textContent = i; el.appendChild(o); });
+                };
 
-            const seqMap = (rawData.metas || []).reduce((acc, curr) => {
-                const seq = (curr.SUB_ANILLO || curr.SUB_ANILLO_ || "").toString().trim().toUpperCase();
-                if (!seq) return acc;
-                if (!acc[seq]) acc[seq] = { gerentes: new Set(), marcas: new Set() };
-                if (curr.GERENTE) acc[seq].gerentes.add(curr.GERENTE.toString().trim().toUpperCase());
-                if (curr.MARCA) acc[seq].marcas.add(curr.MARCA.toString().trim().toUpperCase());
-                return acc;
-            }, {});
+                pop("f-ger", gers); pop("f-mar", marcs); pop("f-ven", vends); pop("f-mes", meses);
+                document.querySelectorAll("select").forEach(s => s.onchange = update);
+                update();
+            }
 
-            let f_o = rawData.oportunidades.filter(o => {
-                const s = (o.secuencia || "").toString().trim().toUpperCase();
-                const mMarca = (m === "ALL" || o.MARCA === m || (seqMap[s] && seqMap[s].marcas.has(m.toUpperCase())));
-                const mGer = (g === "ALL" || (seqMap[s] && seqMap[s].gerentes.has(g.toUpperCase())));
-                const mVend = (v === "ALL" || o.asignado === v);
-                const mMes = (mes === "ALL" || (o.Mes || o.MES) == mes);
-                return mMarca && mGer && mVend && mMes;
-            });
+            function update() {
+                const g = document.getElementById("f-ger").value.toUpperCase();
+                const m = document.getElementById("f-mar").value.toUpperCase();
+                const v = document.getElementById("f-ven").value;
+                const mes = document.getElementById("f-mes").value;
 
-            let f_fb = rawData.facebook.filter(f => {
-                const s = (f.SECUENCIA || "").toString().trim().toUpperCase();
-                const mGer = (g === "ALL" || (seqMap[s] && seqMap[s].gerentes.has(g.toUpperCase())));
-                const mMarca = (m === "ALL" || (seqMap[s] && seqMap[s].marcas.has(m.toUpperCase())));
-                const d = f["Día"] || f.Día || "";
-                const mMes = (mes === "ALL" || (d && parseInt(d.split("-")[1]) == mes));
-                return mGer && mMarca && mMes;
-            });
+                const seqMap = (data.metas || []).reduce((acc, c) => {
+                    const s = (c.sub_anillo || "").toString().toUpperCase().trim();
+                    if (!s) return acc;
+                    if (!acc[s]) acc[s] = { gers: new Set(), marcs: new Set() };
+                    if (c.gerente) acc[s].gers.add(c.gerente.toString().toUpperCase().trim());
+                    if (c.marca) acc[s].marcs.add(c.marca.toString().toUpperCase().trim());
+                    return acc;
+                }, {});
 
-            let f_metas = rawData.metas.filter(met =>
-                (g === "ALL" || met.GERENTE === g) &&
-                (m === "ALL" || met.MARCA === m) &&
-                (mes === "ALL" || (met.MES || met.Mes) == mes)
-            );
+                const f_o = data.oportunidades.filter(o => {
+                    const s = (o.secuencia || "").toString().toUpperCase().trim();
+                    const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                    const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
+                    const mV = (v === "ALL" || o.asignado === v);
+                    const mMes = (mes === "ALL" || String(o.mes) === String(mes));
+                    return mG && mM && mV && mMes;
+                });
 
-            const totalGasto = f_fb.reduce((acc, curr) => acc + Number(curr["Importe gastado"] || 0), 0);
-            const totalLeads = f_fb.reduce((acc, curr) => acc + Number(curr["Contactos mensajes nuevos"] || 0), 0);
-            const totalVenta = f_o.reduce((acc, curr) => acc + Number(curr["Valor del cliente potencial"] || 0), 0);
-            const totalMeta = f_metas.reduce((acc, curr) => acc + Number(curr["META"] || 0), 0);
+                const f_fb = (data.facebook || []).filter(f => {
+                    const s = (f.secuencia || "").toString().toUpperCase().trim();
+                    const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                    const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                    const d = f.dia || "";
+                    const mMes = (mes === "ALL" || (d && parseInt(d.split("-")[1]) == mes));
+                    return mG && mM && mMes;
+                });
 
-            document.getElementById("kpi-gasto").textContent = "Q " + totalGasto.toLocaleString(undefined, {minimumFractionDigits: 2});
-            document.getElementById("kpi-leads").textContent = totalLeads.toLocaleString();
-            document.getElementById("kpi-venta").textContent = "Q " + totalVenta.toLocaleString(undefined, {minimumFractionDigits: 2});
-            document.getElementById("kpi-cpl").textContent = "Q " + (totalLeads > 0 ? (totalGasto/totalLeads).toFixed(2) : "0.00");
-            document.getElementById("kpi-cumplimiento").textContent = (totalMeta > 0 ? ((totalVenta/totalMeta)*100).toFixed(1) : "0") + "%";
-            document.getElementById("kpi-roas").textContent = (totalGasto > 0 ? (totalVenta/totalGasto).toFixed(1) : "0.0");
-            document.getElementById("kpi-cpa").textContent = "Q " + (f_o.length > 0 ? (totalGasto / f_o.length).toFixed(2) : "0.00");
-            document.getElementById("kpi-conversion").textContent = (totalLeads > 0 ? ((f_o.length / totalLeads) * 100).toFixed(1) : "0") + "%";
-            document.getElementById("kpi-asesores").textContent = new Set(f_o.map(o => o.asignado)).size;
+                const f_ms = (data.metas || []).filter(mt =>
+                    (g === "ALL" || (mt.gerente || "").toUpperCase() === g) &&
+                    (m === "ALL" || (mt.marca || "").toUpperCase() === m) &&
+                    (mes === "ALL" || String(mt.mes) === String(mes))
+                );
 
-            const isDigital = (o) => {
-                const s = (o.secuencia || "").toString().toUpperCase();
-                return o.TIPO === "DIGITAL" || o.tipo === "DIGITAL" || s.startsWith("A") || s.startsWith("R") ||
-                       (seqMap[s] && Array.from(seqMap[s].gerentes).some(ger => ger === "DIEGO SANTA CRUZ" || ger === "NOHEMI MACHA"));
-            };
-            const vDig = f_o.filter(isDigital).reduce((acc, curr) => acc + Number(curr["Valor del cliente potencial"] || 0), 0);
-            document.getElementById("kpi-venta-digital").textContent = "Q " + vDig.toLocaleString(undefined, {minimumFractionDigits: 2});
-            document.getElementById("kpi-venta-nodigital").textContent = "Q " + (totalVenta - vDig).toLocaleString(undefined, {minimumFractionDigits: 2});
-            document.getElementById("kpi-gto-vt").textContent = (totalVenta > 0 ? ((totalGasto / totalVenta) * 100).toFixed(1) : "0") + "%";
+                const tGto = f_fb.reduce((a, c) => a + Number(c.importe_gastado || 0), 0);
+                const tLds = f_fb.reduce((a, c) => a + Number(c.contactos_mensajes_nuevos || 0), 0);
+                const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
+                const tMet = f_ms.reduce((a, c) => a + Number(c.meta || 0), 0);
 
-            const cActivos = new Set(f_fb.filter(f => Number(f["Importe gastado"] || 0) > 0).map(f => f.codigo || f["ID del anuncio"])).size;
-            const mCodigos = f_metas.reduce((acc, curr) => acc + Number(curr.codigo || 0), 0);
-            document.getElementById("kpi-codigos").textContent = cActivos;
-            document.getElementById("sub-codigos").textContent = "Meta: " + mCodigos + " | Brecha: " + Math.max(0, mCodigos - cActivos);
+                document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
+                document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
+                document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
+                document.getElementById("kpi-roas").innerText = tGto > 0 ? (tVta / tGto).toFixed(1) : "0.0";
+                document.getElementById("kpi-cumplimiento").innerText = tMet > 0 ? Math.round((tVta / tMet) * 100) + "%" : "0%";
+                document.getElementById("kpi-cpl").innerText = "Q" + (tLds > 0 ? (tGto / tLds).toFixed(2) : "0.00");
+                document.getElementById("kpi-cpa").innerText = "Q" + (f_o.length > 0 ? Math.round(tGto / f_o.length).toLocaleString() : "0");
+                document.getElementById("kpi-conversion").innerText = tLds > 0 ? ((f_o.length / tLds) * 100).toFixed(1) + "%" : "0%";
+                document.getElementById("kpi-asesores").innerText = new Set(f_o.map(o => o.asignado)).size;
 
-            renderCharts(f_o, f_fb, totalVenta, totalMeta, seqMap);
-        }
+                const days = new Set(f_fb.map(f => f.dia)).size || 1;
+                document.getElementById("kpi-prom-vt").innerText = "Q" + Math.round(tVta / days).toLocaleString();
 
-        function renderCharts(f_o, f_fb, totalVenta, totalMeta, seqMap) {
-            Plotly.newPlot("chart-ventas-meta", [{
-                x: ["Real", "Meta"], y: [totalVenta, totalMeta], type: "bar",
-                marker: {color: ["#76933C", "#E2E8F0"]}, text: [totalVenta.toLocaleString(), totalMeta.toLocaleString()], textposition: "auto"
-            }], {margin: {t: 10, b: 40, l: 60, r: 10}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"});
+                const vDig = f_o.filter(o => {
+                    const s = (o.secuencia || "").toString().toUpperCase();
+                    return s.startsWith("A") || s.startsWith("R") || (seqMap[s] && Array.from(seqMap[s].gers).some(gr => gr === "DIEGO SANTA CRUZ" || gr === "NOHEMI MACHA"));
+                }).reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
 
-            const leadsByDay = f_fb.reduce((acc, curr) => {
-                const d = curr["Día"] || curr.Día;
-                acc[d] = (acc[d] || 0) + Number(curr["Contactos mensajes nuevos"] || 0);
-                return acc;
-            }, {});
-            const days = Object.keys(leadsByDay).sort();
-            Plotly.newPlot("chart-leads-dia", [{
-                x: days, y: days.map(d => leadsByDay[d]), type: "scatter", mode: "lines+markers", line: {color: "#1890ff", width: 3}, fill: "tozeroy"
-            }], {margin: {t: 10, b: 40, l: 40, r: 10}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"});
+                document.getElementById("kpi-v-dig").innerText = "Q" + Math.round(vDig).toLocaleString();
+                document.getElementById("kpi-v-nodig").innerText = "Q" + Math.round(tVta - vDig).toLocaleString();
+                document.getElementById("kpi-eficiencia").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0%";
 
-            const mPie = f_o.reduce((acc, curr) => {
-                let mName = curr.MARCA;
-                if (!mName && seqMap[curr.secuencia.toUpperCase()]) mName = Array.from(seqMap[curr.secuencia.toUpperCase()].marcas)[0];
-                if (mName) acc[mName] = (acc[mName] || 0) + Number(curr["Valor del cliente potencial"] || 0);
-                return acc;
-            }, {});
-            Plotly.newPlot("chart-marcas-pie", [{
-                labels: Object.keys(mPie), values: Object.values(mPie), type: "pie", hole: .4
-            }], {margin: {t: 10, b: 10, l: 10, r: 10}, paper_bgcolor: "rgba(0,0,0,0)"});
+                render(f_o, f_fb, tVta, tMet, seqMap);
+            }
 
-            const vMap = f_o.reduce((acc, curr) => {
-                acc[curr.asignado] = (acc[curr.asignado] || 0) + Number(curr["Valor del cliente potencial"] || 0);
-                return acc;
-            }, {});
-            const vSorted = Object.entries(vMap).sort((a,b) => a[1] - b[1]);
-            Plotly.newPlot("chart-vendedores", [{
-                y: vSorted.map(x => x[0]), x: vSorted.map(x => x[1]), type: "bar", orientation: "h", marker: {color: "#76933C"}
-            }], {margin: {t: 10, b: 40, l: 150, r: 10}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"});
-        }
+            function render(f_o, f_fb, tv, tm, seqMap) {
+                const config = { responsive: true, displayModeBar: false };
+                const layout_base = {
+                    margin: { t: 20, b: 40, l: 60, r: 20 },
+                    paper_bgcolor: "rgba(0,0,0,0)",
+                    plot_bgcolor: "rgba(0,0,0,0)",
+                    font: { family: 'Inter', size: 10 }
+                };
 
-        initFilters();
+                Plotly.newPlot("ch-meta", [{
+                    x: ["REAL", "META"], y: [tv, tm], type: "bar", marker: { color: ["#10b981", "#e2e8f0"] },
+                    text: [tv.toLocaleString(), tm.toLocaleString()], textposition: "auto"
+                }], layout_base, config);
+
+                const lbd = f_fb.reduce((acc, c) => { const d = c.dia; acc[d] = (acc[d] || 0) + Number(c.contactos_mensajes_nuevos || 0); return acc; }, {});
+                const dx = Object.keys(lbd).sort();
+                Plotly.newPlot("ch-leads", [{
+                    x: dx, y: dx.map(k => lbd[k]), type: "scatter", mode: "lines+markers",
+                    line: { color: "#3b82f6", width: 4, shape: "spline" }, fill: "tozeroy"
+                }], layout_base, config);
+
+                const mPie = f_o.reduce((acc, c) => {
+                    let n = (c.marca || "").toString().trim();
+                    const sKey = (c.secuencia || "").toString().toUpperCase().trim(); if (!n && seqMap[sKey]) n = Array.from(seqMap[sKey].marcs)[0];
+                    if (n) acc[n] = (acc[n] || 0) + Number(c.valor_del_cliente_potencial || 0);
+                    return acc;
+                }, {});
+                Plotly.newPlot("ch-marca", [{
+                    labels: Object.keys(mPie), values: Object.values(mPie), type: "pie", hole: .7,
+                    marker: { colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899", "#ef4444"] }
+                }], { ...layout_base, margin: {t:0,b:0,l:0,r:0} }, config);
+
+                const vMap = f_o.reduce((acc, c) => { acc[c.asignado] = (acc[c.asignado] || 0) + Number(c.valor_del_cliente_potencial || 0); return acc; }, {});
+                const vS = Object.entries(vMap).sort((a,b) => a[1] - b[1]);
+                Plotly.newPlot("ch-asesor", [{
+                    y: vS.map(x => x[0]), x: vS.map(x => x[1]), type: "bar", orientation: "h", marker: { color: "#10b981" }
+                }], { ...layout_base, margin: { t: 20, b: 40, l: 140, r: 20 } }, config);
+            }
+            init();
+        })();
     </script>
 </body>
 </html>"""
 
-        html_final = html_base.replace("JSON_DATA_HERE", json.dumps(data_json))
-        html_final = html_final.replace("TIMESTAMP_HERE", datetime.now().strftime("%d/%m/%Y %H:%M"))
+        final_html = html_content.replace("PAYLOAD_JSON", json.dumps(payload))
+        final_html = final_html.replace("TIMESTAMP_HERE", datetime.now().strftime("%d/%m/%Y %H:%M"))
 
-        fn_html = f"dashboard_Dupaza_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-        with open(fn_html, "w", encoding="utf-8") as f:
-            f.write(html_final)
-        with open("index.html", "w", encoding="utf-8") as f:
-            f.write(html_final)
-        self.log(f"Dashboard generado: {fn_html}")
+        fn = f"dashboard_Dupaza_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+        with open(fn, "w", encoding="utf-8") as f: f.write(final_html)
+        with open("index.html", "w", encoding="utf-8") as f: f.write(final_html)
+        self.log(f"Dashboards generados correctamente.")
 
     def process_contact_costs(self, res_c, res_fb):
         df_c = pd.DataFrame(res_c)
