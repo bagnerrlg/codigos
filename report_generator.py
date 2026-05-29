@@ -326,8 +326,13 @@ def extraer_datos_anuncio(text):
 
 def extraer_secuencia(text):
     if not text: return ""
-    match_sec = SECUENCIA_REGEX.search(text.upper())
-    return match_sec.group(1) if match_sec else ""
+    t = text.strip().upper()
+    match_sec = SECUENCIA_REGEX.search(t)
+    if match_sec: return match_sec.group(1)
+    # Soporte para formato A03-A
+    match_alt = re.search(r"([A-Z]\d{1,2}-[A-Z])", t)
+    if match_alt: return match_alt.group(1)
+    return t if len(t) <= 8 else "" # Si es corto lo tomamos como código
 
 def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
     token, loc, acc_name = acc["token"], acc["location_id"], acc["name"]
@@ -348,7 +353,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
     formatted_contacts = []
     for c in all_contacts:
         uid = c.get("assignedTo")
-        assigned_name = u_map.get(uid, "") if uid else ""
+        assigned_name = get_mapped_vendedor(u_map.get(uid, "")) if uid else "SinAsignar"
         date_iso, date_fmt = c.get("dateAdded"), ""
         if date_iso:
             dt_local = datetime.fromisoformat(date_iso.replace("Z", "+00:00")).astimezone(GUATEMALA_TZ)
@@ -362,7 +367,15 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
         anuncio, tipo_post = extraer_datos_anuncio(anuncio_raw)
         if not anuncio and primer_mensaje_texto: anuncio, tipo_post = extraer_datos_anuncio(primer_mensaje_texto)
         secuencia = extraer_secuencia(secuencia_raw)
-        formatted_contacts.append({"id": c.get("id", ""), "dateAdded": date_fmt, "assignedToName": assigned_name, "secuencia": secuencia, "Anuncio": anuncio, "tipo_post": tipo_post})
+        formatted_contacts.append({
+            "id": c.get("id", ""),
+            "dateAdded": date_fmt,
+            "dateAddedRaw": dt_local.strftime("%Y-%m-%d") if date_iso else "",
+            "assignedToName": assigned_name,
+            "secuencia": secuencia,
+            "Anuncio": anuncio,
+            "tipo_post": tipo_post
+        })
     return formatted_contacts
 
 def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_callback):
@@ -606,8 +619,10 @@ class App(cctk.CTk):
 
             df_metas = cargar_metas(PATH_METAS)
             if res_o or res_c or res_fb:
-                self.generate_excel(res_o, res_v, res_c, res_fb)
-                self.generate_dashboard_html(res_o, res_v, res_c, res_fb, df_metas)
+                # Unir Contactos y Gasto de Facebook antes de generar reportes
+                df_c_final = self.process_contact_costs(res_c, res_fb)
+                self.generate_excel(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb)
+                self.generate_dashboard_html(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb, df_metas)
             else: self.log("Sin datos.")
         except Exception as e: self.log(f"Error: {str(e)}")
         finally: self.after(0, lambda: self.generate_btn.configure(state="normal", text="🚀 GENERAR EXCEL"))
@@ -1044,6 +1059,77 @@ class App(cctk.CTk):
 
         self.log(f"Dashboard generado: {fn_html}")
 
+    def process_contact_costs(self, res_c, res_fb):
+        df_c = pd.DataFrame(res_c)
+        df_fb = pd.DataFrame(res_fb)
+        if df_c.empty: return df_c
+
+        # Asegurar que los nombres de las columnas existen
+        for col in ['dateAddedRaw', 'secuencia', 'Anuncio']:
+            if col not in df_c.columns: df_c[col] = ""
+        for col in ['Día', 'SECUENCIA', 'codigo', 'Importe gastado']:
+            if col not in df_fb.columns: df_fb[col] = 0 if 'gastado' in col else ""
+
+        # Inicializar columnas
+        df_c['Costo Directo'] = 0.0
+        df_c['Gasto Repartido'] = 0.0
+        df_c['Costo Total'] = 0.0
+
+        if df_fb.empty:
+            if 'dateAddedRaw' in df_c.columns: df_c.drop(columns=['dateAddedRaw'], inplace=True)
+            return df_c
+
+        # Normalización para el join
+        df_c['Anuncio'] = df_c['Anuncio'].astype(str).str.strip().str.upper()
+        df_fb['codigo'] = df_fb['codigo'].astype(str).str.strip().str.upper()
+        df_c['secuencia'] = df_c['secuencia'].astype(str).str.strip().str.upper()
+        df_fb['SECUENCIA'] = df_fb['SECUENCIA'].astype(str).str.strip().str.upper()
+
+        # 1. Gasto Directo por Anuncio
+        fb_grouped = df_fb.groupby(['Día', 'SECUENCIA', 'codigo'])['Importe gastado'].sum().reset_index()
+        c_counts = df_c.groupby(['dateAddedRaw', 'secuencia', 'Anuncio']).size().reset_index(name='contact_count')
+
+        direct_costs = pd.merge(
+            c_counts,
+            fb_grouped,
+            left_on=['dateAddedRaw', 'secuencia', 'Anuncio'],
+            right_on=['Día', 'SECUENCIA', 'codigo'],
+            how='inner'
+        )
+        direct_costs['cost_per_contact'] = direct_costs['Importe gastado'].astype(float) / direct_costs['contact_count']
+
+        df_c = pd.merge(
+            df_c,
+            direct_costs[['dateAddedRaw', 'secuencia', 'Anuncio', 'cost_per_contact']],
+            on=['dateAddedRaw', 'secuencia', 'Anuncio'],
+            how='left'
+        )
+        df_c['Costo Directo'] = df_c['cost_per_contact'].fillna(0.0)
+
+        # 2. Gasto Repartido (Sin Mensajes)
+        fb_attributed_keys = set(zip(direct_costs['Día'], direct_costs['SECUENCIA'], direct_costs['codigo']))
+        df_fb['is_orphan'] = df_fb.apply(lambda r: (r['Día'], r['SECUENCIA'], r['codigo']) not in fb_attributed_keys, axis=1)
+
+        orphan_spend = df_fb[df_fb['is_orphan']].groupby(['Día', 'SECUENCIA'])['Importe gastado'].sum().reset_index(name='total_orphan_spend')
+        seq_total_contacts = df_c.groupby(['dateAddedRaw', 'secuencia']).size().reset_index(name='seq_total')
+
+        allocation_base = pd.merge(orphan_spend, seq_total_contacts, left_on=['Día', 'SECUENCIA'], right_on=['dateAddedRaw', 'secuencia'])
+        allocation_base['orphan_cost_per_contact'] = allocation_base['total_orphan_spend'].astype(float) / allocation_base['seq_total']
+
+        df_c = pd.merge(
+            df_c,
+            allocation_base[['dateAddedRaw', 'secuencia', 'orphan_cost_per_contact']],
+            on=['dateAddedRaw', 'secuencia'],
+            how='left'
+        )
+        df_c['Gasto Repartido'] = df_c['orphan_cost_per_contact'].fillna(0.0)
+        df_c['Costo Total'] = df_c['Costo Directo'] + df_c['Gasto Repartido']
+
+        # Limpieza
+        drop_cols = ['dateAddedRaw', 'cost_per_contact', 'orphan_cost_per_contact']
+        df_c.drop(columns=[c for c in drop_cols if c in df_c.columns], inplace=True)
+        return df_c
+
     def generate_excel(self, res_o, res_v, res_c, res_fb):
         self.log("Compilando..."); df_o, df_v, df_c, df_fb = pd.DataFrame(res_o), pd.DataFrame(res_v), pd.DataFrame(res_c), pd.DataFrame(res_fb)
 
@@ -1064,7 +1150,7 @@ class App(cctk.CTk):
             for c in v_cols:
                 if c not in df_v.columns: df_v[c] = ""
             df_v = df_v[v_cols]
-        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "Anuncio", "tipo_post"]
+        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "Anuncio", "tipo_post", "Costo Directo", "Gasto Repartido", "Costo Total"]
         if not df_c.empty:
             for c in c_cols:
                 if c not in df_c.columns: df_c[c] = ""
@@ -1076,15 +1162,32 @@ class App(cctk.CTk):
             if not df_c.empty: df_c.to_excel(writer, sheet_name='CONTACTOS', index=False)
             if not df_fb.empty: df_fb.to_excel(writer, sheet_name='FACEBOOK ADS', index=False)
             pd.DataFrame().to_excel(writer, sheet_name='Hoja1', index=False)
+
+            # Estilos y Formatos
+            h_f = PatternFill(start_color="76933C", end_color="76933C", fill_type="solid")
+            h_font = Font(bold=True, color="FFFFFF")
+            h_align = Alignment(horizontal="center")
+
             if not df_v.empty:
                 ws_v = writer.book['VENTAS']; idx_bus = len(v_cols) + 1; ws_v.cell(row=1, column=idx_bus).value = "BUSQUEDA"
-                h_f, h_font = PatternFill(start_color="76933C", end_color="76933C", fill_type="solid"), Font(bold=True, color="FFFFFF")
-                for cell in ws_v[1]: cell.fill, cell.font, cell.alignment = h_f, h_font, Alignment(horizontal="center")
+                for cell in ws_v[1]: cell.fill, cell.font, cell.alignment = h_f, h_font, h_align
                 bg_f, cur_f = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid"), None
                 for r in range(2, ws_v.max_row + 1):
                     if ws_v.cell(row=r, column=1).value: ws_v.cell(row=r, column=idx_bus).value = f"=VLOOKUP(T{r},Hoja1!A:A,1,FALSE)"; cur_f = bg_f if cur_f is None else None
                     if cur_f:
                         for c in range(1, idx_bus + 1): ws_v.cell(row=r, column=c).fill = cur_f
+
+            if not df_c.empty:
+                ws_c = writer.book['CONTACTOS']
+                for cell in ws_c[1]: cell.fill, cell.font, cell.alignment = h_f, h_font, h_align
+                # Formato Moneda para columnas G, H, I (Costo Directo, Gasto Repartido, Costo Total)
+                for r in range(2, ws_c.max_row + 1):
+                    for c_idx in range(7, 10):
+                        ws_c.cell(row=r, column=c_idx).number_format = '"Q" #,##0.00'
+
+            if not df_o.empty:
+                ws_o = writer.book['REPORTE']
+                for cell in ws_o[1]: cell.fill, cell.font, cell.alignment = h_f, h_font, h_align
         self.log(f"ÉXITO: {fn}"); messagebox.showinfo("ÉXITO", f"Excel generado:\n{fn}")
 
 if __name__ == "__main__":
