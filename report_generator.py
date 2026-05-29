@@ -1179,13 +1179,19 @@ class App(cctk.CTk):
     def generate_excel(self, res_o, res_v, res_c, res_fb):
         self.log("Compilando..."); df_o, df_v, df_c, df_fb = pd.DataFrame(res_o), pd.DataFrame(res_v), pd.DataFrame(res_c), pd.DataFrame(res_fb)
 
+        # Asegurar tipos numéricos
+        if not df_o.empty:
+            df_o["Valor del cliente potencial"] = pd.to_numeric(df_o["Valor del cliente potencial"], errors="coerce").fillna(0)
+
         # Quitar zonas horarias para Excel en todos los DataFrames
         for df in [df_o, df_v, df_c, df_fb]:
             if not df.empty:
                 for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns, America/Guatemala]']).columns:
                     df[col] = df[col].dt.tz_localize(None)
+
         head = ["secuencia", "fase", "Valor del cliente potencial", "asignado", "Creado", "Ultimo Actualizado", "Seguidores", "Notas", "etiquetas", "estado", "Fecha de Venta", "NIT", "Camas y Combos SKU", "Cantidad Camas y Combo SKU", "Camas y Combos SKU1", "Cantidad Camas y Combo SKU1", "Cocinas SKU", "Cantidad Cocinas SKU", "Cocinas SKU1", "Cantidad Cocinas SKU1", "Salas SKU", "Cantidad Salas SKU", "Salas SKU1", "Cantidad Salas SKU1"]
-        tail = ["", "Departamento", "Municipio", "Telefono 1", "Telefono 2", "MARCA", "ANILLO", "UBICACION", "ID de oportunidad", "ID de contacto", "Cliente", "Mes", "Cod", "DataVenta", "Fecha"]
+        # Ubicamos MARCA, ANILLO y UBICACION al puro final según solicitud
+        tail = ["", "Departamento", "Municipio", "Telefono 1", "Telefono 2", "ID de oportunidad", "ID de contacto", "Cliente", "Mes", "Cod", "DataVenta", "Fecha", "MARCA", "ANILLO", "UBICACION"]
         if not df_o.empty:
             if "" not in df_o.columns: df_o[""] = ""
             for c in head + tail:
@@ -1207,7 +1213,12 @@ class App(cctk.CTk):
             if not df_v.empty: df_v.to_excel(writer, sheet_name='VENTAS', index=False)
             if not df_c.empty: df_c.to_excel(writer, sheet_name='CONTACTOS', index=False)
             if not df_fb.empty: df_fb.to_excel(writer, sheet_name='FACEBOOK ADS', index=False)
-            pd.DataFrame().to_excel(writer, sheet_name='Hoja1', index=False)
+
+            # Llenar Hoja1 con los IDs de REPORTE para habilitar el VLOOKUP
+            if not df_o.empty:
+                df_o[['ID de oportunidad']].to_excel(writer, sheet_name='Hoja1', index=False, header=False)
+            else:
+                pd.DataFrame().to_excel(writer, sheet_name='Hoja1', index=False)
 
             # Estilos y Formatos
             h_f = PatternFill(start_color="76933C", end_color="76933C", fill_type="solid")
@@ -1219,6 +1230,7 @@ class App(cctk.CTk):
                 for cell in ws_v[1]: cell.fill, cell.font, cell.alignment = h_f, h_font, h_align
                 bg_f, cur_f = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid"), None
                 for r in range(2, ws_v.max_row + 1):
+                    # T es la columna 20 que corresponde a ID Oportunidad en VENTAS
                     if ws_v.cell(row=r, column=1).value: ws_v.cell(row=r, column=idx_bus).value = f"=VLOOKUP(T{r},Hoja1!A:A,1,FALSE)"; cur_f = bg_f if cur_f is None else None
                     if cur_f:
                         for c in range(1, idx_bus + 1): ws_v.cell(row=r, column=c).fill = cur_f
