@@ -399,14 +399,28 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
     u_map, cf_names, all_opps, page, limit = get_users_by_location(loc, token), get_custom_fields_map(loc, token), [], 1, 100
     url = "https://services.leadconnectorhq.com/opportunities/search"
     while True:
-        payload = {"locationId": loc, "page": page, "limit": limit, "filters": [{"group": "AND", "filters": [{"field": "pipeline_stage_id", "operator": "eq", "value": stage}, {"field": "status", "operator": "eq", "value": "won"}, {"field": f"custom_fields.{cfield}", "operator": "range", "value": {"gte": ghl_start, "lte": ghl_end}}]}], "sort": [{"field": "date_added", "direction": "desc"}], "additionalDetails": {"notes": True}}
+        # Se remueve el filtro custom_fields.{cfield} de la API porque suele ser inestable,
+        # se filtrará localmente con mayor robustez.
+        payload = {
+            "locationId": loc, "page": page, "limit": limit,
+            "filters": [{"group": "AND", "filters": [
+                {"field": "pipeline_stage_id", "operator": "eq", "value": stage},
+                {"field": "status", "operator": "eq", "value": "won"}
+            ]}],
+            "sort": [{"field": "date_added", "direction": "desc"}],
+            "additionalDetails": {"notes": True}
+        }
         res = safe_post(url, token, payload, API_VERSION_OPPS)
         if not res or (isinstance(res, dict) and res.get("__error_status")): break
         opps = res.get("opportunities", [])
-        if not isinstance(opps, list): break
+        if not isinstance(opps, list) or not opps: break
         all_opps.extend(opps); page += 1
         if len(opps) < limit: break
-    r_opps, r_ventas = [], []
+        # Limite de seguridad para no traer miles si no hay filtros
+        if page > 10: break
+
+    r_opps, r_ventas, filtered_count = [], [], 0
+    log_callback(f"  {acc_name}: {len(all_opps)} ganadas encontradas en total. Filtrando por fecha...")
     for op in all_opps:
         if not isinstance(op, dict): continue
         try:
@@ -419,7 +433,9 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
                 if fid == dv_id: dv_str = str(cf.get("fieldValue") or cf.get("fieldValueString") or "")
                 fname = cf_names.get(fid, fid)
                 if fname and fname.strip().lower() != "id de oportunidad": cf_data[fname] = val
-            if not sale_date_iso or not (client_start <= sale_date_iso <= client_end): continue
+            if not sale_date_iso or not (client_start <= sale_date_iso <= client_end):
+                filtered_count += 1
+                continue
             vendedor_raw, gnam, opp_id_val = u_map.get(op.get("assignedTo"), ""), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
             dv_data = json.loads(dv_str) if dv_str else {}
             row = {"secuencia": acc_name, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
@@ -430,6 +446,7 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
             if nom_j: row["Cliente"] = nom_j
             row.update(p_cols); r_opps.append(row); r_ventas.extend(parse_ventas_unnested(dv_str, op.get("contactId", ""), op.get("id", ""), gp, vendedor_raw, gnam, sale_date_str))
         except: continue
+    log_callback(f"  {acc_name}: {len(r_opps)} ventas aceptadas, {filtered_count} fuera de rango.")
     return r_opps, r_ventas
 
 # ---------------------------
@@ -637,10 +654,11 @@ class App(cctk.CTk):
                                 if f"act_{acc_id}" in FB_USD_ACCOUNTS or acc_id in FB_USD_ACCOUNTS:
                                     spend *= USD_TO_GTQ
 
-                                res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del conjunto": ins.get("adset_name"), "Nombre del anuncio": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": mapping_secuencia_gasto(camp), "Día": ins.get("date_start"), "Contactos mensajes mueros": conv, "Importe gastado": spend, "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop")})
+                                res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del conjunto": ins.get("adset_name"), "Nombre del anuncio": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": mapping_secuencia_gasto(camp), "Día": ins.get("date_start"), "Contactos mensajes nuevos": conv, "Importe gastado": spend, "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop")})
 
             df_metas = cargar_metas(PATH_METAS)
             if res_o or res_c or res_fb:
+                self.log(f"Total extraído: {len(res_o)} ventas, {len(res_c)} contactos, {len(res_fb)} líneas de gasto.")
                 # Unir Contactos y Gasto de Facebook antes de generar reportes
                 df_c_final = self.process_contact_costs(res_c, res_fb)
                 self.generate_excel(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb)
@@ -890,6 +908,11 @@ class App(cctk.CTk):
                 return matchGerente && matchMarca && matchMes;
             }});
 
+            // Si no hay oportunidades pero hay facebook, permitimos ver KPIs de gasto
+            if (f_o.length === 0 && f_fb.length > 0) {{
+                console.log("No hay oportunidades en el filtro actual, mostrando solo datos de Facebook.");
+            }}
+
             // Filtrado de Metas
             let f_metas = rawData.metas.filter(met =>
                 (g === 'ALL' || met.GERENTE === g) &&
@@ -902,7 +925,7 @@ class App(cctk.CTk):
             const totalGasto = f_fb.reduce((acc, curr) => acc + (parseFloat(curr['Importe gastado']) || 0), 0);
             const totalLeads = f_fb.reduce((acc, curr) => acc + (parseInt(curr['Contactos mensajes nuevos']) || 0), 0);
             const totalVenta = f_o.reduce((acc, curr) => acc + (parseFloat(curr['Valor del cliente potencial']) || 0), 0);
-            const totalMeta = f_metas.reduce((acc, curr) => acc + (parseFloat(curr['META']) || 0), 0);
+            const totalMeta = f_metas.length > 0 ? f_metas.reduce((acc, curr) => acc + (parseFloat(curr['META']) || 0), 0) : 0;
 
             // Métricas de Alcance Reales
             const codigosActivos = new Set(f_fb.filter(f => (parseFloat(f['Importe gastado']) || 0) > 0).map(f => f.codigo || f['ID del anuncio'])).size;
@@ -1048,22 +1071,23 @@ class App(cctk.CTk):
                 acc[curr['Nombre de la página']] = (acc[curr['Nombre de la página']] || 0) + (parseFloat(curr['Importe gastado']) || 0);
                 return acc;
             }}, {{}});
-            const tracePlat = {{
-                labels: Object.keys(platMap),
-                values: Object.values(platMap),
-                type: 'pie',
-                hole: .4
-            }};
-            # Crear div si no existe
-            if (!document.getElementById('chart-plataformas')) {{
-                const container = document.getElementById('chart-marcas-pie').parentNode.parentNode;
-                const newCard = document.createElement('div');
-                newCard.className = 'card';
-                newCard.innerHTML = '<h3 class="text-lg font-semibold mb-4">Gasto por Plataforma</h3><div id="chart-plataformas" style="height: 350px;"></div>';
-                container.appendChild(newCard);
+            if (Object.keys(platMap).length > 0) {{
+                const tracePlat = {{
+                    labels: Object.keys(platMap),
+                    values: Object.values(platMap),
+                    type: 'pie',
+                    hole: .4
+                }};
+                // Crear div si no existe
+                if (!document.getElementById('chart-plataformas')) {{
+                    const container = document.getElementById('chart-marcas-pie').parentNode.parentNode;
+                    const newCard = document.createElement('div');
+                    newCard.className = 'card';
+                    newCard.innerHTML = '<h3 class="text-lg font-semibold mb-4">Gasto por Plataforma</h3><div id="chart-plataformas" style="height: 350px;"></div>';
+                    container.appendChild(newCard);
+                }}
+                Plotly.newPlot('chart-plataformas', [tracePlat], {{margin: {{t: 10, b: 10, l: 10, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)'}});
             }}
-            Plotly.newPlot('chart-plataformas', [tracePlat], {{margin: {{t: 10, b: 10, l: 10, r: 10}}, paper_bgcolor: 'rgba(0,0,0,0)'}});
-        }}
 
         initFilters();
         updateDashboard();
