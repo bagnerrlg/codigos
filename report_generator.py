@@ -673,11 +673,15 @@ class App(cctk.CTk):
     def generate_dashboard_html(self, res_o, res_v, res_c, res_fb, df_metas):
         self.log("Generando Dashboard HTML...")
         import json
-        import pandas as pd
 
         def prepare_json(data):
-            if not data: return []
-            df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
+            if data is None: return []
+            if isinstance(data, list):
+                if not data: return []
+                df = pd.DataFrame(data)
+            else:
+                df = data.copy()
+
             if df.empty: return []
 
             # Quitar columnas duplicadas
