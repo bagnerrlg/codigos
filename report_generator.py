@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 import requests
 import time
 import json
@@ -25,7 +28,7 @@ ACCOUNTS = [
         "stage_id": "dea2dacb-97d4-4165-b95b-5a02f6a87155",
         "custom_field": "fydz3DjQN2pib2axnFZe",
         "dataventa_id": "7veOYT8o670WKCIbRd92",
-        "token": "pit-aa32ae57-f021-4345-9c17-599788ca222d",
+        "token": os.getenv("GHL_TOKEN_R21", ""),
         "secuencia_cf": "CDP7RyHYQIhVRNtmuYOX",
         "anuncio_cf": "EsjAWJ6IbHmCB47SbGTe",
         "primer_mensaje_cf": "ILBHzfqHvQpVXZqOqPTt"
@@ -36,7 +39,7 @@ ACCOUNTS = [
         "stage_id": "a5b50462-e82e-4256-b83d-d613ad20abcd",
         "custom_field": "U6OdqsQDVQTUDxxNBtvp",
         "dataventa_id": "1L7km8XXq3V1kDMRyvCC",
-        "token": "pit-c8f89986-1a34-4178-9064-6f678a697a01",
+        "token": os.getenv("GHL_TOKEN_R22", ""),
         "secuencia_cf": "deDXbK9Nw5khnuk679CM",
         "anuncio_cf": "vzIYG6B7mypHxXM9kLGi",
         "primer_mensaje_cf": "gMCJJq0vMZYN0cz1BnUj"
@@ -47,7 +50,7 @@ ACCOUNTS = [
         "stage_id": "d94817e9-a7fb-4ea3-bed0-d1f117001825",
         "custom_field": "xftnXlHb41aDvIx8N26d",
         "dataventa_id": "JJYIQaDMKpMMekORmcqy",
-        "token": "pit-cfd6cb24-6fee-441d-b01f-415160eb6f7b",
+        "token": os.getenv("GHL_TOKEN_R23", ""),
         "secuencia_cf": "ENXxDMYOkFK7XnjzrdOU",
         "anuncio_cf": "r8sOhHm5PKNtXv65jSaN",
         "primer_mensaje_cf": "vphhYZkFfAiaSrgfTiA3"
@@ -58,7 +61,7 @@ ACCOUNTS = [
         "stage_id": "c8d3a128-f03d-4bce-b61d-50593b7c4ebc",
         "custom_field": "k6xXzN1ksd16i1n68o4P",
         "dataventa_id": "kHdjdcIduLvTr3nL6DgZ",
-        "token": "pit-cc6a4560-665e-4063-b12e-7dd3ec412570",
+        "token": os.getenv("GHL_TOKEN_R11", ""),
         "secuencia_cf": "rG3qADV2DReag3vE4LnZ",
         "anuncio_cf": "hN5VqUs4cgWP4tNEdnTI",
         "primer_mensaje_cf": "at9WccT1xJ4tJRm5KpbK"
@@ -69,7 +72,7 @@ ACCOUNTS = [
         "stage_id": "59f6eff0-f06b-4f5a-b2ae-21f50ec8af32",
         "custom_field": "o7giXoy1LK8KMuzH2FNi",
         "dataventa_id": "DeNNFP4LihWoLaIpG0B2",
-        "token": "pit-51105ced-165a-437d-bf76-37c9ec75f00e",
+        "token": os.getenv("GHL_TOKEN_R12", ""),
         "secuencia_cf": "AAYTXtJX7jRHPn0VDqVH",
         "anuncio_cf": "IELF1xRsnl1nWvoHBRHY",
         "primer_mensaje_cf": "uEKcNGLJvv7znfVJb2Z4"
@@ -80,7 +83,7 @@ ACCOUNTS = [
         "stage_id": "3b346e40-01ea-416e-98ff-60ee147aded1",
         "custom_field": "f310g4Z4A1OxHl3KYLRv",
         "dataventa_id": "4tDKaHgodZXQ4ewzjJyh",
-        "token": "pit-58f93f09-e7a8-40d0-8ce6-32bf2f2b87b4",
+        "token": os.getenv("GHL_TOKEN_R13", ""),
         "secuencia_cf": "7s52aRnEuz8T3v0H3IlN",
         "anuncio_cf": "Vki3QtqsNJtYcRC4Fkzt",
         "primer_mensaje_cf": "78eH2yy4INV88QguossT"
@@ -157,7 +160,7 @@ GUATEMALA_TZ = pytz.timezone("America/Guatemala")
 # ---------------------------
 # CONFIG: Facebook Ads
 # ---------------------------
-FB_ACCESS_TOKEN = "EAAQlsSqsOJkBQ8ELEZCLxm0CPEiqaUSoYw0oHB7ML7xvufZBn2B6t1bizlxBtv8gjc1r4bHiqlV0AHtbI9FDLTRhivFwpDr2xMzk7Waj8htSHanBW63gZCOPwPoVOgZBuNurP2ZB6vegJGxYRAmIR2Wp2JbPZAn9u4CVdHZC06TzaIngYeZAh3n4iaMtw3SyZA7XsNAZDZD"
+FB_ACCESS_TOKEN = os.getenv("FB_ACCESS_TOKEN", "")
 FB_API_VERSION = "v19.0"
 FB_AD_ACCOUNTS = ["act_622689460111355", "act_934171589566820"]
 FB_USD_ACCOUNTS = ["act_934171589566820"]
@@ -371,7 +374,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
     for c in all_contacts:
         uid = c.get("assignedTo")
         assigned_name = get_mapped_vendedor(u_map.get(uid, "")) if uid else "SinAsignar"
-        date_iso, date_fmt = c.get("dateAdded"), ""
+        date_iso, date_fmt, dt_local = c.get("dateAdded"), "", None
         if date_iso:
             dt_local = datetime.fromisoformat(date_iso.replace("Z", "+00:00")).astimezone(GUATEMALA_TZ)
             date_fmt = f"{dt_local.day}/{dt_local.month:02d}/{dt_local.year}"
@@ -386,11 +389,11 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
         secuencia = extraer_secuencia(secuencia_raw)
         formatted_contacts.append({
             "id": c.get("id", ""),
-            "dateAdded": date_fmt,
-            "dateAddedRaw": dt_local.strftime("%Y-%m-%d") if date_iso else "",
-            "assignedToName": assigned_name,
+            "fecha": date_fmt,
+            "fecha_iso": dt_local.strftime("%Y-%m-%d") if dt_local else "",
+            "asignado": assigned_name,
             "secuencia": secuencia,
-            "Anuncio": anuncio,
+            "anuncio": anuncio,
             "tipo_post": tipo_post
         })
     return formatted_contacts
@@ -440,7 +443,7 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
                 continue
             vendedor_raw, gnam, opp_id_val = get_mapped_vendedor(u_map.get(op.get("assignedTo"), "")), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
             dv_data = json.loads(dv_str) if dv_str else {}
-            row = {"secuencia": acc_name, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
+            anu_val, _ = extraer_datos_anuncio(dv_data.get("anuncio", "") or dv_data.get("Anuncio", "")); row = {"secuencia": acc_name, "Anuncio": anu_val, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
             row.update(cf_data)
             nit_j, dep, mun, t1, t2, fv_j, nom_j, p_cols = parse_dataventa(dv_str)
             gp, f_final = (op.get("contact", {}).get("phone", "") if isinstance(op.get("contact"), dict) else ""), format_date_ghl(sale_date_str or fv_j)
@@ -673,29 +676,19 @@ class App(cctk.CTk):
     def generate_dashboard_html(self, res_o, res_v, res_c, res_fb, df_metas):
         self.log("Generando Dashboard HTML...")
         import json
+        import pandas as pd
+        from datetime import datetime
 
         def prepare_json(data):
             if data is None: return []
-            if isinstance(data, list):
-                if not data: return []
-                df = pd.DataFrame(data)
-            else:
-                df = data.copy()
-
+            df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
             if df.empty: return []
-
-            # Quitar columnas duplicadas
             df = df.loc[:, ~df.columns.duplicated()]
-
-            # Normalizar nombres de columnas: minusculas, sin espacios, sin tildes
             def clean_name(c):
                 s = str(c).lower().strip().replace(" ", "_")
                 s = s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
                 return "".join(ch for ch in s if ch.isalnum() or ch == "_")
-
             df.columns = [clean_name(c) for c in df.columns]
-
-            # Asegurar tipos
             for col in df.columns:
                 if pd.api.types.is_numeric_dtype(df[col]):
                     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
@@ -703,149 +696,87 @@ class App(cctk.CTk):
                     df[col] = df[col].apply(lambda x: x.isoformat() if hasattr(x, "isoformat") else str(x))
                 else:
                     df[col] = df[col].fillna("").astype(str)
-
             return df.to_dict(orient="records")
 
-        # Consolidar datos
         payload = {
             "oportunidades": prepare_json(res_o),
             "facebook": prepare_json(res_fb),
-            "metas": prepare_json(df_metas)
+            "metas": prepare_json(df_metas),
+            "contactos": prepare_json(res_c)
         }
 
-        # HTML Template (Plantilla limpia)
         html_content = """<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DUPAZA PRO - Dashboard</title>
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .card { background: white; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 24px; border: 1px solid #f1f5f9; }
-        .kpi-val { font-size: 32px; font-weight: 800; color: #1e293b; letter-spacing: -0.02em; }
-        .kpi-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
-        select { transition: all 0.2s; }
-        select:hover { border-color: #10b981; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; border: 1px solid #e2e8f0; }
+        .kpi-val { font-size: 28px; font-weight: 800; color: #0f172a; }
+        .kpi-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
     </style>
 </head>
-<body class="bg-slate-50 p-6">
+<body class="p-6">
     <div class="max-w-7xl mx-auto">
-        <header class="flex justify-between items-center mb-10">
-            <div>
-                <h1 class="text-4xl font-black text-slate-900 tracking-tight">📊 DUPAZA PRO</h1>
-                <p class="text-slate-500 font-medium">Panel de Control Unificado</p>
-            </div>
-            <div class="text-right">
-                <div id="status-badge" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold inline-block mb-2">SISTEMA ACTIVO</div>
-                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Corte: TIMESTAMP_HERE</div>
-            </div>
+        <header class="flex justify-between items-center mb-8 border-b pb-6">
+            <div><h1 class="text-3xl font-black text-slate-800">📊 DUPAZA DASHBOARD</h1></div>
+            <div class="text-right text-[10px] text-slate-400 font-bold uppercase">TIMESTAMP_HERE</div>
         </header>
 
-        <!-- Filtros Maestros -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <div><label class="block text-[10px] font-black text-slate-400 mb-2 uppercase">Gerente</label><select id="f-ger" class="w-full border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">Todos los Gerentes</option></select></div>
-            <div><label class="block text-[10px] font-black text-slate-400 mb-2 uppercase">Marca</label><select id="f-mar" class="w-full border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">Todas las Marcas</option></select></div>
-            <div><label class="block text-[10px] font-black text-slate-400 mb-2 uppercase">Mes</label><select id="f-mes" class="w-full border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">Todos los Meses</option></select></div>
-            <div><label class="block text-[10px] font-black text-slate-400 mb-2 uppercase">Asesor</label><select id="f-ven" class="w-full border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">Todos los Asesores</option></select></div>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8 bg-white p-4 rounded-2xl shadow-sm border">
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">GERENTE</label><select id="f-ger" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">MARCA</label><select id="f-mar" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODAS</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">MES</label><select id="f-mes" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">ASESOR</label><select id="f-ven" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">ANUNCIO</label><select id="f-anu" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
         </div>
 
-        <!-- KPIs Principales -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-6 mb-10">
-            <div class="card text-center"><div class="kpi-label">Inversión</div><div id="kpi-gasto" class="kpi-val text-blue-600">Q 0</div></div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="card text-center"><div class="kpi-label">Gasto</div><div id="kpi-gasto" class="kpi-val text-blue-600">Q 0</div></div>
             <div class="card text-center"><div class="kpi-label">Leads</div><div id="kpi-leads" class="kpi-val">0</div></div>
-            <div class="card text-center"><div class="kpi-label">Ventas Won</div><div id="kpi-venta" class="kpi-val text-emerald-600">Q 0</div></div>
-            <div class="card text-center"><div class="kpi-label">ROAS Real</div><div id="kpi-roas" class="kpi-val text-indigo-600">0.0</div></div>
-            <div class="card text-center"><div class="kpi-label">% Cumplimiento</div><div id="kpi-cumplimiento" class="kpi-val">0%</div></div>
-            <div class="card text-center"><div class="kpi-label">Costo x Lead</div><div id="kpi-cpl" class="kpi-val">Q 0</div></div>
-            <div class="card text-center"><div class="kpi-label">Costo x Venta</div><div id="kpi-cpa" class="kpi-val">Q 0</div></div>
-            <div class="card text-center"><div class="kpi-label">% Conversión</div><div id="kpi-conversion" class="kpi-val">0%</div></div>
-            <div class="card text-center"><div class="kpi-label">Equipo Activo</div><div id="kpi-asesores" class="kpi-val">0</div></div>
-            <div class="card text-center"><div class="kpi-label">Venta/Día</div><div id="kpi-prom-vt" class="kpi-val">Q 0</div></div>
+            <div class="card text-center"><div class="kpi-label">Ventas</div><div id="kpi-venta" class="kpi-val text-emerald-600">Q 0</div></div>
+            <div class="card text-center"><div class="kpi-label">ROAS</div><div id="kpi-roas" class="kpi-val">0.0</div></div>
+            <div class="card text-center"><div class="kpi-label">% Meta</div><div id="kpi-meta" class="kpi-val">0%</div></div>
         </div>
 
-        <!-- Ventas Digitales -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div class="card text-center bg-emerald-50/50 border-emerald-100"><div class="kpi-label text-emerald-600">Venta Digital (A+R)</div><div id="kpi-v-dig" class="kpi-val">Q 0</div></div>
-            <div class="card text-center"><div class="kpi-label text-slate-400">Venta No Digital</div><div id="kpi-v-nodig" class="kpi-val">Q 0</div></div>
-            <div class="card text-center bg-blue-50/50 border-blue-100"><div class="kpi-label text-blue-600">% Inversión / VT</div><div id="kpi-eficiencia" class="kpi-val">0%</div></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Leads Diarios</h3><div id="ch-leads" class="h-full"></div></div>
+            <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Ventas vs Meta</h3><div id="ch-meta" class="h-full"></div></div>
         </div>
 
-        <!-- Gráficos -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-            <div class="card h-[450px] flex flex-col">
-                <h3 class="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest border-b pb-2">Tendencia de Leads</h3>
-                <div id="ch-leads" class="flex-grow"></div>
-            </div>
-            <div class="card h-[450px] flex flex-col">
-                <h3 class="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest border-b pb-2">Rendimiento vs Meta</h3>
-                <div id="ch-meta" class="flex-grow"></div>
-            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Ventas por Marca</h3><div id="ch-marca" class="h-full"></div></div>
+            <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Eficiencia por Asesor</h3><div id="ch-asesor" class="h-full"></div></div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-            <div class="card h-[500px] flex flex-col">
-                <h3 class="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest border-b pb-2">Ventas por Marca</h3>
-                <div id="ch-marca" class="flex-grow"></div>
-            </div>
-            <div class="card h-[500px] flex flex-col">
-                <h3 class="text-sm font-black mb-6 text-slate-400 uppercase tracking-widest border-b pb-2">Top Asesores</h3>
-                <div id="ch-asesor" class="flex-grow"></div>
-            </div>
-        </div>
-
-        <!-- Debug -->
-        <div class="bg-slate-900 p-8 rounded-3xl mb-20 shadow-2xl">
-            <h3 class="text-[10px] font-black text-slate-500 mb-6 tracking-[0.3em] uppercase">Monitor de Integridad de Datos</h3>
-            <div id="debug-grid" class="grid grid-cols-2 md:grid-cols-5 gap-6"></div>
-        </div>
+        <div id="debug" class="text-[10px] text-slate-400 font-mono bg-slate-100 p-4 rounded-xl">Cargando monitor...</div>
     </div>
 
-    <script id="data-payload" type="application/json">PAYLOAD_JSON</script>
+    <script id="data" type="application/json">PAYLOAD_JSON</script>
     <script>
         (function() {
-            let data = null;
+            let raw = null;
             try {
-                data = JSON.parse(document.getElementById('data-payload').textContent);
-                console.log("Dashboard: Datos cargados", data);
-
-                const grid = document.getElementById('debug-grid');
-                const stats = [
-                    ["OPPORTUNITIES", data.oportunidades.length, "#10b981"],
-                    ["ADS_SPEND", data.facebook.length, "#3b82f6"],
-                    ["GOALS", data.metas.length, "#a855f7"],
-                    ["VENDEDORES", new Set(data.oportunidades.map(o => o.asignado)).size, "#f59e0b"]
-                ];
-                stats.forEach(([l, v, c]) => {
-                    grid.innerHTML += `<div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
-                        <span style="color: ${c}" class="block text-[10px] font-black mb-1">${l}</span>
-                        <span class="text-2xl font-black text-white">${v}</span>
-                    </div>`;
-                });
-            } catch (e) {
-                console.error("Dashboard: Error fatal", e);
-                document.body.innerHTML = `<div class="p-20 text-center text-red-500 font-black">ERROR AL PROCESAR DATOS</div>`;
-                return;
-            }
+                raw = JSON.parse(document.getElementById('data').textContent);
+                document.getElementById('debug').innerText = `Data: Opps(${raw.oportunidades.length}) FB(${raw.facebook.length}) Leads(${raw.contactos.length})`;
+            } catch(e) { console.error(e); return; }
 
             function init() {
-                const ms = data.metas || [];
-                const os = data.oportunidades || [];
-
-                const gers = [...new Set(ms.map(x => x.gerente))].filter(Boolean).sort();
-                const marcs = [...new Set(ms.map(x => x.marca))].filter(Boolean).sort();
-                const vends = [...new Set(os.map(x => x.asignado))].filter(Boolean).sort();
-                const meses = [...new Set(os.map(x => x.mes))].filter(Boolean).sort((a,b) => a-b);
-
                 const pop = (id, list) => {
                     const el = document.getElementById(id);
-                    list.forEach(i => { const o = document.createElement("option"); o.value = i; o.textContent = i; el.appendChild(o); });
+                    [...new Set(list)].filter(Boolean).sort().forEach(i => {
+                        const o = document.createElement("option"); o.value = i; o.textContent = i; el.appendChild(o);
+                    });
                 };
-
-                pop("f-ger", gers); pop("f-mar", marcs); pop("f-ven", vends); pop("f-mes", meses);
+                pop("f-ger", raw.metas.map(m => m.gerente));
+                pop("f-mar", raw.metas.map(m => m.marca));
+                pop("f-ven", raw.contactos.map(c => c.asignado));
+                pop("f-mes", raw.oportunidades.map(o => o.mes));
+                pop("f-anu", raw.contactos.map(c => c.anuncio));
                 document.querySelectorAll("select").forEach(s => s.onchange = update);
                 update();
             }
@@ -855,107 +786,130 @@ class App(cctk.CTk):
                 const m = document.getElementById("f-mar").value.toUpperCase();
                 const v = document.getElementById("f-ven").value;
                 const mes = document.getElementById("f-mes").value;
+                const anu = document.getElementById("f-anu").value.toUpperCase();
 
-                const seqMap = (data.metas || []).reduce((acc, c) => {
-                    const s = (c.sub_anillo || "").toString().toUpperCase().trim();
+                const seqMap = raw.metas.reduce((acc, c) => {
+                    const s = (c.sub_anillo || "").toUpperCase().trim();
                     if (!s) return acc;
                     if (!acc[s]) acc[s] = { gers: new Set(), marcs: new Set() };
-                    if (c.gerente) acc[s].gers.add(c.gerente.toString().toUpperCase().trim());
-                    if (c.marca) acc[s].marcs.add(c.marca.toString().toUpperCase().trim());
+                    if (c.gerente) acc[s].gers.add(c.gerente.toUpperCase());
+                    if (c.marca) acc[s].marcs.add(c.marca.toUpperCase());
                     return acc;
                 }, {});
 
-                const f_o = data.oportunidades.filter(o => {
-                    const s = (o.secuencia || "").toString().toUpperCase().trim();
+                const f_c = raw.contactos.filter(c => {
+                    const s = (c.secuencia || "").toUpperCase().trim();
+                    const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                    const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                    const mV = (v === "ALL" || c.asignado === v);
+                    const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
+                    return mG && mM && mV && mA;
+                });
+
+                const f_o = raw.oportunidades.filter(o => {
+                    const s = (o.secuencia || "").toUpperCase().trim();
                     const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                     const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
                     const mV = (v === "ALL" || o.asignado === v);
                     const mMes = (mes === "ALL" || String(o.mes) === String(mes));
-                    return mG && mM && mV && mMes;
+                    const mA = (anu === "ALL" || (o.anuncio || "").toUpperCase() === anu);
+                    return mG && mM && mV && mMes && mA;
                 });
 
-                const f_fb = (data.facebook || []).filter(f => {
-                    const s = (f.secuencia || "").toString().toUpperCase().trim();
-                    const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
-                    const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
-                    const d = f.dia || "";
-                    const mMes = (mes === "ALL" || (d && parseInt(d.split("-")[1]) == mes));
-                    return mG && mM && mMes;
-                });
+                let tGto = 0;
+                if (v !== "ALL" || anu !== "ALL") {
+                    tGto = f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0);
+                } else {
+                    const f_fb = raw.facebook.filter(f => {
+                        const s = (f.secuencia || "").toUpperCase().trim();
+                        return (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g))) && (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                    });
+                    tGto = f_fb.reduce((a, c) => a + Number(c.importe_gastado || 0), 0);
+                }
 
-                const f_ms = (data.metas || []).filter(mt =>
-                    (g === "ALL" || (mt.gerente || "").toUpperCase() === g) &&
-                    (m === "ALL" || (mt.marca || "").toUpperCase() === m) &&
-                    (mes === "ALL" || String(mt.mes) === String(mes))
-                );
-
-                const tGto = f_fb.reduce((a, c) => a + Number(c.importe_gastado || 0), 0);
-                const tLds = f_fb.reduce((a, c) => a + Number(c.contactos_mensajes_nuevos || 0), 0);
                 const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
-                const tMet = f_ms.reduce((a, c) => a + Number(c.meta || 0), 0);
+                const tLds = f_c.length;
 
                 document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
                 document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
                 document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
                 document.getElementById("kpi-roas").innerText = tGto > 0 ? (tVta / tGto).toFixed(1) : "0.0";
-                document.getElementById("kpi-cumplimiento").innerText = tMet > 0 ? Math.round((tVta / tMet) * 100) + "%" : "0%";
-                document.getElementById("kpi-cpl").innerText = "Q" + (tLds > 0 ? (tGto / tLds).toFixed(2) : "0.00");
-                document.getElementById("kpi-cpa").innerText = "Q" + (f_o.length > 0 ? Math.round(tGto / f_o.length).toLocaleString() : "0");
-                document.getElementById("kpi-conversion").innerText = tLds > 0 ? ((f_o.length / tLds) * 100).toFixed(1) + "%" : "0%";
-                document.getElementById("kpi-asesores").innerText = new Set(f_o.map(o => o.asignado)).size;
 
-                const days = new Set(f_fb.map(f => f.dia)).size || 1;
-                document.getElementById("kpi-prom-vt").innerText = "Q" + Math.round(tVta / days).toLocaleString();
-
-                const vDig = f_o.filter(o => {
-                    const s = (o.secuencia || "").toString().toUpperCase();
-                    return s.startsWith("A") || s.startsWith("R") || (seqMap[s] && Array.from(seqMap[s].gers).some(gr => gr === "DIEGO SANTA CRUZ" || gr === "NOHEMI MACHA"));
-                }).reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
-
-                document.getElementById("kpi-v-dig").innerText = "Q" + Math.round(vDig).toLocaleString();
-                document.getElementById("kpi-v-nodig").innerText = "Q" + Math.round(tVta - vDig).toLocaleString();
-                document.getElementById("kpi-eficiencia").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0%";
-
-                render(f_o, f_fb, tVta, tMet, seqMap);
+                render(f_o, f_c, tVta, tGto);
             }
 
-            function render(f_o, f_fb, tv, tm, seqMap) {
-                const config = { responsive: true, displayModeBar: false };
-                const layout_base = {
-                    margin: { t: 20, b: 40, l: 60, r: 20 },
-                    paper_bgcolor: "rgba(0,0,0,0)",
-                    plot_bgcolor: "rgba(0,0,0,0)",
-                    font: { family: 'Inter', size: 10 }
-                };
 
-                Plotly.newPlot("ch-meta", [{
-                    x: ["REAL", "META"], y: [tv, tm], type: "bar", marker: { color: ["#10b981", "#e2e8f0"] },
-                    text: [tv.toLocaleString(), tm.toLocaleString()], textposition: "auto"
-                }], layout_base, config);
+            function render(fo, fc, tv, tg) {
+                const layout = { margin: {t:10, b:40, l:40, r:10}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {size: 10} };
 
-                const lbd = f_fb.reduce((acc, c) => { const d = c.dia; acc[d] = (acc[d] || 0) + Number(c.contactos_mensajes_nuevos || 0); return acc; }, {});
-                const dx = Object.keys(lbd).sort();
+                // 1. Leads Diarios
+                const lbd = fc.reduce((acc, c) => { const d = c.fecha_iso || "N/A"; acc[d] = (acc[d] || 0) + 1; return acc; }, {});
                 Plotly.newPlot("ch-leads", [{
-                    x: dx, y: dx.map(k => lbd[k]), type: "scatter", mode: "lines+markers",
-                    line: { color: "#3b82f6", width: 4, shape: "spline" }, fill: "tozeroy"
-                }], layout_base, config);
+                    x: Object.keys(lbd).sort(), y: Object.keys(lbd).sort().map(k => lbd[k]),
+                    type: "scatter", mode: "lines+markers", line: {color: "#3b82f6", width:3}, fill: "tozeroy"
+                }], layout);
 
-                const mPie = f_o.reduce((acc, c) => {
-                    let n = (c.marca || "").toString().trim();
-                    const sKey = (c.secuencia || "").toString().toUpperCase().trim(); if (!n && seqMap[sKey]) n = Array.from(seqMap[sKey].marcs)[0];
-                    if (n) acc[n] = (acc[n] || 0) + Number(c.valor_del_cliente_potencial || 0);
+                // 2. Ventas por Marca
+                const vbm = fo.reduce((acc, c) => {
+                    const m = (c.marca || "OTRA").toUpperCase();
+                    acc[m] = (acc[m] || 0) + Number(c.valor_del_cliente_potencial || 0);
                     return acc;
                 }, {});
+                const sortedM = Object.entries(vbm).sort((a,b) => b[1] - a[1]);
                 Plotly.newPlot("ch-marca", [{
-                    labels: Object.keys(mPie), values: Object.values(mPie), type: "pie", hole: .7,
-                    marker: { colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899", "#ef4444"] }
-                }], { ...layout_base, margin: {t:0,b:0,l:0,r:0} }, config);
+                    labels: sortedM.map(x => x[0]), values: sortedM.map(x => x[1]), type: "pie", hole: .4,
+                    marker: { colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"] }
+                }], { ...layout, showlegend: true });
 
-                const vMap = f_o.reduce((acc, c) => { acc[c.asignado] = (acc[c.asignado] || 0) + Number(c.valor_del_cliente_potencial || 0); return acc; }, {});
-                const vS = Object.entries(vMap).sort((a,b) => a[1] - b[1]);
+                // 3. Eficiencia por Asesor (Ventas)
+                const vm = fo.reduce((acc, c) => {
+                    const n = c.asignado || "Sin Asignar";
+                    acc[n] = (acc[n] || 0) + Number(c.valor_del_cliente_potencial || 0);
+                    return acc;
+                }, {});
+                const vs = Object.entries(vm).sort((a,b) => a[1] - b[1]);
                 Plotly.newPlot("ch-asesor", [{
-                    y: vS.map(x => x[0]), x: vS.map(x => x[1]), type: "bar", orientation: "h", marker: { color: "#10b981" }
-                }], { ...layout_base, margin: { t: 20, b: 40, l: 140, r: 20 } }, config);
+                    y: vs.map(x => x[0]), x: vs.map(x => x[1]), type: "bar", orientation: "h", marker: {color: "#10b981"}
+                }], { ...layout, margin: {t:10, b:40, l:120, r:10} });
+
+                // 4. Ventas vs Meta (Progreso)
+                const activeG = document.getElementById("f-ger").value.toUpperCase();
+                const activeM = document.getElementById("f-mar").value.toUpperCase();
+                const activeMes = document.getElementById("f-mes").value;
+                const metasF = raw.metas.filter(x => {
+                    const mG = (activeG === "ALL" || (x.gerente || "").toUpperCase() === activeG);
+                    const mM = (activeM === "ALL" || (x.marca || "").toUpperCase() === activeM);
+                    const mMes = (activeMes === "ALL" || String(x.mes) === String(activeMes));
+                    return mG && mM && mMes;
+                });
+                const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || 0), 0);
+                const perc = tMeta > 0 ? (tv / tMeta) * 100 : 0;
+
+                document.getElementById("kpi-meta").innerText = Math.round(perc) + "%";
+                Plotly.newPlot("ch-meta", [{
+                    domain: { x: [0, 1], y: [0, 1] },
+                    value: tv,
+                    title: { text: "Cumplimiento de Meta" },
+                    type: "indicator",
+                    mode: "gauge+number",
+                    gauge: {
+                        axis: { range: [0, Math.max(tMeta, tv * 1.2)] },
+                        bar: { color: "#10b981" },
+                        steps: [{ range: [0, tMeta], color: "#e2e8f0" }]
+                    }
+                }], layout);
+            }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)" };
+                const lbd = fc.reduce((acc, c) => { const d = c.fecha_iso || "N/A"; acc[d] = (acc[d] || 0) + 1; return acc; }, {});
+                Plotly.newPlot("ch-leads", [{
+                    x: Object.keys(lbd).sort(), y: Object.keys(lbd).sort().map(k => lbd[k]),
+                    type: "scatter", mode: "lines+markers", line: {color: "#3b82f6", width:3}, fill: "tozeroy"
+                }], layout);
+
+                const vm = fo.reduce((acc, c) => { acc[c.asignado] = (acc[c.asignado] || 0) + Number(c.valor_del_cliente_potencial || 0); return acc; }, {});
+                const vs = Object.entries(vm).sort((a,b) => a[1] - b[1]);
+                Plotly.newPlot("ch-asesor", [{
+                    y: vs.map(x => x[0]), x: vs.map(x => x[1]), type: "bar", orientation: "h", marker: {color: "#10b981"}
+                }], { ...layout, margin: {t:10, b:40, l:120, r:10} });
             }
             init();
         })();
@@ -963,13 +917,10 @@ class App(cctk.CTk):
 </body>
 </html>"""
 
-        final_html = html_content.replace("PAYLOAD_JSON", json.dumps(payload))
-        final_html = final_html.replace("TIMESTAMP_HERE", datetime.now().strftime("%d/%m/%Y %H:%M"))
-
-        fn = f"dashboard_Dupaza_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-        with open(fn, "w", encoding="utf-8") as f: f.write(final_html)
-        with open("index.html", "w", encoding="utf-8") as f: f.write(final_html)
-        self.log(f"Dashboards generados correctamente.")
+        final = html_content.replace("PAYLOAD_JSON", json.dumps(payload))
+        final = final.replace("TIMESTAMP_HERE", datetime.now().strftime("%d/%m/%Y %H:%M"))
+        with open("index.html", "w", encoding="utf-8") as f: f.write(final)
+        self.log("Dashboard unificado listo.")
 
     def process_contact_costs(self, res_c, res_fb):
         df_c = pd.DataFrame(res_c)
@@ -977,7 +928,7 @@ class App(cctk.CTk):
         if df_c.empty: return df_c
 
         # Asegurar que los nombres de las columnas existen
-        for col in ['dateAddedRaw', 'secuencia', 'Anuncio']:
+        for col in ['fecha_iso', 'secuencia', 'anuncio']:
             if col not in df_c.columns: df_c[col] = ""
         for col in ['Día', 'SECUENCIA', 'codigo', 'Importe gastado']:
             if col not in df_fb.columns: df_fb[col] = 0 if 'gastado' in col else ""
@@ -988,23 +939,23 @@ class App(cctk.CTk):
         df_c['Costo Total'] = 0.0
 
         if df_fb.empty:
-            if 'dateAddedRaw' in df_c.columns: df_c.drop(columns=['dateAddedRaw'], inplace=True)
+            pass
             return df_c
 
         # Normalización para el join
-        df_c['Anuncio'] = df_c['Anuncio'].astype(str).str.strip().str.upper()
+        df_c['anuncio'] = df_c['anuncio'].astype(str).str.strip().str.upper()
         df_fb['codigo'] = df_fb['codigo'].astype(str).str.strip().str.upper()
         df_c['secuencia'] = df_c['secuencia'].astype(str).str.strip().str.upper()
         df_fb['SECUENCIA'] = df_fb['SECUENCIA'].astype(str).str.strip().str.upper()
 
         # 1. Gasto Directo por Anuncio
         fb_grouped = df_fb.groupby(['Día', 'SECUENCIA', 'codigo'])['Importe gastado'].sum().reset_index()
-        c_counts = df_c.groupby(['dateAddedRaw', 'secuencia', 'Anuncio']).size().reset_index(name='contact_count')
+        c_counts = df_c.groupby(['fecha_iso', 'secuencia', 'anuncio']).size().reset_index(name='contact_count')
 
         direct_costs = pd.merge(
             c_counts,
             fb_grouped,
-            left_on=['dateAddedRaw', 'secuencia', 'Anuncio'],
+            left_on=['fecha_iso', 'secuencia', 'anuncio'],
             right_on=['Día', 'SECUENCIA', 'codigo'],
             how='inner'
         )
@@ -1013,7 +964,7 @@ class App(cctk.CTk):
         df_c = pd.merge(
             df_c,
             direct_costs[['dateAddedRaw', 'secuencia', 'Anuncio', 'cost_per_contact']],
-            on=['dateAddedRaw', 'secuencia', 'Anuncio'],
+            on=['fecha_iso', 'secuencia', 'anuncio'],
             how='left'
         )
         df_c['Costo Directo'] = df_c['cost_per_contact'].fillna(0.0)
@@ -1023,22 +974,22 @@ class App(cctk.CTk):
         df_fb['is_orphan'] = df_fb.apply(lambda r: (r['Día'], r['SECUENCIA'], r['codigo']) not in fb_attributed_keys, axis=1)
 
         orphan_spend = df_fb[df_fb['is_orphan']].groupby(['Día', 'SECUENCIA'])['Importe gastado'].sum().reset_index(name='total_orphan_spend')
-        seq_total_contacts = df_c.groupby(['dateAddedRaw', 'secuencia']).size().reset_index(name='seq_total')
+        seq_total_contacts = df_c.groupby(['fecha_iso', 'secuencia']).size().reset_index(name='seq_total')
 
-        allocation_base = pd.merge(orphan_spend, seq_total_contacts, left_on=['Día', 'SECUENCIA'], right_on=['dateAddedRaw', 'secuencia'])
+        allocation_base = pd.merge(orphan_spend, seq_total_contacts, left_on=['Día', 'SECUENCIA'], right_on=['fecha_iso', 'secuencia'])
         allocation_base['orphan_cost_per_contact'] = allocation_base['total_orphan_spend'].astype(float) / allocation_base['seq_total']
 
         df_c = pd.merge(
             df_c,
             allocation_base[['dateAddedRaw', 'secuencia', 'orphan_cost_per_contact']],
-            on=['dateAddedRaw', 'secuencia'],
+            on=['fecha_iso', 'secuencia'],
             how='left'
         )
         df_c['Gasto Repartido'] = df_c['orphan_cost_per_contact'].fillna(0.0)
         df_c['Costo Total'] = df_c['Costo Directo'] + df_c['Gasto Repartido']
 
         # Limpieza
-        drop_cols = ['dateAddedRaw', 'cost_per_contact', 'orphan_cost_per_contact']
+        drop_cols = ['fecha_iso', 'cost_per_contact', 'orphan_cost_per_contact']
         df_c.drop(columns=[c for c in drop_cols if c in df_c.columns], inplace=True)
         return df_c
 
@@ -1068,8 +1019,9 @@ class App(cctk.CTk):
             for c in v_cols:
                 if c not in df_v.columns: df_v[c] = ""
             df_v = df_v[v_cols]
-        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "Anuncio", "tipo_post", "Costo Directo", "Gasto Repartido", "Costo Total"]
+        c_cols = ["id", "fecha", "asignado", "secuencia", "Anuncio", "tipo_post", "Costo Directo", "Gasto Repartido", "Costo Total"]
         if not df_c.empty:
+            if "anuncio" in df_c.columns: df_c.rename(columns={"anuncio": "Anuncio"}, inplace=True)
             for c in c_cols:
                 if c not in df_c.columns: df_c[c] = ""
             df_c = df_c[c_cols]
