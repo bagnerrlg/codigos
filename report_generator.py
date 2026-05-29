@@ -674,13 +674,17 @@ class App(cctk.CTk):
         df_c = pd.DataFrame(res_c)
         df_fb = pd.DataFrame(res_fb)
 
-        # Convertir fechas a string para serialización JSON
+        # Convertir fechas a string para serialización JSON y limpiar NaNs
         def prepare_json(df_in):
             if df_in.empty: return []
             d = df_in.copy()
+            # Tratar NaNs primero
+            d = d.fillna("")
             for col in d.columns:
-                if pd.api.types.is_datetime64_any_dtype(d[col]) or pd.api.types.is_object_dtype(d[col]):
-                    d[col] = d[col].apply(lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x) if x is not None else "")
+                if pd.api.types.is_datetime64_any_dtype(d[col]):
+                    d[col] = d[col].apply(lambda x: x.isoformat() if hasattr(x, 'isoformat') else str(x))
+                elif pd.api.types.is_object_dtype(d[col]):
+                    d[col] = d[col].astype(str)
             return d.to_dict(orient="records")
 
         # Consolidar datos para el Dashboard
@@ -847,8 +851,17 @@ class App(cctk.CTk):
 
     <script>
         const rawData = {json.dumps(data_json)};
+        console.log("Datos cargados:", {
+            oportunidades: rawData.oportunidades.length,
+            facebook: rawData.facebook.length,
+            contactos: rawData.contactos.length,
+            metas: rawData.metas.length
+        });
 
         function initFilters() {{
+            if (rawData.oportunidades.length === 0 && rawData.facebook.length === 0) {{
+                alert("Aviso: No se encontraron datos para el periodo seleccionado.");
+            }}
             const gerentes = [...new Set(rawData.metas.map(m => m.GERENTE))].filter(Boolean).sort();
             const marcas = [...new Set(rawData.metas.map(m => m.MARCA))].filter(Boolean).sort();
             const vendedores = [...new Set(rawData.oportunidades.map(o => o.asignado))].filter(Boolean).sort();
@@ -1068,7 +1081,8 @@ class App(cctk.CTk):
 
             // Gasto por plataforma (Pie)
             const platMap = f_fb.reduce((acc, curr) => {{
-                acc[curr['Nombre de la página']] = (acc[curr['Nombre de la página']] || 0) + (parseFloat(curr['Importe gastado']) || 0);
+                const platName = curr['Nombre de la página'] || 'Desconocida';
+                acc[platName] = (acc[platName] || 0) + (parseFloat(curr['Importe gastado']) || 0);
                 return acc;
             }}, {{}});
             if (Object.keys(platMap).length > 0) {{
