@@ -365,7 +365,10 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
     while True:
         payload = {"locationId": loc, "page": page, "pageLimit": limit, "filters": [{"field": "dateAdded", "operator": "range", "value": {"gt": start_utc, "lt": end_utc}}]}
         res = safe_post(url, token, payload, API_VERSION_CONTACTS)
-        if not res or (isinstance(res, dict) and res.get("__error_status")): break
+        if not res: break
+        if isinstance(res, dict) and res.get("__error_status"):
+            log_callback(f"  {acc_name} ERROR {res.get('__error_status')}: {res.get('__error_text')[:100]}")
+            break
         contacts = res.get("contacts", [])
         if not isinstance(contacts, list) or not contacts: break
         all_contacts.extend(contacts); page += 1
@@ -417,7 +420,10 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
             "additionalDetails": {"notes": True}
         }
         res = safe_post(url, token, payload, API_VERSION_OPPS)
-        if not res or (isinstance(res, dict) and res.get("__error_status")): break
+        if not res: break
+        if isinstance(res, dict) and res.get("__error_status"):
+            log_callback(f"  {acc_name} ERROR {res.get('__error_status')}: {res.get('__error_text')[:100]}")
+            break
         opps = res.get("opportunities", [])
         if not isinstance(opps, list) or not opps: break
         all_opps.extend(opps); page += 1
@@ -627,6 +633,14 @@ class App(cctk.CTk):
         self.generate_btn.configure(state="disabled", text="🚀 PROCESANDO..."); threading.Thread(target=self.execute_logic, daemon=True).start()
 
     def execute_logic(self):
+        missing = []
+        if not FB_ACCESS_TOKEN: missing.append("FB_ACCESS_TOKEN")
+        for acc in ACCOUNTS:
+            if not acc.get("token"): missing.append(f"TOKEN_{acc['name']}")
+        if missing:
+            self.log(f"ERROR: Faltan tokens en .env: {', '.join(missing)}")
+            return
+
         try:
             sd_opp, ed_opp, sd_con, ed_con = self.sales_picker.start_date, self.sales_picker.end_date, self.contacts_picker.start_date, self.contacts_picker.end_date
             s_iso_o, e_iso_o, ghl_s_o, ghl_e_o = sd_opp.strftime("%Y-%m-%d"), ed_opp.strftime("%Y-%m-%d"), sd_opp.strftime("%Y-%m-%dT00:00:00.000Z"), ed_opp.strftime("%Y-%m-%dT23:59:59.999Z")
@@ -640,7 +654,7 @@ class App(cctk.CTk):
                 f_fb = [ex.submit(obtener_insights, acc, fb_s, fb_h, self.log) for acc in FB_AD_ACCOUNTS]
                 for f in as_completed(list(f_opp.keys()) + list(f_con.keys()) + f_fb):
                     if f in f_opp: o, v = f.result(); res_o.extend(o); res_v.extend(v)
-                    elif f in f_con: res_c.extend(f.result())
+                    elif f in f_con: c_data = f.result(); self.log(f"  {f_con[f]['name']}: {len(c_data)} contactos."); res_c.extend(c_data)
                     else:
                         insights = f.result()
                         if insights:
@@ -925,27 +939,32 @@ class App(cctk.CTk):
         for col in ['Día', 'SECUENCIA', 'codigo', 'Importe gastado', 'Contactos mensajes nuevos']:
             if col not in df_fb.columns: df_fb[col] = 0 if 'gastado' in col or 'Contactos' in col else ""
 
-        # 1. Atribución Ad-hoc para contactos vacíos (RANKING TOP 3)
-        # Si un contacto no tiene anuncio, buscamos los top 3 anuncios del día/secuencia en FB
+
+        # 1. Atribución Ad-hoc para contactos vacíos (RANKING TOP 3 con ROTACIÓN)
         def get_top_ads(fb_df):
-            # Agrupar por dia, secuencia, codigo y sumar contactos (mensajes)
             grouped = fb_df.groupby(['Día', 'SECUENCIA', 'codigo'])['Contactos mensajes nuevos'].sum().reset_index()
-            # Ordenar y tomar los top 3 por (Día, SECUENCIA)
             grouped = grouped.sort_values(['Día', 'SECUENCIA', 'Contactos mensajes nuevos'], ascending=[True, True, False])
             top3 = grouped.groupby(['Día', 'SECUENCIA']).head(3)
             return top3
 
         top3_ads = get_top_ads(df_fb)
 
+        # Diccionario para llevar el índice de rotación por (Día, Secuencia)
+        rotation_counters = {}
+
         def assign_top_ad(row, top_df):
             if str(row['anuncio']).strip() != "": return row['anuncio']
-            # Buscar en top_df
+            key = (row['fecha_iso'], row['secuencia'])
             match = top_df[(top_df['Día'] == row['fecha_iso']) & (top_df['SECUENCIA'] == row['secuencia'])]
             if not match.empty:
-                return match.iloc[0]['codigo'] # Tomamos el mejor del top 3
+                # Rotación circular entre los disponibles en el top 3
+                idx = rotation_counters.get(key, 0) % len(match)
+                rotation_counters[key] = idx + 1
+                return match.iloc[idx]['codigo']
             return ""
 
         df_c['anuncio'] = df_c.apply(lambda r: assign_top_ad(r, top3_ads), axis=1)
+
 
         # 2. Inicializar columnas de costo
         df_c['Costo Directo'] = 0.0
@@ -983,73 +1002,6 @@ class App(cctk.CTk):
 
         # 4. Gasto Repartido (Sin Mensajes / Huérfanos)
         fb_attributed_keys = set(zip(direct_costs['fecha_iso'], direct_costs['secuencia'], direct_costs['anuncio']))
-        df_fb['is_orphan'] = df_fb.apply(lambda r: (r['Día'], r['SECUENCIA'], r['codigo']) not in fb_attributed_keys, axis=1)
-
-        orphan_spend = df_fb[df_fb['is_orphan']].groupby(['Día', 'SECUENCIA'])['Importe gastado'].sum().reset_index(name='total_orphan_spend')
-        seq_total_contacts = df_c.groupby(['fecha_iso', 'secuencia']).size().reset_index(name='seq_total')
-
-        allocation_base = pd.merge(orphan_spend, seq_total_contacts, left_on=['Día', 'SECUENCIA'], right_on=['fecha_iso', 'secuencia'])
-        allocation_base['orphan_cost_per_contact'] = allocation_base['total_orphan_spend'].astype(float) / allocation_base['seq_total']
-
-        df_c = pd.merge(
-            df_c,
-            allocation_base[['fecha_iso', 'secuencia', 'orphan_cost_per_contact']],
-            on=['fecha_iso', 'secuencia'],
-            how='left'
-        )
-        df_c['Gasto Repartido'] = df_c['orphan_cost_per_contact'].fillna(0.0)
-        df_c['Costo Total'] = df_c['Costo Directo'] + df_c['Gasto Repartido']
-
-        # Limpieza
-        drop_cols = ['fecha_iso', 'cost_per_contact', 'orphan_cost_per_contact']
-        df_c.drop(columns=[c for c in drop_cols if c in df_c.columns], inplace=True)
-        return df_c
-
-
-        # Asegurar que los nombres de las columnas existen
-        for col in ['fecha_iso', 'secuencia', 'anuncio']:
-            if col not in df_c.columns: df_c[col] = ""
-        for col in ['Día', 'SECUENCIA', 'codigo', 'Importe gastado']:
-            if col not in df_fb.columns: df_fb[col] = 0 if 'gastado' in col else ""
-
-        # Inicializar columnas
-        df_c['Costo Directo'] = 0.0
-        df_c['Gasto Repartido'] = 0.0
-        df_c['Costo Total'] = 0.0
-
-        if df_fb.empty:
-            pass
-            return df_c
-
-        # Normalización para el join
-        df_c['anuncio'] = df_c['anuncio'].astype(str).str.strip().str.upper()
-        df_fb['codigo'] = df_fb['codigo'].astype(str).str.strip().str.upper()
-        df_c['secuencia'] = df_c['secuencia'].astype(str).str.strip().str.upper()
-        df_fb['SECUENCIA'] = df_fb['SECUENCIA'].astype(str).str.strip().str.upper()
-
-        # 1. Gasto Directo por Anuncio
-        fb_grouped = df_fb.groupby(['Día', 'SECUENCIA', 'codigo'])['Importe gastado'].sum().reset_index()
-        c_counts = df_c.groupby(['fecha_iso', 'secuencia', 'anuncio']).size().reset_index(name='contact_count')
-
-        direct_costs = pd.merge(
-            c_counts,
-            fb_grouped,
-            left_on=['fecha_iso', 'secuencia', 'anuncio'],
-            right_on=['Día', 'SECUENCIA', 'codigo'],
-            how='inner'
-        )
-        direct_costs['cost_per_contact'] = direct_costs['Importe gastado'].astype(float) / direct_costs['contact_count']
-
-        df_c = pd.merge(
-            df_c,
-            direct_costs[['fecha_iso', 'secuencia', 'anuncio', 'cost_per_contact']],
-            on=['fecha_iso', 'secuencia', 'anuncio'],
-            how='left'
-        )
-        df_c['Costo Directo'] = df_c['cost_per_contact'].fillna(0.0)
-
-        # 2. Gasto Repartido (Sin Mensajes)
-        fb_attributed_keys = set(zip(direct_costs['Día'], direct_costs['SECUENCIA'], direct_costs['codigo']))
         df_fb['is_orphan'] = df_fb.apply(lambda r: (r['Día'], r['SECUENCIA'], r['codigo']) not in fb_attributed_keys, axis=1)
 
         orphan_spend = df_fb[df_fb['is_orphan']].groupby(['Día', 'SECUENCIA'])['Importe gastado'].sum().reset_index(name='total_orphan_spend')
