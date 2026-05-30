@@ -1,0 +1,7 @@
+requests
+pandas
+customtkinter
+tkcalendar
+pytz
+openpyxl
+python-dotenv
