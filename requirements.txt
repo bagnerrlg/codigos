@@ -4,4 +4,3 @@ customtkinter
 tkcalendar
 pytz
 openpyxl
-python-dotenv

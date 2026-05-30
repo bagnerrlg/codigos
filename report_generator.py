@@ -1,9 +1,4 @@
 import os
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
 import requests
 import time
 import json
@@ -29,7 +24,7 @@ ACCOUNTS = [
         "stage_id": "dea2dacb-97d4-4165-b95b-5a02f6a87155",
         "custom_field": "fydz3DjQN2pib2axnFZe",
         "dataventa_id": "7veOYT8o670WKCIbRd92",
-        "token": os.getenv("GHL_TOKEN_R21", ""),
+        "token": "pit-aa32ae57-f021-4345-9c17-599788ca222d",
         "secuencia_cf": "CDP7RyHYQIhVRNtmuYOX",
         "anuncio_cf": "EsjAWJ6IbHmCB47SbGTe",
         "primer_mensaje_cf": "ILBHzfqHvQpVXZqOqPTt"
@@ -40,7 +35,7 @@ ACCOUNTS = [
         "stage_id": "a5b50462-e82e-4256-b83d-d613ad20abcd",
         "custom_field": "U6OdqsQDVQTUDxxNBtvp",
         "dataventa_id": "1L7km8XXq3V1kDMRyvCC",
-        "token": os.getenv("GHL_TOKEN_R22", ""),
+        "token": "pit-c8f89986-1a34-4178-9064-6f678a697a01",
         "secuencia_cf": "deDXbK9Nw5khnuk679CM",
         "anuncio_cf": "vzIYG6B7mypHxXM9kLGi",
         "primer_mensaje_cf": "gMCJJq0vMZYN0cz1BnUj"
@@ -51,7 +46,7 @@ ACCOUNTS = [
         "stage_id": "d94817e9-a7fb-4ea3-bed0-d1f117001825",
         "custom_field": "xftnXlHb41aDvIx8N26d",
         "dataventa_id": "JJYIQaDMKpMMekORmcqy",
-        "token": os.getenv("GHL_TOKEN_R23", ""),
+        "token": "pit-cfd6cb24-6fee-441d-b01f-415160eb6f7b",
         "secuencia_cf": "ENXxDMYOkFK7XnjzrdOU",
         "anuncio_cf": "r8sOhHm5PKNtXv65jSaN",
         "primer_mensaje_cf": "vphhYZkFfAiaSrgfTiA3"
@@ -62,7 +57,7 @@ ACCOUNTS = [
         "stage_id": "c8d3a128-f03d-4bce-b61d-50593b7c4ebc",
         "custom_field": "k6xXzN1ksd16i1n68o4P",
         "dataventa_id": "kHdjdcIduLvTr3nL6DgZ",
-        "token": os.getenv("GHL_TOKEN_R11", ""),
+        "token": "pit-cc6a4560-665e-4063-b12e-7dd3ec412570",
         "secuencia_cf": "rG3qADV2DReag3vE4LnZ",
         "anuncio_cf": "hN5VqUs4cgWP4tNEdnTI",
         "primer_mensaje_cf": "at9WccT1xJ4tJRm5KpbK"
@@ -73,7 +68,7 @@ ACCOUNTS = [
         "stage_id": "59f6eff0-f06b-4f5a-b2ae-21f50ec8af32",
         "custom_field": "o7giXoy1LK8KMuzH2FNi",
         "dataventa_id": "DeNNFP4LihWoLaIpG0B2",
-        "token": os.getenv("GHL_TOKEN_R12", ""),
+        "token": "pit-51105ced-165a-437d-bf76-37c9ec75f00e",
         "secuencia_cf": "AAYTXtJX7jRHPn0VDqVH",
         "anuncio_cf": "IELF1xRsnl1nWvoHBRHY",
         "primer_mensaje_cf": "uEKcNGLJvv7znfVJb2Z4"
@@ -84,7 +79,7 @@ ACCOUNTS = [
         "stage_id": "3b346e40-01ea-416e-98ff-60ee147aded1",
         "custom_field": "f310g4Z4A1OxHl3KYLRv",
         "dataventa_id": "4tDKaHgodZXQ4ewzjJyh",
-        "token": os.getenv("GHL_TOKEN_R13", ""),
+        "token": "pit-58f93f09-e7a8-40d0-8ce6-32bf2f2b87b4",
         "secuencia_cf": "7s52aRnEuz8T3v0H3IlN",
         "anuncio_cf": "Vki3QtqsNJtYcRC4Fkzt",
         "primer_mensaje_cf": "78eH2yy4INV88QguossT"
@@ -161,7 +156,7 @@ GUATEMALA_TZ = pytz.timezone("America/Guatemala")
 # ---------------------------
 # CONFIG: Facebook Ads
 # ---------------------------
-FB_ACCESS_TOKEN = os.getenv("FB_ACCESS_TOKEN", "")
+FB_ACCESS_TOKEN = "EAAQlsSqsOJkBQ8ELEZCLxm0CPEiqaUSoYw0oHB7ML7xvufZBn2B6t1bizlxBtv8gjc1r4bHiqlV0AHtbI9FDLTRhivFwpDr2xMzk7Waj8htSHanBW63gZCOPwPoVOgZBuNurP2ZB6vegJGxYRAmIR2Wp2JbPZAn9u4CVdHZC06TzaIngYeZAh3n4iaMtw3SyZA7XsNAZDZD"
 FB_API_VERSION = "v19.0"
 FB_AD_ACCOUNTS = ["act_622689460111355", "act_934171589566820"]
 FB_USD_ACCOUNTS = ["act_934171589566820"]
@@ -633,13 +628,6 @@ class App(cctk.CTk):
         self.generate_btn.configure(state="disabled", text="🚀 PROCESANDO..."); threading.Thread(target=self.execute_logic, daemon=True).start()
 
     def execute_logic(self):
-        missing = []
-        if not FB_ACCESS_TOKEN: missing.append("FB_ACCESS_TOKEN")
-        for acc in ACCOUNTS:
-            if not acc.get("token"): missing.append(f"TOKEN_{acc['name']}")
-        if missing:
-            self.log(f"ERROR: Faltan tokens en .env: {', '.join(missing)}")
-            return
 
         try:
             sd_opp, ed_opp, sd_con, ed_con = self.sales_picker.start_date, self.sales_picker.end_date, self.contacts_picker.start_date, self.contacts_picker.end_date
@@ -658,6 +646,7 @@ class App(cctk.CTk):
                     else:
                         insights = f.result()
                         if insights:
+                            self.log(f"  Facebook: {len(insights)} líneas de gasto extraídas.")
                             ad_ids = list({i["ad_id"] for i in insights if "ad_id" in i})
                             creative_map = obtener_creatives(ad_ids)
                             p_map = obtener_paginas(list(set(creative_map.values())))
