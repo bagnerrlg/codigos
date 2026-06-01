@@ -703,12 +703,18 @@ class App(cctk.CTk):
             if data is None: return []
             df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
             if df.empty: return []
-            df = df.loc[:, ~df.columns.duplicated()]
+
             def clean_name(c):
                 s = str(c).lower().strip().replace(" ", "_")
                 s = s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
                 return "".join(ch for ch in s if ch.isalnum() or ch == "_")
+
+            # 1. Clean column names
             df.columns = [clean_name(c) for c in df.columns]
+
+            # 2. Deduplicate columns after cleaning (e.g., "Asignado" and "asignado" both become "asignado")
+            df = df.loc[:, ~df.columns.duplicated()]
+
             for col in df.columns:
                 if pd.api.types.is_numeric_dtype(df[col]):
                     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
