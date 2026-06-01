@@ -279,7 +279,7 @@ def parse_dataventa(dv_str):
 def get_mapped_vendedor(raw_vendedor):
     if not raw_vendedor: return "SinAsignar"
     key = str(raw_vendedor).strip().upper()
-    return VENDEDOR_MAP.get(key, raw_vendedor)
+    return str(raw_vendedor).strip().upper() # Desactivado mapeo para mantener relación GHL
 
 def parse_ventas_unnested(dv_str, contact_id, opp_id, ghl_phone, vendedor, ghl_name="", sale_date_str=""):
     data = {}
@@ -445,7 +445,7 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
                 continue
             vendedor_raw, gnam, opp_id_val = get_mapped_vendedor(u_map.get(op.get("assignedTo"), "")), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
             dv_data = json.loads(dv_str) if dv_str else {}
-            anu_val, _ = extraer_datos_anuncio(dv_data.get("anuncio", "") or dv_data.get("Anuncio", "")); row = {"secuencia": acc_name, "Anuncio": anu_val, "fecha_iso": sale_date_iso, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
+            anu_val, _ = extraer_datos_anuncio(dv_data.get("anuncio", "") or dv_data.get("Anuncio", "")); row = {"Asignado": vendedor_raw, "Secuencia": acc_name, "Anuncio": anu_val, "fecha_iso": sale_date_iso, "Mes": int(sale_date_iso[5:7]) if sale_date_iso else 0, "Anio": int(sale_date_iso[0:4]) if sale_date_iso else 0, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
             row.update(cf_data)
             nit_j, dep, mun, t1, t2, fv_j, nom_j, p_cols = parse_dataventa(dv_str)
             gp, f_final = (op.get("contact", {}).get("phone", "") if isinstance(op.get("contact"), dict) else ""), format_date_ghl(sale_date_str or fv_j)
@@ -663,9 +663,30 @@ class App(cctk.CTk):
                                 res_fb.append({"ad_id": aid, "page_id": pid, "page_name": pname, "campaign_name": camp, "adset_name": ins.get("adset_name"), "ad_name": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "secuencia": mapping_secuencia_gasto(camp), "dia": ins.get("date_start"), "contactos_mensajes_nuevos": conv, "importe_gastado": spend})
 
             df_metas = cargar_metas(PATH_METAS, self.log)
+
             if res_o or res_c or res_fb:
                 self.log(f"Total extraído: {len(res_o)} ventas, {len(res_c)} contactos, {len(res_fb)} líneas de gasto.")
+
+                # Mapa de cruce: ID Contacto -> (Anuncio, Secuencia)
+                c_map = {c['id']: (c.get('anuncio',''), c.get('secuencia','')) for c in res_c if c.get('id')}
+                for o in res_o:
+                    cid = o.get('ID de contacto')
+                    if cid in c_map:
+                        if not o.get('Anuncio') or o['Anuncio'] == "": o['Anuncio'] = c_map[cid][0]
+                        if not o.get('Secuencia') or o['Secuencia'] == "": o['Secuencia'] = c_map[cid][1]
+
+                # Asegurar campos Mes/Año en contactos y facebook
+                for c in res_c:
+                    d = c.get('fecha_iso','')
+                    c['Mes'] = int(d[5:7]) if d else 0
+                    c['Anio'] = int(d[0:4]) if d else 0
+                for f in res_fb:
+                    d = f.get('dia','')
+                    f['Mes'] = int(d[5:7]) if d else 0
+                    f['Anio'] = int(d[0:4]) if d else 0
+
                 df_c_final = self.process_contact_costs(res_c, res_fb)
+
                 self.generate_excel(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb)
                 self.generate_dashboard_html(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb, df_metas)
             else: self.log("Sin datos.")
@@ -784,7 +805,7 @@ class App(cctk.CTk):
                 };
                 pop("f-ger", raw.metas.map(m => m.gerente));
                 pop("f-mar", raw.metas.map(m => m.marca));
-                pop("f-ven", raw.contactos.map(c => c.asignado));
+                pop("f-ven", raw.contactos.map(c => c.asignado).concat(raw.oportunidades.map(o => o.asignado)));
                 pop("f-mes", raw.oportunidades.map(o => o.mes));
                 pop("f-anu", raw.contactos.map(c => c.anuncio));
                 document.querySelectorAll("select, input[type='date']").forEach(s => s.onchange = update);
@@ -815,7 +836,7 @@ class App(cctk.CTk):
                     const mDate = (!start || d >= start) && (!end || d <= end);
                     const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                     const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
-                    const mV = (v === "ALL" || c.asignado === v);
+                    const mV = (v === "ALL" || (c.asignado || "").toUpperCase() === v.toUpperCase());
                     const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
                     return mDate && mG && mM && mV && mA;
                 });
@@ -826,7 +847,7 @@ class App(cctk.CTk):
                     const mDate = (!start || d >= start) && (!end || d <= end);
                     const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                     const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
-                    const mV = (v === "ALL" || o.asignado === v);
+                    const mV = (v === "ALL" || (o.asignado || "").toUpperCase() === v.toUpperCase());
                     const mMes = (mes === "ALL" || String(o.mes) === String(mes));
                     const mA = (anu === "ALL" || (o.anuncio || "").toUpperCase() === anu);
                     return mDate && mG && mM && mV && mMes && mA;
@@ -976,8 +997,8 @@ class App(cctk.CTk):
         for df in [df_o, df_v, df_c, df_fb]:
             if not df.empty:
                 for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns, America/Guatemala]']).columns: df[col] = df[col].dt.tz_localize(None)
-        head = ["secuencia", "fase", "Valor del cliente potencial", "asignado", "Creado", "Ultimo Actualizado", "Seguidores", "Notas", "etiquetas", "estado", "Fecha de Venta", "NIT", "Camas y Combos SKU", "Cantidad Camas y Combo SKU", "Camas y Combos SKU1", "Cantidad Camas y Combo SKU1", "Cocinas SKU", "Cantidad Cocinas SKU", "Cocinas SKU1", "Cantidad Cocinas SKU1", "Salas SKU", "Cantidad Salas SKU", "Salas SKU1", "Cantidad Salas SKU1"]
-        tail = ["", "Departamento", "Municipio", "Telefono 1", "Telefono 2", "ID de oportunidad", "ID de contacto", "Cliente", "Mes", "Cod", "DataVenta", "Fecha", "MARCA", "ANILLO", "UBICACION"]
+        head = ["Asignado", "Secuencia", "Mes", "Anio", "Anuncio", "fase", "Valor del cliente potencial", "Creado", "Ultimo Actualizado", "Seguidores", "Notas", "etiquetas", "estado", "Fecha de Venta", "NIT", "Camas y Combos SKU", "Cantidad Camas y Combo SKU", "Camas y Combos SKU1", "Cantidad Camas y Combo SKU1", "Cocinas SKU", "Cantidad Cocinas SKU", "Cocinas SKU1", "Cantidad Cocinas SKU1", "Salas SKU", "Cantidad Salas SKU", "Salas SKU1", "Cantidad Salas SKU1"]
+        tail = ["", "Departamento", "Municipio", "Telefono 1", "Telefono 2", "ID de oportunidad", "ID de contacto", "Cliente", "Cod", "DataVenta", "Fecha", "MARCA", "ANILLO", "UBICACION"]
         if not df_o.empty:
             if "" not in df_o.columns: df_o[""] = ""
             for c in head + tail:
