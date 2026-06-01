@@ -281,7 +281,7 @@ def get_mapped_vendedor(raw_vendedor):
     key = str(raw_vendedor).strip().upper()
     return str(raw_vendedor).strip().upper() # Desactivado mapeo para mantener relación GHL
 
-def parse_ventas_unnested(dv_str, contact_id, opp_id, ghl_phone, vendedor, ghl_name="", sale_date_str=""):
+def parse_ventas_unnested(dv_str, contact_id, opp_id, ghl_phone, vendedor, ghl_name="", sale_date_str="", secuencia=""):
     data = {}
     if dv_str:
         try: data = json.loads(dv_str)
@@ -290,7 +290,7 @@ def parse_ventas_unnested(dv_str, contact_id, opp_id, ghl_phone, vendedor, ghl_n
     try: total_docto = float(str(data.get("Total_General", 0)).replace(',', ''))
     except: total_docto = 0.0
     vendedor_final = get_mapped_vendedor(vendedor)
-    base_metadata = {"ID CONTACTO": contact_id, "NIT": calculate_nit(nit_j, t1, ghl_phone), "NOMBRE": data.get("nombre", ghl_name), "TEL1": t1, "TEL2": data.get("tel2", ""), "VENDEDOR": vendedor_final, "MUNICIPIO": data.get("municipio", ""), "DIRECCION": data.get("direccion", ""), "RCF": "000000000000", "canal": data.get("canal", ""), "DEPARTAMENTO": data.get("departamento", ""), "FECHA": format_date_ghl(data.get("fechaVenta", sale_date_str)), "MARCA": data.get("marca", ""), "UBICACION": data.get("ubicacion", ""), "ANILLO": data.get("anillo", ""), "COMENTARIOS": data.get("COMENTARIO", ""), "ID Oportunidad": opp_id, "BODEGAF": str(data.get("bodega", ""))[:4] if data.get("bodega") else "", "TOTAL DOCTO": total_docto}
+    base_metadata = {"ID CONTACTO": contact_id, "NIT": calculate_nit(nit_j, t1, ghl_phone), "NOMBRE": data.get("nombre", ghl_name), "TEL1": t1, "TEL2": data.get("tel2", ""), "VENDEDOR": vendedor_final, "MUNICIPIO": data.get("municipio", ""), "DIRECCION": data.get("direccion", ""), "RCF": "000000000000", "canal": data.get("canal", ""), "DEPARTAMENTO": data.get("departamento", ""), "FECHA": format_date_ghl(data.get("fechaVenta", sale_date_str)), "MARCA": data.get("marca", ""), "UBICACION": data.get("ubicacion", ""), "ANILLO": data.get("anillo", ""), "COMENTARIOS": data.get("COMENTARIO", ""), "SECUENCIA": secuencia, "ID Oportunidad": opp_id, "BODEGAF": str(data.get("bodega", ""))[:4] if data.get("bodega") else "", "TOTAL DOCTO": total_docto}
     empty_metadata = {k: "" for k in base_metadata.keys()}
     prods = data.get("productos", [])
     if not prods: return [base_metadata]
@@ -391,7 +391,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
             "fecha": date_fmt,
             "fecha_iso": dt_local.strftime("%Y-%m-%d") if dt_local else "",
             "asignado": assigned_name,
-            "secuencia": secuencia,
+            "secuencia": acc_name,
             "anuncio": anuncio,
             "tipo_post": tipo_post
         })
@@ -451,7 +451,7 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
             gp, f_final = (op.get("contact", {}).get("phone", "") if isinstance(op.get("contact"), dict) else ""), format_date_ghl(sale_date_str or fv_j)
             row.update({"NIT": calculate_nit(nit_j, t1, gp), "Departamento": dep, "Municipio": mun, "Telefono 1": t1, "Telefono 2": t2, "Fecha": f_final, "Fecha de Venta": f_final})
             if nom_j: row["Cliente"] = nom_j
-            row.update(p_cols); r_opps.append(row); r_ventas.extend(parse_ventas_unnested(dv_str, op.get("contactId", ""), op.get("id", ""), gp, vendedor_raw, gnam, sale_date_str))
+            row.update(p_cols); r_opps.append(row); r_ventas.extend(parse_ventas_unnested(dv_str, op.get("contactId", ""), op.get("id", ""), gp, vendedor_raw, gnam, sale_date_str, acc_name))
         except: continue
     log_callback(f"  {acc_name}: {len(r_opps)} ventas aceptadas, {filtered_count} fuera de rango.")
     return r_opps, r_ventas
@@ -471,18 +471,18 @@ def fb_api_get(url, params):
 
 def mapping_secuencia_gasto(camp):
     camp = str(camp).upper()
-    if camp.startswith("DIEGOA01C1.PAGINA M"): return "A03-A"
-    if camp.startswith("DIEGO"): return "A03-A"
-    if camp.startswith("VICTORIAA02C1"): return "A02-A"
-    if camp.startswith("VICTORIA"): return "A02-A"
-    if camp.startswith("NOHEA02C1"): return "A02-A"
-    if camp.startswith("NOHEA02C2"): return "A07-A"
-    if camp.startswith("NOHE"): return "A07-A"
-    if camp.startswith("ANGEL"): return "A07-A"
+    if camp.startswith("DIEGOA01C1.PAGINA M"): return "R1.3"
+    if camp.startswith("DIEGO"): return "R1.3"
+    if camp.startswith("VICTORIAA02C1"): return "R1.2"
+    if camp.startswith("VICTORIA"): return "R1.2"
+    if camp.startswith("NOHEA02C1"): return "R1.2"
+    if camp.startswith("NOHEA02C2"): return "R1.3"
+    if camp.startswith("NOHE"): return "R1.3"
+    if camp.startswith("ANGEL"): return "R1.3"
     if camp.startswith("2510"): return "TIENDAS"
     if camp.startswith("RRHH"): return "RRHH"
-    if camp.startswith("TIENDAS"): return "A04-A"
-    if camp.startswith("BOT2"): return "A02-C3"
+    if camp.startswith("TIENDAS"): return "TIENDAS"
+    if camp.startswith("BOT2"): return "R1.2"
     if camp.startswith("R2.2"): return "R2.2"
     if camp.startswith("R2.1"): return "R2.1"
     if camp.startswith("R1.1"): return "R1.1"
@@ -1010,14 +1010,16 @@ class App(cctk.CTk):
             for c in head + tail:
                 if c not in df_o.columns: df_o[c] = ""
             extra = [c for c in df_o.columns if c not in set(head + tail)]; df_o = df_o[head + extra + tail]
-        v_cols = ["ID CONTACTO", "NIT", "NOMBRE", "TEL1", "TEL2", "VENDEDOR", "MUNICIPIO", "DIRECCION", "RCF", "canal", "DEPARTAMENTO", "FECHA", "SKU", "DESCRIPCION", "Cantidad de combo", "MARCA", "UBICACION", "ANILLO", "COMENTARIOS", "ID Oportunidad", "BODEGAF", "TOTAL DOCTO", "PRECIO COMBO"]
+        v_cols = ["ID CONTACTO", "NIT", "NOMBRE", "TEL1", "TEL2", "VENDEDOR", "SECUENCIA", "MUNICIPIO", "DIRECCION", "RCF", "canal", "DEPARTAMENTO", "FECHA", "SKU", "DESCRIPCION", "Cantidad de combo", "MARCA", "UBICACION", "ANILLO", "COMENTARIOS", "ID Oportunidad", "BODEGAF", "TOTAL DOCTO", "PRECIO COMBO"]
         if not df_v.empty:
             for c in v_cols:
                 if c not in df_v.columns: df_v[c] = ""
             df_v = df_v[v_cols]
-        c_cols = ["id", "fecha", "asignado", "secuencia", "Anuncio", "tipo_post", "Costo Directo", "Gasto Repartido", "Costo Total"]
+        c_cols = ["id", "fecha", "asignado", "secuencia", "Anuncio", "tipo_post", "Mes", "Anio", "Costo Directo", "Gasto Repartido", "Costo Total"]
         if not df_c.empty:
             if "anuncio" in df_c.columns: df_c.rename(columns={"anuncio": "Anuncio"}, inplace=True)
+            if "Mes" not in df_c.columns: df_c["Mes"] = ""
+            if "Anio" not in df_c.columns: df_c["Anio"] = ""
             for c in c_cols:
                 if c not in df_c.columns: df_c[c] = ""
             df_c = df_c[c_cols]
