@@ -682,6 +682,7 @@ class App(cctk.CTk):
             df_metas = cargar_metas(PATH_METAS, self.log)
 
 
+
             if res_o or res_c or res_fb:
                 self.log(f"Total extraído: {len(res_o)} ventas, {len(res_c)} contactos, {len(res_fb)} líneas de gasto.")
 
@@ -690,10 +691,8 @@ class App(cctk.CTk):
                 for o in res_o:
                     cid = o.get('ID de contacto')
                     if cid in c_map:
-                        # Si a la venta le falta el anuncio lo hereda del contacto
                         if not o.get('Anuncio') or str(o.get('Anuncio','')).strip() == "":
                             o['Anuncio'] = c_map[cid][0]
-                        # Asegurar secuencia correcta
                         if not o.get('Secuencia') or str(o.get('Secuencia','')).strip() == "":
                             o['Secuencia'] = c_map[cid][1]
 
@@ -703,16 +702,29 @@ class App(cctk.CTk):
                     if 'Mes' not in c: c['Mes'] = int(d[5:7]) if d else 0
                     if 'Anio' not in c: c['Anio'] = int(d[0:4]) if d else 0
 
-                for f in res_fb:
-                    # En res_fb las claves son "Mes" y "Anio" ya puestas arriba.
-                    pass
-
                 # 3. Procesar costos de contactos
                 df_c_final = self.process_contact_costs(res_c, res_fb)
 
+                # 4. Cruzar VENTAS -> CONTACTOS (Saber cuánto vendió cada contacto/anuncio)
+                v_map = {} # ID Contacto -> Total Venta
+                for o in res_o:
+                    cid = o.get('ID de contacto')
+                    if cid:
+                        v_map[cid] = v_map.get(cid, 0) + float(o.get('Valor del cliente potencial', 0))
+
+                # Inyectar valor de venta en el DataFrame de contactos final
+                if not df_c_final.empty:
+                    df_c_final['Valor Venta'] = df_c_final['id'].map(v_map).fillna(0.0)
+
+                # 5. Cruzar COSTOS -> VENTAS (Saber cuánto costó cada venta basado en su lead)
+                c_cost_map = df_c_final.set_index('id')['Costo Total'].to_dict() if not df_c_final.empty else {}
+                for o in res_o:
+                    cid = o.get('ID de contacto')
+                    o['Costo Lead'] = c_cost_map.get(cid, 0.0)
 
                 self.generate_excel(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb)
                 self.generate_dashboard_html(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb, df_metas)
+
             else: self.log("Sin datos.")
         except Exception as e: import traceback; err_msg = traceback.format_exc(); print(err_msg); self.log(f"Error: {str(e)}\nConsulte la consola para detalles.")
         finally: self.after(0, lambda: self.generate_btn.configure(state="normal", text="🚀 GENERAR EXCEL"))
@@ -1027,7 +1039,7 @@ class App(cctk.CTk):
         for df in [df_o, df_v, df_c, df_fb]:
             if not df.empty:
                 for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns, America/Guatemala]']).columns: df[col] = df[col].dt.tz_localize(None)
-        head = ["Asignado", "Secuencia", "Mes", "Anio", "Anuncio", "fase", "Valor del cliente potencial", "Creado", "Ultimo Actualizado", "Seguidores", "Notas", "etiquetas", "estado", "Fecha de Venta", "NIT", "Camas y Combos SKU", "Cantidad Camas y Combo SKU", "Camas y Combos SKU1", "Cantidad Camas y Combo SKU1", "Cocinas SKU", "Cantidad Cocinas SKU", "Cocinas SKU1", "Cantidad Cocinas SKU1", "Salas SKU", "Cantidad Salas SKU", "Salas SKU1", "Cantidad Salas SKU1"]
+        head = ["Asignado", "Secuencia", "Mes", "Anio", "Anuncio", "fase", "Valor del cliente potencial", "Costo Lead", "Creado", "Ultimo Actualizado", "Seguidores", "Notas", "etiquetas", "estado", "Fecha de Venta", "NIT", "Camas y Combos SKU", "Cantidad Camas y Combo SKU", "Camas y Combos SKU1", "Cantidad Camas y Combo SKU1", "Cocinas SKU", "Cantidad Cocinas SKU", "Cocinas SKU1", "Cantidad Cocinas SKU1", "Salas SKU", "Cantidad Salas SKU", "Salas SKU1", "Cantidad Salas SKU1"]
         tail = ["", "Departamento", "Municipio", "Telefono 1", "Telefono 2", "ID de oportunidad", "ID de contacto", "Cliente", "Cod", "DataVenta", "Fecha", "MARCA", "ANILLO", "UBICACION"]
         if not df_o.empty:
             if "" not in df_o.columns: df_o[""] = ""
@@ -1039,7 +1051,7 @@ class App(cctk.CTk):
             for c in v_cols:
                 if c not in df_v.columns: df_v[c] = ""
             df_v = df_v[v_cols]
-        c_cols = ["id", "fecha", "asignado", "secuencia", "Anuncio", "tipo_post", "Mes", "Anio", "Costo Directo", "Gasto Repartido", "Costo Total"]
+        c_cols = ["id", "fecha", "asignado", "secuencia", "Anuncio", "tipo_post", "Mes", "Anio", "Costo Directo", "Gasto Repartido", "Costo Total", "Valor Venta"]
         if not df_c.empty:
             if "anuncio" in df_c.columns: df_c.rename(columns={"anuncio": "Anuncio"}, inplace=True)
             if "Mes" not in df_c.columns: df_c["Mes"] = ""
@@ -1073,7 +1085,7 @@ class App(cctk.CTk):
                 ws_c = writer.book['CONTACTOS']
                 for cell in ws_c[1]: cell.fill, cell.font, cell.alignment = h_f, h_font, h_align
                 for r in range(2, ws_c.max_row + 1):
-                    for c_idx in range(7, 10): ws_c.cell(row=r, column=c_idx).number_format = '"Q" #,##0.00'
+                    for c_idx in range(7, 12): ws_c.cell(row=r, column=c_idx).number_format = '"Q" #,##0.00'
             if not df_o.empty:
                 ws_o = writer.book['REPORTE']
                 for cell in ws_o[1]: cell.fill, cell.font, cell.alignment = h_f, h_font, h_align
