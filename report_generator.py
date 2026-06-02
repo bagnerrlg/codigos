@@ -385,7 +385,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
             elif cid == pm_cf: primer_mensaje_texto = val.strip()
         anuncio, tipo_post = extraer_datos_anuncio(anuncio_raw)
         if not anuncio and primer_mensaje_texto: anuncio, tipo_post = extraer_datos_anuncio(primer_mensaje_texto)
-        secuencia = extraer_secuencia(secuencia_raw)
+        secuencia = acc_name # Usar nombre de cuenta estrictamente
         formatted_contacts.append({
             "id": c.get("id", ""),
             "fecha": date_fmt,
@@ -490,6 +490,9 @@ def mapping_secuencia_gasto(camp):
     if "R1.3" in camp: return "R1.3"
     if "R2.3" in camp: return "R2.3"
     if "R3.2" in camp: return "R3.2"
+    # Fallback to ACCOUNT names check
+    for r_name in ["R1.1", "R1.2", "R1.3", "R2.1", "R2.2", "R2.3", "R3.2"]:
+        if r_name in camp: return r_name
     return "OTRO"
 
 def obtener_insights(account, fecha_desde, fecha_hasta, log_callback):
@@ -726,7 +729,7 @@ class App(cctk.CTk):
                 self.generate_dashboard_html(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb, df_metas)
 
             else: self.log("Sin datos.")
-        except Exception as e: import traceback; err_msg = traceback.format_exc(); print(err_msg); self.log(f"Error: {str(e)}\nConsulte la consola para detalles.")
+        except Exception as e: err_msg = traceback.format_exc(); print(err_msg); self.log(f"Error: {str(e)}\nConsulte la consola para detalles.")
         finally: self.after(0, lambda: self.generate_btn.configure(state="normal", text="🚀 GENERAR EXCEL"))
 
     def generate_dashboard_html(self, res_o, res_v, res_c, res_fb, df_metas):
@@ -957,8 +960,40 @@ class App(cctk.CTk):
                 document.getElementById("kpi-meta").innerText = Math.round(perc) + "%";
                 Plotly.newPlot("ch-meta", [{ domain: { x: [0, 1], y: [0, 1] }, value: tv, title: { text: "Cumplimiento de Meta" }, type: "indicator", mode: "gauge+number", gauge: { axis: { range: [0, Math.max(tMeta, tv * 1.2)] }, bar: { color: "#10b981" }, steps: [{ range: [0, tMeta], color: "#e2e8f0" }] } }], layout);
 
+                                // 5. Rendimiento por Anuncio (Leads, Gasto y Ventas)
                 const adData = {};
-                fc.forEach(c => { const a = (c.anuncio || "SIN CODA").toUpperCase(); if (!adData[a]) adData[a] = { leads: 0, spend: 0 }; adData[a].leads += 1; });
+
+                ffb.forEach(f => {
+                    const a = (f.codigo || "SIN CODA").toUpperCase();
+                    if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                    adData[a].spend += Number(f.importe_gastado || 0);
+                });
+
+                fc.forEach(c => {
+                    const a = (c.anuncio || "SIN CODA").toUpperCase();
+                    if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                    adData[a].leads += 1;
+                });
+
+                fo.forEach(o => {
+                    const a = (o.anuncio || "SIN CODA").toUpperCase();
+                    if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                    adData[a].sales += Number(o.valor_del_cliente_potencial || 0);
+                });
+
+                const ads = Object.entries(adData).sort((a,b) => b[1].spend - a[1].spend).slice(0, 20);
+                Plotly.newPlot("ch-ad-perf", [
+                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.leads), name: "Leads", type: "bar", marker: {color: "#3b82f6"} },
+                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.sales), name: "Ventas (Q)", type: "bar", marker: {color: "#10b981"} },
+                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.spend), name: "Gasto (Q)", type: "scatter", yaxis: "y2", line: {color: "#ef4444", width: 3} }
+                ], {
+                    ...layout,
+                    showlegend: true,
+                    legend: { orientation: "h", y: -0.2 },
+                    yaxis: { title: "Leads / Ventas" },
+                    yaxis2: { title: "Gasto (Q)", overlaying: "y", side: "right" },
+                    barmode: 'group'
+                });
                 ffb.forEach(f => { const a = (f.codigo || "SIN CODA").toUpperCase(); if (!adData[a]) adData[a] = { leads: 0, spend: 0 }; adData[a].spend += Number(f.importe_gastado || 0); });
                 const ads = Object.entries(adData).sort((a,b) => b[1].spend - a[1].spend).slice(0, 20);
                 Plotly.newPlot("ch-ad-perf", [
@@ -980,55 +1015,98 @@ class App(cctk.CTk):
         import pandas as pd
         df_c = pd.DataFrame(res_c)
         df_fb = pd.DataFrame(res_fb)
-        if df_c.empty: return df_c
+
+        if df_c.empty:
+            return df_c
+
+        # 1. Normalizar columnas base
         for col in ['fecha_iso', 'secuencia', 'anuncio']:
             if col not in df_c.columns: df_c[col] = ""
             else: df_c[col] = df_c[col].astype(str).str.strip().str.upper()
+
         if not df_fb.empty:
-            for col in ['dia', 'secuencia', 'codigo']:
+            for col in ['Día', 'SECUENCIA', 'codigo']:
                 if col not in df_fb.columns: df_fb[col] = ""
                 else: df_fb[col] = df_fb[col].astype(str).str.strip().str.upper()
-            for col in ['importe_gastado', 'contactos_mensajes_nuevos']:
-                if col in df_fb.columns: df_fb[col] = pd.to_numeric(df_fb[col], errors='coerce').fillna(0.0)
-                else: df_fb[col] = 0.0
+
+            for col in ['Importe gastado', 'Contactos mensajes nuevos']:
+                if col in df_fb.columns:
+                    df_fb[col] = pd.to_numeric(df_fb[col], errors='coerce').fillna(0.0)
+                else:
+                    df_fb[col] = 0.0
         else:
-            df_fb = pd.DataFrame(columns=['dia', 'secuencia', 'codigo', 'importe_gastado', 'contactos_mensajes_nuevos'])
+            df_fb = pd.DataFrame(columns=['Día', 'SECUENCIA', 'codigo', 'Importe gastado', 'Contactos mensajes nuevos'])
+
+        # 2. Atribución Ad-hoc para contactos vacíos (RANKING TOP 3 con ROTACIÓN)
         def get_top_ads(fb_df):
-            if fb_df.empty: return pd.DataFrame(columns=['dia', 'secuencia', 'codigo', 'contactos_mensajes_nuevos'])
-            grouped = fb_df.groupby(['dia', 'secuencia', 'codigo'])['contactos_mensajes_nuevos'].sum().reset_index()
-            grouped = grouped.sort_values(['dia', 'secuencia', 'contactos_mensajes_nuevos'], ascending=[True, True, False])
-            top3 = grouped.groupby(['dia', 'secuencia']).head(3)
+            if fb_df.empty: return pd.DataFrame(columns=['Día', 'SECUENCIA', 'codigo', 'Contactos mensajes nuevos'])
+            grouped = fb_df.groupby(['Día', 'SECUENCIA', 'codigo'])['Contactos mensajes nuevos'].sum().reset_index()
+            grouped = grouped.sort_values(['Día', 'SECUENCIA', 'Contactos mensajes nuevos'], ascending=[True, True, False])
+            top3 = grouped.groupby(['Día', 'SECUENCIA']).head(3)
             return top3
+
         top3_ads = get_top_ads(df_fb)
         rotation_counters = {}
+
         def assign_top_ad(row, top_df):
             curr_anu = str(row.get('anuncio', '')).strip()
             if curr_anu != "" and curr_anu != "NAN" and curr_anu != "NONE": return curr_anu
+
             f_iso, seq = row.get('fecha_iso', ''), row.get('secuencia', '')
             if not f_iso or not seq: return ""
+
             key = (f_iso, seq)
-            match = top_df[(top_df['dia'] == f_iso) & (top_df['secuencia'] == seq)]
+            match = top_df[(top_df['Día'] == f_iso) & (top_df['SECUENCIA'] == seq)]
             if not match.empty:
                 idx = rotation_counters.get(key, 0) % len(match)
                 rotation_counters[key] = idx + 1
                 return str(match.iloc[idx]['codigo'])
             return ""
+
         df_c['anuncio'] = df_c.apply(lambda r: assign_top_ad(r, top3_ads), axis=1)
-        fb_grouped = df_fb.groupby(['dia', 'secuencia', 'codigo'])['importe_gastado'].sum().reset_index()
+
+        # 3. Gasto Directo por Anuncio
+        fb_grouped = df_fb.groupby(['Día', 'SECUENCIA', 'codigo'])['Importe gastado'].sum().reset_index()
         c_counts = df_c.groupby(['fecha_iso', 'secuencia', 'anuncio']).size().reset_index(name='contact_count')
-        direct_costs = pd.merge(c_counts, fb_grouped, left_on=['fecha_iso', 'secuencia', 'anuncio'], right_on=['dia', 'secuencia', 'codigo'], how='inner')
-        direct_costs['cost_per_contact'] = direct_costs['importe_gastado'] / direct_costs['contact_count'].replace(0, 1)
-        df_c = pd.merge(df_c, direct_costs[['fecha_iso', 'secuencia', 'anuncio', 'cost_per_contact']], on=['fecha_iso', 'secuencia', 'anuncio'], how='left')
+
+        direct_costs = pd.merge(
+            c_counts,
+            fb_grouped,
+            left_on=['fecha_iso', 'secuencia', 'anuncio'],
+            right_on=['Día', 'SECUENCIA', 'codigo'],
+            how='inner'
+        )
+        direct_costs['cost_per_contact'] = direct_costs['Importe gastado'] / direct_costs['contact_count'].replace(0, 1)
+
+        df_c = pd.merge(
+            df_c,
+            direct_costs[['fecha_iso', 'secuencia', 'anuncio', 'cost_per_contact']],
+            on=['fecha_iso', 'secuencia', 'anuncio'],
+            how='left'
+        )
         df_c['Costo Directo'] = pd.to_numeric(df_c['cost_per_contact'], errors='coerce').fillna(0.0)
+
+        # 4. Gasto Repartido (Huérfanos)
         fb_attributed_keys = set(zip(direct_costs['fecha_iso'], direct_costs['secuencia'], direct_costs['anuncio']))
-        df_fb['is_orphan'] = df_fb.apply(lambda r: (r['dia'], r['secuencia'], r['codigo']) not in fb_attributed_keys, axis=1)
-        orphan_spend = df_fb[df_fb['is_orphan']].groupby(['dia', 'secuencia'])['importe_gastado'].sum().reset_index(name='total_orphan_spend')
+        df_fb['is_orphan'] = df_fb.apply(lambda r: (r['Día'], r['SECUENCIA'], r['codigo']) not in fb_attributed_keys, axis=1)
+
+        orphan_spend = df_fb[df_fb['is_orphan']].groupby(['Día', 'SECUENCIA'])['Importe gastado'].sum().reset_index(name='total_orphan_spend')
         seq_total_contacts = df_c.groupby(['fecha_iso', 'secuencia']).size().reset_index(name='seq_total')
-        allocation_base = pd.merge(orphan_spend, seq_total_contacts, left_on=['dia', 'secuencia'], right_on=['fecha_iso', 'secuencia'])
+
+        allocation_base = pd.merge(orphan_spend, seq_total_contacts, left_on=['Día', 'SECUENCIA'], right_on=['fecha_iso', 'secuencia'])
         allocation_base['orphan_cost_per_contact'] = allocation_base['total_orphan_spend'] / allocation_base['seq_total'].replace(0, 1)
-        df_c = pd.merge(df_c, allocation_base[['fecha_iso', 'secuencia', 'orphan_cost_per_contact']], on=['fecha_iso', 'secuencia'], how='left')
+
+        df_c = pd.merge(
+            df_c,
+            allocation_base[['fecha_iso', 'secuencia', 'orphan_cost_per_contact']],
+            on=['fecha_iso', 'secuencia'],
+            how='left'
+        )
         df_c['Gasto Repartido'] = pd.to_numeric(df_c['orphan_cost_per_contact'], errors='coerce').fillna(0.0)
+
+        # 5. Costo Total
         df_c['Costo Total'] = df_c['Costo Directo'] + df_c['Gasto Repartido']
+
         drop_cols = ['cost_per_contact', 'orphan_cost_per_contact']
         df_c.drop(columns=[c for c in drop_cols if c in df_c.columns], inplace=True)
         return df_c
@@ -1078,7 +1156,7 @@ class App(cctk.CTk):
                 bg_f, cur_f = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid"), None
                 for r in range(2, ws_v.max_row + 1):
                     val_id = ws_v.cell(row=r, column=1).value
-                    if val_id and str(val_id).strip(): ws_v.cell(row=r, column=idx_bus).value = f"=VLOOKUP(T{r},Hoja1!A:A,1,FALSE)"; cur_f = bg_f if cur_f is None else None
+                    if val_id and str(val_id).strip(): ws_v.cell(row=r, column=idx_bus).value = f"=VLOOKUP(U{r},Hoja1!A:A,1,FALSE)"; cur_f = bg_f if cur_f is None else None
                     if cur_f:
                         for c in range(1, idx_bus + 1): ws_v.cell(row=r, column=c).fill = cur_f
             if not df_c.empty:
