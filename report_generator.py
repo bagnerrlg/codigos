@@ -14,6 +14,7 @@ import pytz
 from openpyxl.styles import PatternFill, Font, Alignment
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from html import unescape
+import traceback
 # ---------------------------
 # CONFIG: GHL Cuentas
 # ---------------------------
@@ -278,8 +279,13 @@ def parse_dataventa(dv_str):
 
 def get_mapped_vendedor(raw_vendedor):
     if not raw_vendedor: return "SinAsignar"
-    key = str(raw_vendedor).strip().upper()
-    return str(raw_vendedor).strip().upper()
+    nm = str(raw_vendedor).strip().upper()
+    # Priorizar búsqueda exacta en el mapa
+    if nm in VENDEDOR_MAP: return VENDEDOR_MAP[nm]
+    # Buscar si alguna llave está contenida o viceversa (más flexible)
+    for k, v in VENDEDOR_MAP.items():
+        if k in nm or nm in k: return v
+    return nm
 
 def parse_ventas_unnested(dv_str, contact_id, opp_id, ghl_phone, vendedor, ghl_name="", sale_date_str="", secuencia=""):
     data = {}
@@ -403,28 +409,42 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
     u_map, cf_names, all_opps, page, limit = get_users_by_location(loc, token), get_custom_fields_map(loc, token), [], 1, 100
     url = "https://services.leadconnectorhq.com/opportunities/search"
     while True:
-        # Se remueve el filtro custom_fields.{cfield} de la API porque suele ser inestable,
-        # se filtrará localmente con mayor robustez.
         payload = {
             "locationId": loc, "page": page, "limit": limit,
-            "filters": [{"group": "AND", "filters": [
-                {"field": "pipeline_stage_id", "operator": "eq", "value": stage},
+            "filters": [
+                {"field": "pipelineStageId", "operator": "eq", "value": stage},
                 {"field": "status", "operator": "eq", "value": "won"}
-            ]}],
-            "sort": [{"field": "date_added", "direction": "desc"}],
+            ],
+            "sort": [{"field": "dateAdded", "direction": "desc"}],
             "additionalDetails": {"notes": True}
         }
         res = safe_post(url, token, payload, API_VERSION_OPPS)
-        if not res: break
+        if not res:
+            # Intentar fallback con snake_case si CamelCase falla
+            payload["filters"] = [
+                {"field": "pipeline_stage_id", "operator": "eq", "value": stage},
+                {"field": "status", "operator": "eq", "value": "won"}
+            ]
+            res = safe_post(url, token, payload, API_VERSION_OPPS)
+            if not res: break
+
         if isinstance(res, dict) and res.get("__error_status"):
-            log_callback(f"  {acc_name} ERROR {res.get('__error_status')}: {res.get('__error_text')[:100]}")
-            break
+            # Si el error es 400, intentar el otro formato de una vez
+            if res.get("__error_status") == 400:
+                payload["filters"] = [{"field": "pipeline_stage_id", "operator": "eq", "value": stage}, {"field": "status", "operator": "eq", "value": "won"}]
+                res = safe_post(url, token, payload, API_VERSION_OPPS)
+                if isinstance(res, dict) and res.get("__error_status"):
+                    log_callback(f"  {acc_name} ERROR {res.get('__error_status')}: {res.get('__error_text')[:100]}")
+                    break
+            else:
+                log_callback(f"  {acc_name} ERROR {res.get('__error_status')}: {res.get('__error_text')[:100]}")
+                break
+
         opps = res.get("opportunities", [])
         if not isinstance(opps, list) or not opps: break
         all_opps.extend(opps); page += 1
         if len(opps) < limit: break
-        # Limite de seguridad para no traer miles si no hay filtros
-        if page > 10: break
+        if page > 100: break # Aumentado a 100 páginas (10k registros)
 
     r_opps, r_ventas, filtered_count = [], [], 0
     log_callback(f"  {acc_name}: {len(all_opps)} ganadas encontradas en total. Filtrando por fecha...")
@@ -739,23 +759,29 @@ class App(cctk.CTk):
         from datetime import datetime
 
         def prepare_json(data):
-            if data is None: return []
-            df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
-            if df.empty: return []
-            def clean_name(c):
-                s = str(c).lower().strip().replace(" ", "_")
-                s = s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
-                return "".join(ch for ch in s if ch.isalnum() or ch == "_")
-            df.columns = [clean_name(c) for c in df.columns]
-            df = df.loc[:, ~df.columns.duplicated()]
-            for col in df.columns:
-                if pd.api.types.is_numeric_dtype(df[col]):
-                    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-                elif pd.api.types.is_datetime64_any_dtype(df[col]):
-                    df[col] = df[col].apply(lambda x: x.isoformat() if hasattr(x, "isoformat") else str(x))
-                else:
-                    df[col] = df[col].fillna("").astype(str)
-            return df.to_dict(orient="records")
+            try:
+                if data is None: return []
+                df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
+                if df.empty: return []
+                # Limpiar infinitos antes de convertir a JSON
+                df.replace([float('inf'), float('-inf')], 0, inplace=True)
+                def clean_name(c):
+                    s = str(c).lower().strip().replace(" ", "_")
+                    s = s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
+                    return "".join(ch for ch in s if ch.isalnum() or ch == "_")
+                df.columns = [clean_name(c) for c in df.columns]
+                df = df.loc[:, ~df.columns.duplicated(keep='first')]
+                for col in df.columns:
+                    if pd.api.types.is_numeric_dtype(df[col]):
+                        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+                    elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                        df[col] = df[col].apply(lambda x: x.isoformat() if hasattr(x, "isoformat") else str(x))
+                    else:
+                        df[col] = df[col].fillna("").astype(str)
+                return df.to_dict(orient="records")
+            except Exception as e:
+                print(f"Error en prepare_json: {e}")
+                return []
 
         payload = {
             "oportunidades": prepare_json(res_o),
@@ -827,101 +853,115 @@ class App(cctk.CTk):
             let raw = null;
             try {
                 raw = JSON.parse(document.getElementById('data').textContent);
-            } catch(e) { console.error(e); return; }
+                console.log("Datos cargados:", raw);
+            } catch(e) {
+                console.error("Error parseando JSON:", e);
+                document.getElementById('debug').innerText = "ERROR: No se pudo cargar el JSON.";
+                return;
+            }
 
             function init() {
-                const dates = raw.facebook.map(f => f.dia).concat(raw.contactos.map(c => c.fecha_iso)).filter(Boolean).sort();
-                if (dates.length) {
-                    document.getElementById("f-start").value = dates[0];
-                    document.getElementById("f-end").value = dates[dates.length - 1];
+                try {
+                    const dates = raw.facebook.map(f => f.dia).concat(raw.contactos.map(c => c.fecha_iso)).filter(Boolean).sort();
+                    if (dates.length) {
+                        document.getElementById("f-start").value = dates[0];
+                        document.getElementById("f-end").value = dates[dates.length - 1];
+                    }
+                    const pop = (id, list) => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        [...new Set(list)].filter(Boolean).sort().forEach(i => {
+                            const o = document.createElement("option"); o.value = i; o.textContent = i; el.appendChild(o);
+                        });
+                    };
+                    pop("f-ger", raw.metas.map(m => m.gerente || m.gerente_regional));
+                    pop("f-mar", raw.metas.map(m => m.marca || m.empresa));
+                    pop("f-ven", [...raw.contactos.map(c => c.asignado), ...raw.oportunidades.map(o => o.asignado)]);
+                    pop("f-mes", raw.oportunidades.map(o => o.mes));
+                    pop("f-anu", [...raw.contactos.map(c => c.anuncio), ...raw.facebook.map(f => f.codigo)]);
+
+                    document.querySelectorAll("select, input[type='date']").forEach(s => s.onchange = update);
+                    update();
+                } catch(e) {
+                    console.error("Error en init:", e);
+                    document.getElementById('debug').innerText = "ERROR en init: " + e.message;
                 }
-                const pop = (id, list) => {
-                    const el = document.getElementById(id);
-                    [...new Set(list)].filter(Boolean).sort().forEach(i => {
-                        const o = document.createElement("option"); o.value = i; o.textContent = i; el.appendChild(o);
-                    });
-                };
-                pop("f-ger", raw.metas.map(m => m.gerente));
-                pop("f-mar", raw.metas.map(m => m.marca));
-                pop("f-ven", [...raw.contactos.map(c => c.asignado), ...raw.oportunidades.map(o => o.asignado)]);
-                pop("f-mes", raw.oportunidades.map(o => o.mes));
-                pop("f-anu", raw.contactos.map(c => c.anuncio));
-                document.querySelectorAll("select, input[type='date']").forEach(s => s.onchange = update);
-                update();
             }
 
             function update() {
-                const start = document.getElementById("f-start").value;
-                const end = document.getElementById("f-end").value;
-                const g = document.getElementById("f-ger").value.toUpperCase();
-                const m = document.getElementById("f-mar").value.toUpperCase();
-                const v = document.getElementById("f-ven").value;
-                const mes = document.getElementById("f-mes").value;
-                const anu = document.getElementById("f-anu").value.toUpperCase();
+                try {
+                    const start = document.getElementById("f-start").value;
+                    const end = document.getElementById("f-end").value;
+                    const g = document.getElementById("f-ger").value.toUpperCase();
+                    const m = document.getElementById("f-mar").value.toUpperCase();
+                    const v = document.getElementById("f-ven").value.toUpperCase();
+                    const mes = document.getElementById("f-mes").value;
+                    const anu = document.getElementById("f-anu").value.toUpperCase();
 
-                const seqMap = raw.metas.reduce((acc, c) => {
-                    const s = (c.sub_anillo || "").toUpperCase().trim();
-                    if (!s) return acc;
-                    if (!acc[s]) acc[s] = { gers: new Set(), marcs: new Set() };
-                    if (c.gerente) acc[s].gers.add(c.gerente.toUpperCase());
-                    if (c.marca) acc[s].marcs.add(c.marca.toUpperCase());
-                    return acc;
-                }, {});
+                    const seqMap = raw.metas.reduce((acc, c) => {
+                        const s = (c.sub_anillo || c.secuencia || "").toUpperCase().trim();
+                        if (!s) return acc;
+                        if (!acc[s]) acc[s] = { gers: new Set(), marcs: new Set() };
+                        const gVal = c.gerente || c.gerente_regional || "";
+                        const mVal = c.marca || c.empresa || "";
+                        if (gVal) acc[s].gers.add(gVal.toUpperCase());
+                        if (mVal) acc[s].marcs.add(mVal.toUpperCase());
+                        return acc;
+                    }, {});
 
-                const f_c = raw.contactos.filter(c => {
-                    const s = (c.secuencia || "").toUpperCase().trim();
-                    const d = c.fecha_iso;
-                    const mDate = (!start || d >= start) && (!end || d <= end);
-                    const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
-                    const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
-                    const mV = (v === "ALL" || (c.asignado || "").trim().toUpperCase() === v.trim().toUpperCase());
-                    const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
-                    return mDate && mG && mM && mV && mA;
-                });
+                    const f_c = raw.contactos.filter(c => {
+                        const s = (c.secuencia || "").toUpperCase().trim();
+                        const d = c.fecha_iso;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mV = (v === "ALL" || (c.asignado || "").trim().toUpperCase() === v);
+                        const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mV && mA;
+                    });
 
-                const f_o = raw.oportunidades.filter(o => {
-                    const s = (o.secuencia || "").toUpperCase().trim();
-                    const d = o.fecha_iso;
-                    const mDate = (!start || d >= start) && (!end || d <= end);
-                    const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
-                    const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
-                    const mV = (v === "ALL" || (o.asignado || "").trim().toUpperCase() === v.trim().toUpperCase());
-                    const mMes = (mes === "ALL" || String(o.mes) === String(mes));
-                    const mA = (anu === "ALL" || (o.anuncio || "").toUpperCase() === anu);
-                    return mDate && mG && mM && mV && mMes && mA;
-                });
+                    const f_o = raw.oportunidades.filter(o => {
+                        const s = (o.secuencia || "").toUpperCase().trim();
+                        const d = o.fecha_iso;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mV = (v === "ALL" || (o.asignado || "").trim().toUpperCase() === v);
+                        const mMes = (mes === "ALL" || String(o.mes) === String(mes));
+                        const mA = (anu === "ALL" || (o.anuncio || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mV && mMes && mA;
+                    });
 
-                const f_fb = raw.facebook.filter(f => {
-                    const s = (f.secuencia || "").toUpperCase().trim();
-                    const d = f.dia;
-                    const mDate = (!start || d >= start) && (!end || d <= end);
-                    const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
-                    const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
-                    const mA = (anu === "ALL" || (f.codigo || "").toUpperCase() === anu);
-                    return mDate && mG && mM && mA;
-                });
+                    const f_fb = raw.facebook.filter(f => {
+                        const s = (f.secuencia || "").toUpperCase().trim();
+                        const d = f.dia;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mA = (anu === "ALL" || (f.codigo || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mA;
+                    });
 
-                let tGto = 0;
-                if (v !== "ALL" || anu !== "ALL") {
-                    tGto = f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0);
-                } else {
-                    tGto = f_fb.reduce((a, c) => a + Number(f.importe_gastado || 0), 0);
-                    // Correcting variable reference for tGto
+                    const tGto = (v !== "ALL" || anu !== "ALL")
+                        ? f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0)
+                        : f_fb.reduce((a, f) => a + Number(f.importe_gastado || 0), 0);
+
+                    const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
+                    const tLds = f_c.length;
+
+                    document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
+                    document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
+                    document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
+                    document.getElementById("kpi-roas").innerText = tGto > 0 ? (tVta / tGto).toFixed(1) : "0.0";
+
+                    render(f_o, f_c, f_fb, tVta, tGto);
+                    const dbg = `Opps: ${raw.oportunidades.length} (filt: ${f_o.length}) | FB: ${raw.facebook.length} (filt: ${f_fb.length}) | Leads: ${raw.contactos.length} (filt: ${f_c.length}) | Metas: ${raw.metas.length} | seqMapKeys: ${Object.keys(seqMap).length}`;
+                    console.log(dbg);
+                    document.getElementById('debug').innerText = dbg;
+                } catch(e) {
+                    console.error("Error en update:", e);
+                    document.getElementById('debug').innerText = "ERROR en update: " + e.message;
                 }
-
-                // Re-calculating tGto correctly
-                tGto = (v !== "ALL" || anu !== "ALL") ? f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0) : f_fb.reduce((a, f) => a + Number(f.importe_gastado || 0), 0);
-
-                const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
-                const tLds = f_c.length;
-
-                document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
-                document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
-                document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
-                document.getElementById("kpi-roas").innerText = tGto > 0 ? (tVta / tGto).toFixed(1) : "0.0";
-
-                render(f_o, f_c, f_fb, tVta, tGto);
-                document.getElementById('debug').innerText = `Data: Opps(${raw.oportunidades.length}) FB(${raw.facebook.length}) Leads(${raw.contactos.length}) | Filt: Opps(${f_o.length}) Leads(${f_c.length})`;
             }
 
             function render(fo, fc, ffb, tv, tg) {
@@ -955,7 +995,7 @@ class App(cctk.CTk):
                     const mMes = (activeMes === "ALL" || String(x.mes) === String(activeMes));
                     return mG && mM && mMes;
                 });
-                const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || 0), 0);
+                const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
                 const perc = tMeta > 0 ? (tv / tMeta) * 100 : 0;
                 document.getElementById("kpi-meta").innerText = Math.round(perc) + "%";
                 Plotly.newPlot("ch-meta", [{ domain: { x: [0, 1], y: [0, 1] }, value: tv, title: { text: "Cumplimiento de Meta" }, type: "indicator", mode: "gauge+number", gauge: { axis: { range: [0, Math.max(tMeta, tv * 1.2)] }, bar: { color: "#10b981" }, steps: [{ range: [0, tMeta], color: "#e2e8f0" }] } }], layout, config);
