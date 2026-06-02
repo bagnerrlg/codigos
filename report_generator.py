@@ -409,42 +409,27 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
     u_map, cf_names, all_opps, page, limit = get_users_by_location(loc, token), get_custom_fields_map(loc, token), [], 1, 100
     url = "https://services.leadconnectorhq.com/opportunities/search"
     while True:
+        # Volviendo al formato original robusto de filtros anidados
         payload = {
             "locationId": loc, "page": page, "limit": limit,
-            "filters": [
-                {"field": "pipelineStageId", "operator": "eq", "value": stage},
+            "filters": [{"group": "AND", "filters": [
+                {"field": "pipeline_stage_id", "operator": "eq", "value": stage},
                 {"field": "status", "operator": "eq", "value": "won"}
-            ],
-            "sort": [{"field": "dateAdded", "direction": "desc"}],
+            ]}],
+            "sort": [{"field": "date_added", "direction": "desc"}],
             "additionalDetails": {"notes": True}
         }
         res = safe_post(url, token, payload, API_VERSION_OPPS)
-        if not res:
-            # Intentar fallback con snake_case si CamelCase falla
-            payload["filters"] = [
-                {"field": "pipeline_stage_id", "operator": "eq", "value": stage},
-                {"field": "status", "operator": "eq", "value": "won"}
-            ]
-            res = safe_post(url, token, payload, API_VERSION_OPPS)
-            if not res: break
-
-        if isinstance(res, dict) and res.get("__error_status"):
-            # Si el error es 400, intentar el otro formato de una vez
-            if res.get("__error_status") == 400:
-                payload["filters"] = [{"field": "pipeline_stage_id", "operator": "eq", "value": stage}, {"field": "status", "operator": "eq", "value": "won"}]
-                res = safe_post(url, token, payload, API_VERSION_OPPS)
-                if isinstance(res, dict) and res.get("__error_status"):
-                    log_callback(f"  {acc_name} ERROR {res.get('__error_status')}: {res.get('__error_text')[:100]}")
-                    break
-            else:
+        if not res or (isinstance(res, dict) and res.get("__error_status")):
+            if isinstance(res, dict) and res.get("__error_status"):
                 log_callback(f"  {acc_name} ERROR {res.get('__error_status')}: {res.get('__error_text')[:100]}")
-                break
+            break
 
         opps = res.get("opportunities", [])
         if not isinstance(opps, list) or not opps: break
         all_opps.extend(opps); page += 1
         if len(opps) < limit: break
-        if page > 100: break # Aumentado a 100 páginas (10k registros)
+        if page > 100: break
 
     r_opps, r_ventas, filtered_count = [], [], 0
     log_callback(f"  {acc_name}: {len(all_opps)} ganadas encontradas en total. Filtrando por fecha...")
@@ -460,10 +445,16 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
                 if fid == dv_id: dv_str = str(cf.get("fieldValue") or cf.get("fieldValueString") or "")
                 fname = cf_names.get(fid, fid)
                 if fname and fname.strip().lower() != "id de oportunidad": cf_data[fname] = val
+            if not sale_date_iso:
+                # Fallback: intentar usar updatedAt si la fecha custom no está
+                updated_at_iso = get_yyyy_mm_dd(op.get("updatedAt") or op.get("updated_at"))
+                if updated_at_iso:
+                    sale_date_iso = updated_at_iso
+
             if not sale_date_iso or not (client_start <= sale_date_iso <= client_end):
                 filtered_count += 1
                 continue
-            vendedor_raw, gnam, opp_id_val = get_mapped_vendedor(u_map.get(op.get("assignedTo"), "")), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
+            vendedor_raw, gnam, opp_id_val = get_mapped_vendedor(u_map.get(op.get("assignedTo") or op.get("assigned_to"), "")), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
             dv_data = json.loads(dv_str) if dv_str else {}
             anu_val, _ = extraer_datos_anuncio(dv_data.get("anuncio", "") or dv_data.get("Anuncio", "")); row = {"Asignado": vendedor_raw, "Secuencia": acc_name, "Anuncio": anu_val, "fecha_iso": sale_date_iso, "Mes": int(sale_date_iso[5:7]) if sale_date_iso else 0, "Anio": int(sale_date_iso[0:4]) if sale_date_iso else 0, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
             row.update(cf_data)
