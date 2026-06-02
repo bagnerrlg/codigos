@@ -742,18 +742,12 @@ class App(cctk.CTk):
             if data is None: return []
             df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
             if df.empty: return []
-
             def clean_name(c):
                 s = str(c).lower().strip().replace(" ", "_")
                 s = s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
                 return "".join(ch for ch in s if ch.isalnum() or ch == "_")
-
-            # 1. Clean column names
             df.columns = [clean_name(c) for c in df.columns]
-
-            # 2. Deduplicate columns after cleaning (e.g., "Asignado" and "asignado" both become "asignado")
             df = df.loc[:, ~df.columns.duplicated()]
-
             for col in df.columns:
                 if pd.api.types.is_numeric_dtype(df[col]):
                     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
@@ -821,7 +815,7 @@ class App(cctk.CTk):
         </div>
 
         <div class="grid grid-cols-1 gap-8 mb-8">
-            <div class="card h-[500px]"><h3 class="kpi-label border-b pb-2 mb-4">Rendimiento Detallado por Anuncio (Leads vs Gasto)</h3><div id="ch-ad-perf" class="h-full"></div></div>
+            <div class="card h-[500px]"><h3 class="kpi-label border-b pb-2 mb-4">Rendimiento Detallado por Anuncio (Leads, Gasto y Ventas)</h3><div id="ch-ad-perf" class="h-full"></div></div>
         </div>
 
         <div id="debug" class="text-[10px] text-slate-400 font-mono bg-slate-100 p-4 rounded-xl">Cargando monitor...</div>
@@ -833,7 +827,6 @@ class App(cctk.CTk):
             let raw = null;
             try {
                 raw = JSON.parse(document.getElementById('data').textContent);
-                document.getElementById('debug').innerText = `Data: Opps(${raw.oportunidades.length}) FB(${raw.facebook.length}) Leads(${raw.contactos.length})`;
             } catch(e) { console.error(e); return; }
 
             function init() {
@@ -912,8 +905,12 @@ class App(cctk.CTk):
                 if (v !== "ALL" || anu !== "ALL") {
                     tGto = f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0);
                 } else {
-                    tGto = f_fb.reduce((a, c) => a + Number(c.importe_gastado || 0), 0);
+                    tGto = f_fb.reduce((a, c) => a + Number(f.importe_gastado || 0), 0);
+                    // Correcting variable reference for tGto
                 }
+
+                // Re-calculating tGto correctly
+                tGto = (v !== "ALL" || anu !== "ALL") ? f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0) : f_fb.reduce((a, f) => a + Number(f.importe_gastado || 0), 0);
 
                 const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
                 const tLds = f_c.length;
@@ -924,27 +921,30 @@ class App(cctk.CTk):
                 document.getElementById("kpi-roas").innerText = tGto > 0 ? (tVta / tGto).toFixed(1) : "0.0";
 
                 render(f_o, f_c, f_fb, tVta, tGto);
+                document.getElementById('debug').innerText = `Data: Opps(${raw.oportunidades.length}) FB(${raw.facebook.length}) Leads(${raw.contactos.length}) | Filt: Opps(${f_o.length}) Leads(${f_c.length})`;
             }
 
             function render(fo, fc, ffb, tv, tg) {
-                const layout = { margin: {t:10, b:40, l:40, r:10}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {size: 10} };
+                const layout = { autosize: true, margin: {t:30, b:60, l:50, r:50}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {size: 10} };
+                const config = { responsive: true };
 
                 const daily = {};
                 fc.forEach(c => { const d = c.fecha_iso || "N/A"; if(!daily[d]) daily[d] = { leads: 0, spend: 0 }; daily[d].leads += 1; });
                 ffb.forEach(f => { const d = f.dia || "N/A"; if(!daily[d]) daily[d] = { leads: 0, spend: 0 }; daily[d].spend += Number(f.importe_gastado || 0); });
                 const sortedDays = Object.keys(daily).sort();
+
                 Plotly.newPlot("ch-leads", [
-                    { x: sortedDays, y: sortedDays.map(d => daily[d].leads), name: "Leads", type: "scatter", mode: "lines+markers", line: {color: "#3b82f6", width:3}, fill: "tozeroy" },
-                    { x: sortedDays, y: sortedDays.map(d => daily[d].spend), name: "Gasto (Q)", type: "scatter", mode: "lines", yaxis: "y2", line: {color: "#ef4444", width:2, dash: "dot"} }
-                ], { ...layout, yaxis: { title: "Leads" }, yaxis2: { title: "Gasto (Q)", overlaying: "y", side: "right" }, showlegend: true, legend: { orientation: "h", y: -0.2 } });
+                    { x: sortedDays, y: sortedDays.map(d => daily[d].leads), name: "Leads", type: "bar", marker: {color: "#3b82f6", opacity: 0.7} },
+                    { x: sortedDays, y: sortedDays.map(d => daily[d].spend), name: "Gasto (Q)", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#ef4444", width:2} }
+                ], { ...layout, yaxis: { title: "Leads" }, yaxis2: { title: "Gasto (Q)", overlaying: "y", side: "right" }, showlegend: true, legend: { orientation: "h", y: -0.2 } }, config);
 
                 const vbm = fo.reduce((acc, c) => { const m = (c.marca || "OTRA").toUpperCase(); acc[m] = (acc[m] || 0) + Number(c.valor_del_cliente_potencial || 0); return acc; }, {});
                 const sortedM = Object.entries(vbm).sort((a,b) => b[1] - a[1]);
-                Plotly.newPlot("ch-marca", [{ labels: sortedM.map(x => x[0]), values: sortedM.map(x => x[1]), type: "pie", hole: .4, marker: { colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"] } }], { ...layout, showlegend: true });
+                Plotly.newPlot("ch-marca", [{ labels: sortedM.map(x => x[0]), values: sortedM.map(x => x[1]), type: "pie", hole: .4, marker: { colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"] } }], { ...layout, showlegend: true }, config);
 
                 const vm = fo.reduce((acc, c) => { const n = c.asignado || "Sin Asignar"; acc[n] = (acc[n] || 0) + Number(c.valor_del_cliente_potencial || 0); return acc; }, {});
                 const vs = Object.entries(vm).sort((a,b) => a[1] - b[1]);
-                Plotly.newPlot("ch-asesor", [{ y: vs.map(x => x[0]), x: vs.map(x => x[1]), type: "bar", orientation: "h", marker: {color: "#10b981"} }], { ...layout, margin: {t:10, b:40, l:120, r:10} });
+                Plotly.newPlot("ch-asesor", [{ y: vs.map(x => x[0]), x: vs.map(x => x[1]), type: "bar", orientation: "h", marker: {color: "#10b981"} }], { ...layout, margin: {t:10, b:40, l:150, r:10} }, config);
 
                 const activeG = document.getElementById("f-ger").value.toUpperCase();
                 const activeM = document.getElementById("f-mar").value.toUpperCase();
@@ -958,23 +958,19 @@ class App(cctk.CTk):
                 const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || 0), 0);
                 const perc = tMeta > 0 ? (tv / tMeta) * 100 : 0;
                 document.getElementById("kpi-meta").innerText = Math.round(perc) + "%";
-                Plotly.newPlot("ch-meta", [{ domain: { x: [0, 1], y: [0, 1] }, value: tv, title: { text: "Cumplimiento de Meta" }, type: "indicator", mode: "gauge+number", gauge: { axis: { range: [0, Math.max(tMeta, tv * 1.2)] }, bar: { color: "#10b981" }, steps: [{ range: [0, tMeta], color: "#e2e8f0" }] } }], layout);
+                Plotly.newPlot("ch-meta", [{ domain: { x: [0, 1], y: [0, 1] }, value: tv, title: { text: "Cumplimiento de Meta" }, type: "indicator", mode: "gauge+number", gauge: { axis: { range: [0, Math.max(tMeta, tv * 1.2)] }, bar: { color: "#10b981" }, steps: [{ range: [0, tMeta], color: "#e2e8f0" }] } }], layout, config);
 
-                                // 5. Rendimiento por Anuncio (Leads, Gasto y Ventas)
                 const adData = {};
-
                 ffb.forEach(f => {
                     const a = (f.codigo || "SIN CODA").toUpperCase();
                     if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
                     adData[a].spend += Number(f.importe_gastado || 0);
                 });
-
                 fc.forEach(c => {
                     const a = (c.anuncio || "SIN CODA").toUpperCase();
                     if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
                     adData[a].leads += 1;
                 });
-
                 fo.forEach(o => {
                     const a = (o.anuncio || "SIN CODA").toUpperCase();
                     if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
@@ -984,22 +980,11 @@ class App(cctk.CTk):
                 const ads = Object.entries(adData).sort((a,b) => b[1].spend - a[1].spend).slice(0, 20);
                 Plotly.newPlot("ch-ad-perf", [
                     { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.leads), name: "Leads", type: "bar", marker: {color: "#3b82f6"} },
-                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.sales), name: "Ventas (Q)", type: "bar", marker: {color: "#10b981"} },
-                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.spend), name: "Gasto (Q)", type: "scatter", yaxis: "y2", line: {color: "#ef4444", width: 3} }
+                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.sales), name: "Ventas (Q)", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#10b981", width: 3} },
+                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.spend), name: "Gasto (Q)", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#ef4444", width: 3} }
                 ], {
-                    ...layout,
-                    showlegend: true,
-                    legend: { orientation: "h", y: -0.2 },
-                    yaxis: { title: "Leads / Ventas" },
-                    yaxis2: { title: "Gasto (Q)", overlaying: "y", side: "right" },
-                    barmode: 'group'
-                });
-                ffb.forEach(f => { const a = (f.codigo || "SIN CODA").toUpperCase(); if (!adData[a]) adData[a] = { leads: 0, spend: 0 }; adData[a].spend += Number(f.importe_gastado || 0); });
-                const ads = Object.entries(adData).sort((a,b) => b[1].spend - a[1].spend).slice(0, 20);
-                Plotly.newPlot("ch-ad-perf", [
-                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.leads), name: "Leads", type: "bar", marker: {color: "#3b82f6"} },
-                    { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.spend), name: "Gasto (Q)", type: "scatter", yaxis: "y2", line: {color: "#ef4444", width: 3} }
-                ], { ...layout, showlegend: true, legend: { orientation: "h", y: -0.2 }, yaxis: { title: "Leads" }, yaxis2: { title: "Gasto (Q)", overlaying: "y", side: "right" } });
+                    ...layout, showlegend: true, legend: { orientation: "h", y: -0.2 }, yaxis: { title: "Cant. Leads" }, yaxis2: { title: "Dinero (Q)", overlaying: "y", side: "right" }
+                }, config);
             }
             init();
         })();
@@ -1010,6 +995,9 @@ class App(cctk.CTk):
         final = final.replace("TIMESTAMP_HERE", datetime.now().strftime("%d/%m/%Y %H:%M"))
         with open("index.html", "w", encoding="utf-8") as f: f.write(final)
         self.log("Dashboard unificado listo.")
+
+
+
 
     def process_contact_costs(self, res_c, res_fb):
         import pandas as pd
