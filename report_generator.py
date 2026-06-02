@@ -279,7 +279,7 @@ def parse_dataventa(dv_str):
 def get_mapped_vendedor(raw_vendedor):
     if not raw_vendedor: return "SinAsignar"
     key = str(raw_vendedor).strip().upper()
-    return str(raw_vendedor).strip().upper() # Desactivado mapeo para mantener relación GHL
+    return str(raw_vendedor).strip().upper()
 
 def parse_ventas_unnested(dv_str, contact_id, opp_id, ghl_phone, vendedor, ghl_name="", sale_date_str="", secuencia=""):
     data = {}
@@ -479,18 +479,17 @@ def mapping_secuencia_gasto(camp):
     if camp.startswith("NOHEA02C2"): return "R1.3"
     if camp.startswith("NOHE"): return "R1.3"
     if camp.startswith("ANGEL"): return "R1.3"
-    if camp.startswith("2510"): return "TIENDAS"
+    if camp.startswith("2510"): return "R1.1"
     if camp.startswith("RRHH"): return "RRHH"
-    if camp.startswith("TIENDAS"): return "TIENDAS"
+    if camp.startswith("TIENDAS"): return "R1.1"
     if camp.startswith("BOT2"): return "R1.2"
-    if camp.startswith("R2.2"): return "R2.2"
-    if camp.startswith("R2.1"): return "R2.1"
-    if camp.startswith("R1.1"): return "R1.1"
-    if camp.startswith("R1.2"): return "R1.2"
-    if camp.startswith("R1.3"): return "R1.3"
-    if camp.startswith("R2.3"): return "R2.3"
-    if camp.startswith("R3.2"): return "R3.2"
-    if camp.startswith("ALCANCE"): return "TIENDAS"
+    if "R2.2" in camp: return "R2.2"
+    if "R2.1" in camp: return "R2.1"
+    if "R1.1" in camp: return "R1.1"
+    if "R1.2" in camp: return "R1.2"
+    if "R1.3" in camp: return "R1.3"
+    if "R2.3" in camp: return "R2.3"
+    if "R3.2" in camp: return "R3.2"
     return "OTRO"
 
 def obtener_insights(account, fecha_desde, fecha_hasta, log_callback):
@@ -660,32 +659,57 @@ class App(cctk.CTk):
                                 spend = float(ins.get("spend", 0))
                                 if f"act_{acc_id}" in FB_USD_ACCOUNTS or acc_id in FB_USD_ACCOUNTS:
                                     spend *= USD_TO_GTQ
-                                res_fb.append({"ad_id": aid, "page_id": pid, "page_name": pname, "campaign_name": camp, "adset_name": ins.get("adset_name"), "ad_name": ad_n, "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "secuencia": mapping_secuencia_gasto(camp), "dia": ins.get("date_start"), "contactos_mensajes_nuevos": conv, "importe_gastado": spend})
+
+                                d = ins.get("date_start", "")
+                                res_fb.append({
+                                    "ID del anuncio": aid,
+                                    "ID de la página": pid,
+                                    "Nombre de la página": pname,
+                                    "Nombre de la campaña": camp,
+                                    "Nombre del conjunto": ins.get("adset_name"),
+                                    "Nombre del anuncio": ad_n,
+                                    "Día": d,
+                                    "Contactos mensajes nuevos": conv,
+                                    "Importe gastado": spend,
+                                    "Mes": int(d[5:7]) if d else 0,
+                                    "Anio": int(d[0:4]) if d else 0,
+                                    "codigo": anu,
+                                    "precio": extraer_precio_fb(ad_n),
+                                    "tipo_post": tpost,
+                                    "SECUENCIA": mapping_secuencia_gasto(camp)
+                                })
 
             df_metas = cargar_metas(PATH_METAS, self.log)
+
 
             if res_o or res_c or res_fb:
                 self.log(f"Total extraído: {len(res_o)} ventas, {len(res_c)} contactos, {len(res_fb)} líneas de gasto.")
 
-                # Mapa de cruce: ID Contacto -> (Anuncio, Secuencia)
+                # 1. Mapa de cruce: ID Contacto -> (Anuncio, Secuencia) para enriquecer ventas
                 c_map = {c['id']: (c.get('anuncio',''), c.get('secuencia','')) for c in res_c if c.get('id')}
                 for o in res_o:
                     cid = o.get('ID de contacto')
                     if cid in c_map:
-                        if not o.get('Anuncio') or o['Anuncio'] == "": o['Anuncio'] = c_map[cid][0]
-                        if not o.get('Secuencia') or o['Secuencia'] == "": o['Secuencia'] = c_map[cid][1]
+                        # Si a la venta le falta el anuncio lo hereda del contacto
+                        if not o.get('Anuncio') or str(o.get('Anuncio','')).strip() == "":
+                            o['Anuncio'] = c_map[cid][0]
+                        # Asegurar secuencia correcta
+                        if not o.get('Secuencia') or str(o.get('Secuencia','')).strip() == "":
+                            o['Secuencia'] = c_map[cid][1]
 
-                # Asegurar campos Mes/Año en contactos y facebook
+                # 2. Asegurar campos Mes/Año en todas las fuentes
                 for c in res_c:
                     d = c.get('fecha_iso','')
-                    c['Mes'] = int(d[5:7]) if d else 0
-                    c['Anio'] = int(d[0:4]) if d else 0
-                for f in res_fb:
-                    d = f.get('dia','')
-                    f['Mes'] = int(d[5:7]) if d else 0
-                    f['Anio'] = int(d[0:4]) if d else 0
+                    if 'Mes' not in c: c['Mes'] = int(d[5:7]) if d else 0
+                    if 'Anio' not in c: c['Anio'] = int(d[0:4]) if d else 0
 
+                for f in res_fb:
+                    # En res_fb las claves son "Mes" y "Anio" ya puestas arriba.
+                    pass
+
+                # 3. Procesar costos de contactos
                 df_c_final = self.process_contact_costs(res_c, res_fb)
+
 
                 self.generate_excel(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb)
                 self.generate_dashboard_html(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb, df_metas)
@@ -811,7 +835,7 @@ class App(cctk.CTk):
                 };
                 pop("f-ger", raw.metas.map(m => m.gerente));
                 pop("f-mar", raw.metas.map(m => m.marca));
-                pop("f-ven", raw.contactos.map(c => c.asignado).concat(raw.oportunidades.map(o => o.asignado)));
+                pop("f-ven", [...raw.contactos.map(c => c.asignado), ...raw.oportunidades.map(o => o.asignado)]);
                 pop("f-mes", raw.oportunidades.map(o => o.mes));
                 pop("f-anu", raw.contactos.map(c => c.anuncio));
                 document.querySelectorAll("select, input[type='date']").forEach(s => s.onchange = update);
@@ -842,7 +866,7 @@ class App(cctk.CTk):
                     const mDate = (!start || d >= start) && (!end || d <= end);
                     const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                     const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
-                    const mV = (v === "ALL" || (c.asignado || "").toUpperCase() === v.toUpperCase());
+                    const mV = (v === "ALL" || (c.asignado || "").trim().toUpperCase() === v.trim().toUpperCase());
                     const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
                     return mDate && mG && mM && mV && mA;
                 });
@@ -853,7 +877,7 @@ class App(cctk.CTk):
                     const mDate = (!start || d >= start) && (!end || d <= end);
                     const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                     const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
-                    const mV = (v === "ALL" || (o.asignado || "").toUpperCase() === v.toUpperCase());
+                    const mV = (v === "ALL" || (o.asignado || "").trim().toUpperCase() === v.trim().toUpperCase());
                     const mMes = (mes === "ALL" || String(o.mes) === String(mes));
                     const mA = (anu === "ALL" || (o.anuncio || "").toUpperCase() === anu);
                     return mDate && mG && mM && mV && mMes && mA;
