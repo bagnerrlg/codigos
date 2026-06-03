@@ -476,7 +476,8 @@ def extraer_precio_fb(nombre):
     return int(m.group(1)) if m else None
 
 def fb_api_get(url, params):
-    params["access_token"] = FB_ACCESS_TOKEN
+    if "access_token" not in url and "access_token" not in params:
+        params["access_token"] = FB_ACCESS_TOKEN
     for attempt in range(1, 4):
         try:
             r = requests.get(url, params=params, timeout=45)
@@ -493,6 +494,7 @@ def fb_api_get(url, params):
 
 def mapping_secuencia_gasto(camp):
     camp = str(camp).upper()
+    # Prioridad: Prefijos especiales de nombres/campañas
     if camp.startswith("DIEGOA01C1.PAGINA M"): return "R1.3"
     if camp.startswith("DIEGO"): return "R1.3"
     if camp.startswith("VICTORIAA02C1"): return "R1.2"
@@ -505,21 +507,23 @@ def mapping_secuencia_gasto(camp):
     if camp.startswith("RRHH"): return "RRHH"
     if camp.startswith("TIENDAS"): return "R1.1"
     if camp.startswith("BOT2"): return "R1.2"
-    if "R2.2" in camp: return "R2.2"
-    if "R2.1" in camp: return "R2.1"
-    if "R1.1" in camp: return "R1.1"
-    if "R1.2" in camp: return "R1.2"
-    if "R1.3" in camp: return "R1.3"
-    if "R2.3" in camp: return "R2.3"
-    if "R3.2" in camp: return "R3.2"
-    # Fallback to ACCOUNT names check
-    for r_name in ["R1.1", "R1.2", "R1.3", "R2.1", "R2.2", "R2.3", "R3.2"]:
-        if r_name in camp: return r_name
+
+    # Automatización: Buscar cualquier nombre de cuenta en la campaña
+    for acc in ACCOUNTS:
+        acc_name = str(acc["name"]).upper()
+        if acc_name in camp:
+            return acc_name
+
+    # Intentar búsqueda de secuencia genérica ej A1.1 o R2.2
+    match = re.search(r"([A-R]\d\.\d)", camp)
+    if match: return match.group(1)
+
     return "OTRO"
 
 def obtener_insights(account, fecha_desde, fecha_hasta, log_callback):
     log_callback(f"Extraer Insights FB: {account}...")
-    url, params = f"{FB_BASE_URL}/{account}/insights", {"fields": FB_FIELDS_INSIGHTS, "level": "ad", "limit": 500, "time_range": json.dumps({"since": fecha_desde, "until": fecha_hasta}), "time_increment": 1, "filtering": '[{"field":"spend","operator":"GREATER_THAN","value":0}]'}
+    # Removido el filtro GREATER_THAN 0 para asegurar que no se pierda nada por redondeo de la API
+    url, params = f"{FB_BASE_URL}/{account}/insights", {"fields": FB_FIELDS_INSIGHTS, "level": "ad", "limit": 500, "time_range": json.dumps({"since": fecha_desde, "until": fecha_hasta}), "time_increment": 1}
     data = []
     while True:
         js = fb_api_get(url, params)
@@ -726,6 +730,17 @@ class App(cctk.CTk):
 
             if res_o or res_c or res_fb:
                 self.log(f"Total extraído: {len(res_o)} ventas, {len(res_c)} contactos, {len(res_fb)} líneas de gasto.")
+
+                # Normalización Estricta de llaves
+                for r in res_fb:
+                    r["codigo"] = str(r.get("codigo", "")).strip().upper()
+                    r["SECUENCIA"] = str(r.get("SECUENCIA", "")).strip().upper()
+                for r in res_c:
+                    r["anuncio"] = str(r.get("anuncio", "")).strip().upper()
+                    r["secuencia"] = str(r.get("secuencia", "")).strip().upper()
+                for r in res_o:
+                    r["Anuncio"] = str(r.get("Anuncio", "")).strip().upper()
+                    r["Secuencia"] = str(r.get("Secuencia", "")).strip().upper()
 
                 # 1. Mapa de cruce: ID Contacto -> (Anuncio, Secuencia) para enriquecer ventas
                 c_map = {c['id']: (c.get('anuncio',''), c.get('secuencia','')) for c in res_c if c.get('id')}
@@ -1060,7 +1075,8 @@ class App(cctk.CTk):
                     document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
                     document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
                     document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
-                    document.getElementById("kpi-roas").innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(1) + "%" : "0.0%";
+                    // Peso de mercadeo: (Gasto / Venta) * 100
+                    document.getElementById("kpi-roas").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
 
                     // --- Lógica Dashboard Personal ---
                     const personalSection = document.getElementById("personal-dashboard");
