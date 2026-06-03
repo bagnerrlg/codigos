@@ -1022,15 +1022,23 @@ class App(cctk.CTk):
                 }], layout, config);
 
                 const adData = {};
-                ffb.forEach(f => {
-                    const a = (f.codigo || "SIN CODA").toUpperCase();
-                    if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
-                    adData[a].spend += Number(f.importe_gastado || 0);
-                });
+                const isVFilteredForAds = document.getElementById("f-ven").value !== "ALL";
+
+                if (!isVFilteredForAds) {
+                    ffb.forEach(f => {
+                        const a = (f.codigo || "SIN CODA").toUpperCase();
+                        if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                        adData[a].spend += Number(f.importe_gastado || 0);
+                    });
+                }
+
                 fc.forEach(c => {
                     const a = (c.anuncio || "SIN CODA").toUpperCase();
                     if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
                     adData[a].leads += 1;
+                    if (isVFilteredForAds) {
+                        adData[a].spend += Number(c.costo_total || 0);
+                    }
                 });
                 fo.forEach(o => {
                     const a = (o.anuncio || "SIN CODA").toUpperCase();
