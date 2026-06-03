@@ -477,8 +477,19 @@ def extraer_precio_fb(nombre):
 
 def fb_api_get(url, params):
     params["access_token"] = FB_ACCESS_TOKEN
-    try: r = requests.get(url, params=params, timeout=30); return r.json()
-    except: return {}
+    for attempt in range(1, 4):
+        try:
+            r = requests.get(url, params=params, timeout=45)
+            if r.status_code == 200: return r.json()
+            if r.status_code == 429:
+                time.sleep(attempt * 3)
+                continue
+            print(f"FB API Error {r.status_code}: {r.text}")
+            return r.json() # Devolver JSON aunque tenga error para que el llamador lo vea
+        except Exception as e:
+            print(f"FB API Attempt {attempt} failed: {e}")
+            time.sleep(attempt * 2)
+    return {}
 
 def mapping_secuencia_gasto(camp):
     camp = str(camp).upper()
@@ -512,10 +523,21 @@ def obtener_insights(account, fecha_desde, fecha_hasta, log_callback):
     data = []
     while True:
         js = fb_api_get(url, params)
-        if "data" not in js: break
-        data.extend(js["data"])
-        if "paging" in js and "next" in js["paging"]: url, params = js["paging"]["next"], {}
-        else: break
+        if not js or "data" not in js:
+            if js and "error" in js:
+                log_callback(f"  Error FB ({account}): {js['error'].get('message')}")
+            break
+
+        batch_data = js.get("data", [])
+        data.extend(batch_data)
+        log_callback(f"  {account}: {len(batch_data)} registros obtenidos en este lote.")
+
+        if "paging" in js and "next" in js["paging"]:
+            url = js["paging"]["next"]
+            params = {} # El next ya trae los params en la URL
+        else:
+            break
+    log_callback(f"  Total FB {account}: {len(data)} registros.")
     return data
 
 def obtener_creatives(ad_ids):
@@ -633,9 +655,14 @@ class App(cctk.CTk):
         self.console = cctk.CTkTextbox(logs_frame, height=60, font=("Consolas", 10)); self.console.pack(fill="both", expand=True, padx=5, pady=5); self.log("LISTO.")
 
     def log(self, txt):
-        txt = str(txt)
-        hour = datetime.now().strftime("%H:%M:%S")
-        self.console.configure(state="normal"); self.console.insert("end", f"[{hour}] {txt}\n"); self.console.see("end"); self.console.configure(state="disabled")
+        def _log():
+            msg = str(txt)
+            hour = datetime.now().strftime("%H:%M:%S")
+            self.console.configure(state="normal")
+            self.console.insert("end", f"[{hour}] {msg}\n")
+            self.console.see("end")
+            self.console.configure(state="disabled")
+        self.after(0, _log)
 
     def start_process(self):
         if not all([self.sales_picker.start_date, self.sales_picker.end_date, self.contacts_picker.start_date, self.contacts_picker.end_date, self.fb_picker.start_date, self.fb_picker.end_date]): messagebox.showwarning("Atención", "Elija todos los rangos."); return
@@ -788,22 +815,113 @@ class App(cctk.CTk):
     <title>DUPAZA PRO - Dashboard</title>
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        :root {
+            --bg-dark: #090e1a;
+            --card-dark: #121a2b;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #6366f1;
+            --text-muted: #94a3b8;
+        }
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; border: 1px solid #e2e8f0; }
         .kpi-val { font-size: 28px; font-weight: 800; color: #0f172a; }
         .kpi-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* Estilos Dashboard Personal */
+        .personal-mode { background-color: var(--bg-dark); color: white; }
+        .personal-mode .card { background: var(--card-dark); border: 1px solid rgba(255,255,255,0.05); color: white; }
+        .personal-mode .kpi-val { color: white; }
+        .glass-card { background: var(--card-dark); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 1.25rem; transition: all 0.3s ease; }
+        .gradient-text { background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .rank-badge { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); }
+        .active-rank { border: 2px solid var(--accent-primary); background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%); }
     </style>
 </head>
-<body class="p-6">
+<body class="p-6 transition-colors duration-500" id="body-main">
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b pb-6">
-            <div><h1 class="text-3xl font-black text-slate-800">📊 DUPAZA DASHBOARD</h1></div>
+            <div><h1 class="text-3xl font-black text-slate-800" id="main-title">📊 DUPAZA DASHBOARD</h1></div>
             <div class="text-right text-[10px] text-slate-400 font-bold uppercase">TIMESTAMP_HERE</div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-7 gap-4 mb-8 bg-white p-4 rounded-2xl shadow-sm border">
+        <!-- DASHBOARD PERSONAL (Visible solo cuando hay un asesor filtrado) -->
+        <div id="personal-dashboard" class="hidden space-y-8 mb-12">
+            <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-8 space-y-8">
+                    <!-- User Profile Hero -->
+                    <div class="glass-card p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-8 opacity-5"><i class="fa-solid fa-user-tie text-9xl"></i></div>
+                        <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                            <div class="relative group">
+                                <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+                                <img src="https://i.pravatar.cc/300?u=user" id="user-avatar" alt="Usuario" class="relative w-32 h-32 rounded-full border-2 border-white/10 object-cover shadow-2xl">
+                                <div id="user-rank-badge" class="rank-badge absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-black text-white italic border-2 border-[#121a2b]">#? RANK</div>
+                            </div>
+                            <div class="flex-1 text-center md:text-left">
+                                <div class="flex flex-col md:flex-row md:items-end gap-3 mb-4">
+                                    <h2 id="display-name" class="text-3xl font-black">---</h2>
+                                    <span class="bg-blue-500/10 text-blue-400 text-[10px] font-bold px-2 py-1 rounded-md border border-blue-500/20 uppercase tracking-widest mb-1">Agente</span>
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Venta Periodo</span>
+                                        <span id="stat-monthly-sales" class="text-lg font-bold text-blue-400">Q 0</span>
+                                    </div>
+                                    <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Inversión</span>
+                                        <span id="stat-monthly-investment" class="text-lg font-bold text-amber-400">Q 0</span>
+                                    </div>
+                                    <div class="hidden md:block bg-white/5 p-3 rounded-xl border border-white/5">
+                                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Ctd. Ventas</span>
+                                        <span id="stat-total-count" class="text-lg font-bold text-emerald-400">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span><div id="metric-sales" class="text-2xl font-black mt-1 text-white">Q 0.00</div></div>
+                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ganancia Est. (10%-Inv)</span><div id="metric-profit" class="text-2xl font-black mt-1 text-emerald-400">Q 0.00</div></div>
+                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Inversión Atribuida</span><div id="metric-investment" class="text-2xl font-black mt-1 text-amber-400">Q 0.00</div></div>
+                    </div>
+
+                    <!-- Percentage Metrics -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="glass-card p-6 flex items-center justify-between">
+                            <div class="flex gap-4 items-center">
+                                <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-black text-indigo-400 text-xl" id="perc-expense-sales">0.0</div>
+                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Gasto vrs Venta</h4><p class="text-xs text-indigo-400 font-semibold mt-1">Marketing Efficiency</p></div>
+                            </div>
+                            <i id="icon-expense-sales" class="fa-solid fa-circle-check text-slate-700 text-xl"></i>
+                        </div>
+                        <div class="glass-card p-6 flex items-center justify-between">
+                            <div class="flex gap-4 items-center">
+                                <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-black text-amber-400 text-xl" id="perc-inv-profit">0.0</div>
+                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Inv. s/ Ganancia</h4><p class="text-xs text-amber-400 font-semibold mt-1">ROI Analysis</p></div>
+                            </div>
+                            <i id="icon-inv-profit" class="fa-solid fa-circle-exclamation text-slate-700 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ranking Sidebar -->
+                <aside class="lg:col-span-4 h-full">
+                    <div class="glass-card p-8 h-full">
+                        <div class="flex items-center justify-between mb-8">
+                            <h3 class="text-xl font-black flex items-center gap-3"><i class="fa-solid fa-crown text-amber-500"></i>Top Ranking</h3>
+                        </div>
+                        <div id="ranking-list" class="space-y-4"></div>
+                    </div>
+                </aside>
+            </main>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-7 gap-4 mb-8 bg-white p-4 rounded-2xl shadow-sm border" id="filter-bar">
             <div><label class="block text-[10px] font-black text-slate-400 mb-1">FECHA INICIO</label><input type="date" id="f-start" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"></div>
             <div><label class="block text-[10px] font-black text-slate-400 mb-1">FECHA FIN</label><input type="date" id="f-end" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"></div>
             <div><label class="block text-[10px] font-black text-slate-400 mb-1">GERENTE</label><select id="f-ger" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
@@ -942,7 +1060,65 @@ class App(cctk.CTk):
                     document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
                     document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
                     document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
-                document.getElementById("kpi-roas").innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(1) + "%" : "0.0%";
+                    document.getElementById("kpi-roas").innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(1) + "%" : "0.0%";
+
+                    // --- Lógica Dashboard Personal ---
+                    const personalSection = document.getElementById("personal-dashboard");
+                    const bodyMain = document.getElementById("body-main");
+                    const mainTitle = document.getElementById("main-title");
+
+                    if (v !== "ALL") {
+                        personalSection.classList.remove("hidden");
+                        bodyMain.classList.add("personal-mode");
+                        mainTitle.classList.add("gradient-text");
+
+                        document.getElementById("display-name").innerText = v;
+                        document.getElementById("stat-monthly-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
+                        document.getElementById("stat-monthly-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
+                        document.getElementById("stat-total-count").innerText = f_o.length;
+
+                        document.getElementById("metric-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
+                        document.getElementById("metric-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
+                        const profit = (tVta * 0.10) - tGto;
+                        document.getElementById("metric-profit").innerText = "Q" + Math.round(profit).toLocaleString();
+
+                        const gv = tVta > 0 ? (tGto / tVta) * 100 : 0;
+                        const ig = (tVta * 0.10) > 0 ? (tGto / (tVta * 0.10)) * 100 : 0;
+
+                        document.getElementById("perc-expense-sales").innerText = gv.toFixed(1);
+                        document.getElementById("perc-inv-profit").innerText = ig.toFixed(1);
+
+                        document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
+
+                        // --- Ranking Logic ---
+                        const rankings = {};
+                        raw.oportunidades.forEach(op => {
+                            const name = (op.asignado || "").toUpperCase().trim();
+                            if (name) rankings[name] = (rankings[name] || 0) + Number(op.valor_del_cliente_potencial || 0);
+                        });
+                        const sortedRank = Object.entries(rankings).sort((a,b) => b[1] - a[1]);
+                        const myRank = sortedRank.findIndex(r => r[0] === v) + 1;
+                        document.getElementById("user-rank-badge").innerText = `#${myRank || "?"} RANK`;
+
+                        const rankList = document.getElementById("ranking-list");
+                        rankList.innerHTML = "";
+                        sortedRank.slice(0, 5).forEach(([name, val], i) => {
+                            const isMe = name === v;
+                            const div = document.createElement("div");
+                            div.className = `flex items-center gap-4 p-4 rounded-2xl transition-all ${isMe ? 'active-rank scale-[1.05]' : 'bg-white/5'}`;
+                            div.innerHTML = `
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${i===0?'bg-amber-500 text-slate-900':'bg-slate-700 text-white'}">${i+1}</div>
+                                <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${isMe ? 'TÚ: ' : ''}${name}</div></div>
+                                <div class="text-right text-[10px] font-black text-emerald-400">Q${Math.round(val/1000)}k</div>
+                            `;
+                            rankList.appendChild(div);
+                        });
+
+                    } else {
+                        personalSection.classList.add("hidden");
+                        bodyMain.classList.remove("personal-mode");
+                        mainTitle.classList.remove("gradient-text");
+                    }
 
                     render(f_o, f_c, f_fb, tVta, tGto, start, end);
                     const dbg = `Opps: ${raw.oportunidades.length} (filt: ${f_o.length}) | FB: ${raw.facebook.length} (filt: ${f_fb.length}) | Leads: ${raw.contactos.length} (filt: ${f_c.length}) | Metas: ${raw.metas.length} | seqMapKeys: ${Object.keys(seqMap).length}`;
