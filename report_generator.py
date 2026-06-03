@@ -933,7 +933,7 @@ class App(cctk.CTk):
                         return mDate && mG && mM && mA;
                     });
 
-                    const tGto = (v !== "ALL" || anu !== "ALL")
+                    const tGto = (v !== "ALL")
                         ? f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0)
                         : f_fb.reduce((a, f) => a + Number(f.importe_gastado || 0), 0);
 
@@ -960,14 +960,27 @@ class App(cctk.CTk):
                 const config = { responsive: true };
 
                 const daily = {};
-                fc.forEach(c => { const d = c.fecha_iso || "N/A"; if(!daily[d]) daily[d] = { leads: 0, spend: 0 }; daily[d].leads += 1; });
-                ffb.forEach(f => { const d = f.dia || "N/A"; if(!daily[d]) daily[d] = { leads: 0, spend: 0 }; daily[d].spend += Number(f.importe_gastado || 0); });
+                const isVFiltered = document.getElementById("f-ven").value !== "ALL";
+
+                fc.forEach(c => {
+                    const d = c.fecha_iso || "N/A";
+                    if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
+                    daily[d].leads += 1;
+                    if(isVFiltered) daily[d].spend += Number(c.costo_total || 0);
+                });
+                if(!isVFiltered) {
+                    ffb.forEach(f => {
+                        const d = f.dia || "N/A";
+                        if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
+                        daily[d].spend += Number(f.importe_gastado || 0);
+                    });
+                }
                 const sortedDays = Object.keys(daily).sort();
 
                 Plotly.newPlot("ch-leads", [
-                    { x: sortedDays, y: sortedDays.map(d => daily[d].leads), name: "Leads", type: "bar", marker: {color: "#3b82f6", opacity: 0.7} },
-                    { x: sortedDays, y: sortedDays.map(d => daily[d].spend), name: "Gasto (Q)", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#ef4444", width:2} }
-                ], { ...layout, yaxis: { title: "Leads" }, yaxis2: { title: "Gasto (Q)", overlaying: "y", side: "right" }, showlegend: true, legend: { orientation: "h", y: -0.2 } }, config);
+                    { x: sortedDays, y: sortedDays.map(d => daily[d].spend), name: "Gasto (Q)", type: "bar", marker: {color: "#ef4444", opacity: 0.6} },
+                    { x: sortedDays, y: sortedDays.map(d => daily[d].leads), name: "Leads", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#3b82f6", width:2} }
+                ], { ...layout, yaxis: { title: "Gasto (Q)" }, yaxis2: { title: "Leads", overlaying: "y", side: "right", showgrid: false }, showlegend: true, legend: { orientation: "h", y: -0.2 } }, config);
 
                 const vbm = fo.reduce((acc, c) => { const m = (c.marca || "OTRA").toUpperCase(); acc[m] = (acc[m] || 0) + Number(c.valor_del_cliente_potencial || 0); return acc; }, {});
                 const sortedM = Object.entries(vbm).sort((a,b) => b[1] - a[1]);
@@ -989,7 +1002,24 @@ class App(cctk.CTk):
                 const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
                 const perc = tMeta > 0 ? (tv / tMeta) * 100 : 0;
                 document.getElementById("kpi-meta").innerText = Math.round(perc) + "%";
-                Plotly.newPlot("ch-meta", [{ domain: { x: [0, 1], y: [0, 1] }, value: tv, title: { text: "Cumplimiento de Meta" }, type: "indicator", mode: "gauge+number", gauge: { axis: { range: [0, Math.max(tMeta, tv * 1.2)] }, bar: { color: "#10b981" }, steps: [{ range: [0, tMeta], color: "#e2e8f0" }] } }], layout, config);
+                Plotly.newPlot("ch-meta", [{
+                    domain: { x: [0, 1], y: [0, 1] },
+                    value: tv,
+                    title: { text: "Cumplimiento (Meta: Q" + Math.round(tMeta).toLocaleString() + ")" },
+                    type: "indicator",
+                    mode: "gauge+number",
+                    number: { prefix: "Q", valueformat: ",.0f" },
+                    gauge: {
+                        axis: { range: [0, Math.max(tMeta, tv * 1.2)] },
+                        bar: { color: "#10b981" },
+                        steps: [{ range: [0, tMeta], color: "#e2e8f0" }],
+                        threshold: {
+                            line: { color: "yellow", width: 4 },
+                            thickness: 0.75,
+                            value: tMeta
+                        }
+                    }
+                }], layout, config);
 
                 const adData = {};
                 ffb.forEach(f => {
