@@ -817,7 +817,7 @@ class App(cctk.CTk):
             <div class="card text-center"><div class="kpi-label">Gasto</div><div id="kpi-gasto" class="kpi-val text-blue-600">Q 0</div></div>
             <div class="card text-center"><div class="kpi-label">Leads</div><div id="kpi-leads" class="kpi-val">0</div></div>
             <div class="card text-center"><div class="kpi-label">Ventas</div><div id="kpi-venta" class="kpi-val text-emerald-600">Q 0</div></div>
-            <div class="card text-center"><div class="kpi-label">ROAS</div><div id="kpi-roas" class="kpi-val">0.0</div></div>
+            <div class="card text-center"><div class="kpi-label">PESO MERCADEO</div><div id="kpi-roas" class="kpi-val">0.0%</div></div>
             <div class="card text-center"><div class="kpi-label">% Meta</div><div id="kpi-meta" class="kpi-val">0%</div></div>
         </div>
 
@@ -826,9 +826,8 @@ class App(cctk.CTk):
             <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Ventas vs Meta</h3><div id="ch-meta" class="h-full"></div></div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div class="grid grid-cols-1 gap-8 mb-8">
             <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Ventas por Marca</h3><div id="ch-marca" class="h-full"></div></div>
-            <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Eficiencia por Asesor</h3><div id="ch-asesor" class="h-full"></div></div>
         </div>
 
         <div class="grid grid-cols-1 gap-8 mb-8">
@@ -943,9 +942,9 @@ class App(cctk.CTk):
                     document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
                     document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
                     document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
-                    document.getElementById("kpi-roas").innerText = tGto > 0 ? (tVta / tGto).toFixed(1) : "0.0";
+                document.getElementById("kpi-roas").innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(1) + "%" : "0.0%";
 
-                    render(f_o, f_c, f_fb, tVta, tGto);
+                    render(f_o, f_c, f_fb, tVta, tGto, start, end);
                     const dbg = `Opps: ${raw.oportunidades.length} (filt: ${f_o.length}) | FB: ${raw.facebook.length} (filt: ${f_fb.length}) | Leads: ${raw.contactos.length} (filt: ${f_c.length}) | Metas: ${raw.metas.length} | seqMapKeys: ${Object.keys(seqMap).length}`;
                     console.log(dbg);
                     document.getElementById('debug').innerText = dbg;
@@ -955,7 +954,7 @@ class App(cctk.CTk):
                 }
             }
 
-            function render(fo, fc, ffb, tv, tg) {
+            function render(fo, fc, ffb, tv, tg, start, end) {
                 const layout = { autosize: true, margin: {t:30, b:60, l:50, r:50}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {size: 10} };
                 const config = { responsive: true };
 
@@ -986,20 +985,43 @@ class App(cctk.CTk):
                 const sortedM = Object.entries(vbm).sort((a,b) => b[1] - a[1]);
                 Plotly.newPlot("ch-marca", [{ labels: sortedM.map(x => x[0]), values: sortedM.map(x => x[1]), type: "pie", hole: .4, marker: { colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"] } }], { ...layout, showlegend: true }, config);
 
-                const vm = fo.reduce((acc, c) => { const n = c.asignado || "Sin Asignar"; acc[n] = (acc[n] || 0) + Number(c.valor_del_cliente_potencial || 0); return acc; }, {});
-                const vs = Object.entries(vm).sort((a,b) => a[1] - b[1]);
-                Plotly.newPlot("ch-asesor", [{ y: vs.map(x => x[0]), x: vs.map(x => x[1]), type: "bar", orientation: "h", marker: {color: "#10b981"} }], { ...layout, margin: {t:10, b:40, l:150, r:10} }, config);
-
                 const activeG = document.getElementById("f-ger").value.toUpperCase();
                 const activeM = document.getElementById("f-mar").value.toUpperCase();
-                const activeMes = document.getElementById("f-mes").value;
+                const activeV = document.getElementById("f-ven").value.toUpperCase();
+
+                const sDt = new Date(start + "T00:00:00");
+                const eDt = new Date(end + "T23:59:59");
+                const monthsInRange = [];
+                let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
+                while (curr <= eDt) {
+                    monthsInRange.push(curr.getMonth() + 1);
+                    curr.setMonth(curr.getMonth() + 1);
+                }
+
                 const metasF = raw.metas.filter(x => {
-                    const mG = (activeG === "ALL" || (x.gerente || "").toUpperCase() === activeG);
-                    const mM = (activeM === "ALL" || (x.marca || "").toUpperCase() === activeM);
-                    const mMes = (activeMes === "ALL" || String(x.mes) === String(activeMes));
-                    return mG && mM && mMes;
+                    const mG = (activeG === "ALL" || (x.gerente || x.gerente_regional || "").toUpperCase() === activeG);
+                    const mM = (activeM === "ALL" || (x.marca || x.empresa || "").toUpperCase() === activeM);
+                    const mV = (activeV === "ALL" || (x.vendedor || "").toUpperCase() === activeV);
+                    const mMes = monthsInRange.includes(Number(x.mes));
+                    return mG && mM && mV && mMes;
                 });
+
                 const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
+                const diffMs = eDt - sDt;
+                const diffDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+                let totalMonthDays = 0;
+                let monthCounter = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
+                while (monthCounter <= eDt) {
+                    if (monthsInRange.includes(monthCounter.getMonth() + 1)) {
+                        totalMonthDays += new Date(monthCounter.getFullYear(), monthCounter.getMonth() + 1, 0).getDate();
+                    }
+                    monthCounter.setMonth(monthCounter.getMonth() + 1);
+                }
+                if (totalMonthDays === 0) totalMonthDays = 30;
+
+                const trend = (tv / diffDays) * totalMonthDays;
+
                 const perc = tMeta > 0 ? (tv / tMeta) * 100 : 0;
                 document.getElementById("kpi-meta").innerText = Math.round(perc) + "%";
                 Plotly.newPlot("ch-meta", [{
@@ -1010,16 +1032,20 @@ class App(cctk.CTk):
                     mode: "gauge+number",
                     number: { prefix: "Q", valueformat: ",.0f" },
                     gauge: {
-                        axis: { range: [0, Math.max(tMeta, tv * 1.2)] },
+                        axis: { range: [0, Math.max(tMeta, tv * 1.2, trend * 1.1)] },
                         bar: { color: "#10b981" },
                         steps: [{ range: [0, tMeta], color: "#e2e8f0" }],
                         threshold: {
-                            line: { color: "yellow", width: 4 },
-                            thickness: 0.75,
-                            value: tMeta
+                            line: { color: "yellow", width: 6 },
+                            thickness: 0.8,
+                            value: trend
                         }
                     }
-                }], layout, config);
+                }], { ...layout, annotations: [{
+                    x: 0.5, y: -0.1, xref: "paper", yref: "paper",
+                    text: "Tendencia: Q" + Math.round(trend).toLocaleString(),
+                    showarrow: false, font: { size: 12, color: "#f59e0b", weight: "bold" }
+                }] }, config);
 
                 const adData = {};
                 const isVFilteredForAds = document.getElementById("f-ven").value !== "ALL";
@@ -1046,7 +1072,7 @@ class App(cctk.CTk):
                     adData[a].sales += Number(o.valor_del_cliente_potencial || 0);
                 });
 
-                const ads = Object.entries(adData).sort((a,b) => b[1].spend - a[1].spend).slice(0, 20);
+                const ads = Object.entries(adData).sort((a,b) => b[1].leads - a[1].leads).slice(0, 20);
                 Plotly.newPlot("ch-ad-perf", [
                     { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.leads), name: "Leads", type: "bar", marker: {color: "#3b82f6"} },
                     { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.sales), name: "Ventas (Q)", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#10b981", width: 3} },
