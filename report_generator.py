@@ -135,6 +135,7 @@ VENDEDOR_MAP = {
     "ROSALINDA EUSEBIA RAMIREZ TEZEN": "Rosalinda Ramirez",
     "JULIO ALEJANDRO AJXUP GIL": "Julio Ajxup",
     "JOCARI ANASOL LOPEZ SICAL": "Jocari Lopez",
+    "DIEGO SANTA CRUZ": "DIEGO SANTACRUZ",
     "ODILIA NINETTE CALEL CARAU": "ODILIA NINETH CALEL",
 }
 
@@ -156,6 +157,7 @@ FB_AD_ACCOUNTS = [
     {"id": "act_277464379553028", "currency": "GTQ"},
     {"id": "", "currency": "USD"}
 ]
+FB_USD_ACCOUNTS = [a["id"] for a in FB_AD_ACCOUNTS if a["currency"] == "USD"]
 
 # Regex para extracción
 ANUNCIO_REGEX = re.compile(r"([A-Z]\d{3,4}[A-Z]\d{3})", re.IGNORECASE)
@@ -220,14 +222,27 @@ def get_custom_fields_map(location_id, token):
         return {f.get("id"): f.get("name") for f in r.json().get("customFields", []) if isinstance(f, dict)}
     except: return {}
 
-def get_users_by_location(location_id, token, version=API_VERSION_CONTACTS):
-    url = f"https://services.leadconnectorhq.com/users/?locationId={location_id}"
-    headers = {"Authorization": f"Bearer {token}", "Version": version, "Accept": "application/json"}
+def get_users_by_location(location_id, token, log_callback, acc_name, version="2021-07-28"):
+    user_map = {}
+    user_list = []
     try:
+        url = f"https://services.leadconnectorhq.com/users/?locationId={location_id}"
+        headers = {"Authorization": f"Bearer {token}", "Version": version, "Accept": "application/json"}
         r = requests.get(url, headers=headers, timeout=30)
-        if r.status_code != 200: return {}
-        return {u.get("id"): f"{u.get('firstName','') or ''} {u.get('lastName','') or ''}".strip() or u.get("email", "Desconocido") for u in r.json().get("users", [])}
-    except: return {}
+        if r.status_code != 200:
+            log_callback(f"  [ERROR] Usuarios {acc_name}: {r.status_code}")
+            return user_map, user_list
+        data = r.json()
+        for u in data.get("users", []):
+            uid = u.get("id")
+            name = f"{u.get('firstName', '') or ''} {u.get('lastName', '') or ''}".strip() or u.get("email", "Desconocido")
+            user_map[uid] = name
+            user_list.append({"Cuenta": acc_name, "ID Usuario": uid, "Nombre": name})
+        log_callback(f"  - {acc_name}: {len(user_map)} usuarios.")
+        return user_map, user_list
+    except Exception as e:
+        log_callback(f"  [ERROR] {acc_name}: {str(e)[:40]}")
+        return user_map, user_list
 
 def safe_post(url, token, payload, version):
     headers = {"Authorization": f"Bearer {token}", "Version": version, "Content-Type": "application/json"}
@@ -309,11 +324,10 @@ def extraer_secuencia(text):
     match_sec = SECUENCIA_REGEX.search(text.upper())
     return match_sec.group(1) if match_sec else ""
 
-def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
+def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback, u_map):
     token, loc, acc_name = acc["token"], acc["location_id"], acc["name"]
     sec_cf, anu_cf, pm_cf = acc["secuencia_cf"], acc["anuncio_cf"], acc["primer_mensaje_cf"]
     log_callback(f"Extraer Contactos: {acc_name}...")
-    u_map = get_users_by_location(loc, token)
     all_contacts, page, limit = [], 1, 100
     url = "https://services.leadconnectorhq.com/contacts/search"
     while True:
@@ -341,14 +355,13 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
             elif cid == pm_cf: primer_mensaje_texto = val.strip()
         anuncio, tipo_post = extraer_datos_anuncio(anuncio_raw)
         if not anuncio and primer_mensaje_texto: anuncio, tipo_post = extraer_datos_anuncio(primer_mensaje_texto)
-        secuencia = extraer_secuencia(secuencia_raw)
-        formatted_contacts.append({"id": c.get("id", ""), "dateAdded": date_fmt, "assignedToName": assigned_name, "secuencia": secuencia, "Anuncio": anuncio, "tipo_post": tipo_post})
+        formatted_contacts.append({"id": c.get("id", ""), "dateAdded": date_fmt, "assignedToName": assigned_name, "secuencia": acc_name, "Anuncio": anuncio, "tipo_post": tipo_post})
     return formatted_contacts
 
-def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_callback):
+def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_callback, u_map):
     token, loc, stage, cfield, dv_id, acc_name = acc["token"], acc["location_id"], acc["stage_id"], acc["custom_field"], acc["dataventa_id"], acc["name"]
     log_callback(f"Extraer Ventas: {acc_name}...")
-    u_map, cf_names, all_opps, page, limit = get_users_by_location(loc, token), get_custom_fields_map(loc, token), [], 1, 100
+    cf_names, all_opps, page, limit = get_custom_fields_map(loc, token), [], 1, 100
     url = "https://services.leadconnectorhq.com/opportunities/search"
     while True:
         payload = {"locationId": loc, "page": page, "limit": limit, "filters": [{"group": "AND", "filters": [{"field": "pipeline_stage_id", "operator": "eq", "value": stage}, {"field": "status", "operator": "eq", "value": "won"}, {"field": f"custom_fields.{cfield}", "operator": "range", "value": {"gte": ghl_start, "lte": ghl_end}}]}], "sort": [{"field": "date_added", "direction": "desc"}], "additionalDetails": {"notes": True}}
@@ -372,15 +385,15 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
                 fname = cf_names.get(fid, fid)
                 if fname and fname.strip().lower() != "id de oportunidad": cf_data[fname] = val
             if not sale_date_iso or not (client_start <= sale_date_iso <= client_end): continue
-            vendedor_raw, gnam, opp_id_val = get_mapped_vendedor(u_map.get(op.get("assignedTo"), "")), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
+            v_raw, gnam, opp_id_val = get_mapped_vendedor(u_map.get(op.get("assignedTo"), "")), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
             dv_data = json.loads(dv_str) if dv_str else {}
-            row = {"secuencia": acc_name, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "assignedToName": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
+            row = {"secuencia": acc_name, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "assignedToName": v_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
             row.update(cf_data)
             nit_j, dep, mun, t1, t2, fv_j, nom_j, p_cols = parse_dataventa(dv_str)
             gp, f_final = (op.get("contact", {}).get("phone", "") if isinstance(op.get("contact"), dict) else ""), format_date_ghl(sale_date_str or fv_j)
             row.update({"NIT": calculate_nit(nit_j, t1, gp), "Departamento": dep, "Municipio": mun, "Telefono 1": t1, "Telefono 2": t2, "Fecha": f_final, "Fecha de Venta": f_final, "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", "")})
             if nom_j: row["Cliente"] = nom_j
-            row.update(p_cols); r_opps.append(row); r_ventas.extend(parse_ventas_unnested(dv_str, op.get("contactId", ""), op.get("id", ""), gp, vendedor_raw, gnam, sale_date_str))
+            row.update(p_cols); r_opps.append(row); r_ventas.extend(parse_ventas_unnested(dv_str, op.get("contactId", ""), op.get("id", ""), gp, v_raw, gnam, sale_date_str))
         except: continue
     return r_opps, r_ventas
 
@@ -546,54 +559,65 @@ class App(cctk.CTk):
         self.after(0, _update)
 
     def start_process(self):
-        if not all([self.sales_picker.start_date, self.sales_picker.end_date, self.contacts_picker.start_date, self.contacts_picker.end_date, self.fb_picker.start_date, self.fb_picker.end_date]): messagebox.showwarning("Atención", "Elija todos los rangos."); return
-        self.generate_btn.configure(state="disabled", text="🚀 PROCESANDO..."); threading.Thread(target=self.execute_logic, daemon=True).start()
+        h_s = self.sales_picker.start_date and self.sales_picker.end_date
+        h_c = self.contacts_picker.start_date and self.contacts_picker.end_date
+        h_f = self.fb_picker.start_date and self.fb_picker.end_date
+        if not (h_s or h_c or h_f): self.log("Aviso: No hay rangos. Solo usuarios.")
+        self.generate_btn.configure(state="disabled", text="🚀 PROCESANDO..."); threading.Thread(target=self.execute_logic, daemon=True, args=(h_s, h_c, h_f)).start()
 
-    def execute_logic(self):
+    def execute_logic(self, has_sales, has_contacts, has_fb):
         try:
-            sd_opp, ed_opp, sd_con, ed_con = self.sales_picker.start_date, self.sales_picker.end_date, self.contacts_picker.start_date, self.contacts_picker.end_date
-            s_iso_o, e_iso_o, ghl_s_o, ghl_e_o = sd_opp.strftime("%Y-%m-%d"), ed_opp.strftime("%Y-%m-%d"), sd_opp.strftime("%Y-%m-%dT00:00:00.000Z"), ed_opp.strftime("%Y-%m-%dT23:59:59.999Z")
-            s_u_c, e_u_c = make_utc_range(sd_con, ed_con)
-            fb_s, fb_h = self.fb_picker.start_date.strftime("%Y-%m-%d"), self.fb_picker.end_date.strftime("%Y-%m-%d")
-            self.log("Extrayendo..."); res_o, res_v, res_c, res_fb = [], [], [], []
-            me_pages = obtener_paginas_autorizadas()
+            self.log("Cargando usuarios..."); res_o, res_v, res_c, res_fb, res_u, user_maps = [], [], [], [], [], {}
             with ThreadPoolExecutor(max_workers=5) as ex:
-                f_opp = {ex.submit(fetch_for_account, acc, ghl_s_o, ghl_e_o, s_iso_o, e_iso_o, self.log): acc for acc in ACCOUNTS}
-                f_con = {ex.submit(fetch_contacts_for_account, acc, s_u_c, e_u_c, self.log): acc for acc in ACCOUNTS}
-                f_fb_res = [ex.submit(obtener_insights, acc["id"], fb_s, fb_h, self.log) for acc in FB_AD_ACCOUNTS if acc["id"]]
-                for f in as_completed(list(f_opp.keys()) + list(f_con.keys()) + f_fb_res):
-                    if f in f_opp: o, v = f.result(); res_o.extend(o); res_v.extend(v)
-                    elif f in f_con: res_c.extend(f.result())
-                    else:
-                        insights = f.result()
-                        if not insights: continue
-                        acc_id = insights[0].get("account_id")
-                        acc_config = next((a for a in FB_AD_ACCOUNTS if a["id"].endswith(str(acc_id))), {"currency": "GTQ"})
-                        is_usd = acc_config["currency"] == "USD"
-                        ad_ids = list({i["ad_id"] for i in insights if "ad_id" in i}); adset_ids = list({i["adset_id"] for i in insights if "adset_id" in i})
-                        creative_map = obtener_creatives(ad_ids); p_map = obtener_paginas(list(set(creative_map.values()))); adset_budgets = obtener_presupuestos_adsets(adset_ids)
-                        all_page_names = {**me_pages, **obtener_nombres_paginas(list(set(p_map.values())))}
-                        for ins in insights:
-                            aid, asid, ad_n, camp = str(ins.get("ad_id")), str(ins.get("adset_id")), ins.get("ad_name", ""), ins.get("campaign_name", "")
-                            pid = p_map.get(creative_map.get(aid)); pname = all_page_names.get(pid); conv = next((a["value"] for a in ins.get("actions", []) if a["action_type"] == "onsite_conversion.messaging_conversation_started_7d"), 0)
-                            anu, tpost = extraer_datos_anuncio(ad_n); val_spend = float(ins.get("spend", 0)); val_budget = adset_budgets.get(asid, 0)
-                            spend_q, budget_q = (val_spend * FB_EXCHANGE_RATE if is_usd else val_spend), (val_budget * FB_EXCHANGE_RATE if is_usd else val_budget)
-                            spend_usd, budget_usd = (val_spend if is_usd else val_spend / FB_EXCHANGE_RATE), (val_budget if is_usd else val_budget / FB_EXCHANGE_RATE)
-                            res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del anuncio": ad_n, "Día": ins.get("date_start"), "Contactos mensajes nuevos": conv, "Importe gastado Q": spend_q, "Presupuesto del conjunto de anuncios Q": budget_q, "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop"), "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": extraer_secuencia(camp), "Nombre del conjunto": ins.get("adset_name"), "Presupuesto del conjunto de anuncios (USD)": budget_usd, "Importe gastado (USD)": spend_usd})
-            if res_o or res_c or res_fb: self.generate_excel(res_o, res_v, res_c, res_fb)
+                u_futs = {ex.submit(get_users_by_location, acc["location_id"], acc["token"], self.log, acc["name"]): acc["location_id"] for acc in ACCOUNTS}
+                for f in as_completed(u_futs):
+                    l_id = u_futs[f]; u_m, u_l = f.result(); user_maps[l_id] = u_m; res_u.extend(u_l)
+
+                self.log("Extrayendo modular..."); futures, f_map = [], {}
+                if has_sales:
+                    sd_opp, ed_opp = self.sales_picker.start_date, self.sales_picker.end_date
+                    s_i, e_i, g_s, g_e = sd_opp.strftime("%Y-%m-%d"), ed_opp.strftime("%Y-%m-%d"), sd_opp.strftime("%Y-%m-%dT00:00:00.000Z"), ed_opp.strftime("%Y-%m-%dT23:59:59.999Z")
+                    for acc in ACCOUNTS: fut = ex.submit(fetch_for_account, acc, g_s, g_e, s_i, e_i, self.log, user_maps.get(acc["location_id"], {})); futures.append(fut); f_map[fut] = ("opp", acc)
+                if has_contacts:
+                    s_u, e_u = make_utc_range(self.contacts_picker.start_date, self.contacts_picker.end_date)
+                    for acc in ACCOUNTS: fut = ex.submit(fetch_contacts_for_account, acc, s_u, e_u, self.log, user_maps.get(acc["location_id"], {})); futures.append(fut); f_map[fut] = ("con", acc)
+                if has_fb:
+                    fb_s, fb_h = self.fb_picker.start_date.strftime("%Y-%m-%d"), self.fb_picker.end_date.strftime("%Y-%m-%d")
+                    me_p = obtener_paginas_autorizadas()
+                    for acc_id in [a["id"] for a in FB_AD_ACCOUNTS if a["id"]]:
+                        fut = ex.submit(obtener_insights, acc_id, fb_s, fb_h, self.log); futures.append(fut); f_map[fut] = ("fb", acc_id)
+                for f in as_completed(futures):
+                    type, a_data = f_map[f]
+                    if type == "opp": o, v = f.result(); res_o.extend(o); res_v.extend(v)
+                    elif type == "con": res_c.extend(f.result())
+                    elif type == "fb":
+                        ins_list = f.result()
+                        if ins_list:
+                            acc_id = a_data; is_usd = acc_id in FB_USD_ACCOUNTS
+                            ad_ids = list({i["ad_id"] for i in ins_list if "ad_id" in i}); adset_ids = list({i["adset_id"] for i in ins_list if "adset_id" in i})
+                            c_map = obtener_creatives(ad_ids); b_map = obtener_presupuestos_adsets(adset_ids); p_map = obtener_paginas(list(set(c_map.values())))
+                            all_p_n = {**me_p, **obtener_nombres_paginas(list(set(p_map.values())))}
+                            for ins in ins_list:
+                                aid, asid, ad_n, camp = str(ins.get("ad_id")), str(ins.get("adset_id")), ins.get("ad_name", ""), ins.get("campaign_name", "")
+                                pid = p_map.get(c_map.get(aid)); pname = all_p_n.get(pid); conv = next((a["value"] for a in ins.get("actions", []) if a["action_type"] == "onsite_conversion.messaging_conversation_started_7d"), 0)
+                                anu, tpost = extraer_datos_anuncio(ad_n); sp_o = float(ins.get("spend", 0)); b_o = b_map.get(asid, 0)
+                                sp_q, b_q = (sp_o * FB_EXCHANGE_RATE if is_usd else sp_o), (b_o * FB_EXCHANGE_RATE if is_usd else b_o)
+                                sp_u, b_u = (sp_o if is_usd else sp_o / FB_EXCHANGE_RATE), (b_o if is_usd else b_o / FB_EXCHANGE_RATE)
+                                res_fb.append({"ID del anuncio": aid, "ID de la página": pid, "Nombre de la página": pname, "Nombre de la campaña": camp, "Nombre del conjunto": ins.get("adset_name"), "Nombre del anuncio": ad_n, "Día": ins.get("date_start"), "Contactos mensajes nuevos": conv, "Importe gastado Q": sp_q, "Presupuesto Q": b_q, "Importe gastado $": sp_u, "Presupuesto $": b_u, "Inicio informe": ins.get("date_start"), "Fin informe": ins.get("date_stop"), "codigo": anu, "precio": extraer_precio_fb(ad_n), "tipo_post": tpost, "SECUENCIA": extraer_secuencia(camp)})
+            if res_o or res_c or res_fb or res_u: self.generate_excel(res_o, res_v, res_c, res_fb, res_u)
             else: self.log("Sin datos.")
         except Exception as e: self.log(f"Error: {str(e)}")
         finally: self.after(0, lambda: self.generate_btn.configure(state="normal", text="🚀 GENERAR EXCEL"))
 
-    def generate_excel(self, res_o, res_v, res_c, res_fb):
-        self.log("Compilando..."); df_o, df_v, df_c, df_fb = pd.DataFrame(res_o), pd.DataFrame(res_v), pd.DataFrame(res_c), pd.DataFrame(res_fb)
+    def generate_excel(self, res_o, res_v, res_c, res_fb, res_u):
+        self.log("Compilando..."); df_o, df_v, df_c, df_fb, df_u = pd.DataFrame(res_o), pd.DataFrame(res_v), pd.DataFrame(res_c), pd.DataFrame(res_fb), pd.DataFrame(res_u)
         head = ["secuencia", "fase", "Valor del cliente potencial", "assignedToName", "Creado", "Ultimo Actualizado", "Seguidores", "Notas", "etiquetas", "estado", "Fecha de Venta", "NIT", "Camas y Combos SKU", "Cantidad Camas y Combo SKU", "Camas y Combos SKU1", "Cantidad Camas y Combo SKU1", "Cocinas SKU", "Cantidad Cocinas SKU", "Cocinas SKU1", "Cantidad Cocinas SKU1", "Salas SKU", "Cantidad Salas SKU", "Salas SKU1", "Cantidad Salas SKU1"]
         tail = ["", "Departamento", "Municipio", "Telefono 1", "Telefono 2", "ID de oportunidad", "ID de contacto", "Cliente", "Mes", "Cod", "DataVenta", "Fecha", "MARCA", "ANILLO", "UBICACION"]
         if not df_o.empty:
             if "" not in df_o.columns: df_o[""] = ""
             for c in head + tail:
                 if c not in df_o.columns: df_o[c] = ""
-            extra = [c for c in df_o.columns if c not in set(head + tail)]; df_o = df_o[head + extra + tail]
+            extra = [c for c in df_o.columns if c not in head and c not in tail]; df_o = df_o[head + extra + tail]
         v_cols = ["ID CONTACTO", "NIT", "NOMBRE", "TEL1", "TEL2", "VENDEDOR", "MUNICIPIO", "DIRECCION", "RCF", "canal", "DEPARTAMENTO", "FECHA", "SKU", "DESCRIPCION", "Cantidad de combo", "MARCA", "UBICACION", "ANILLO", "COMENTARIOS", "ID Oportunidad", "BODEGAF", "TOTAL DOCTO", "PRECIO COMBO"]
         if not df_v.empty:
             for c in v_cols:
@@ -604,17 +628,19 @@ class App(cctk.CTk):
             for c in c_cols:
                 if c not in df_c.columns: df_c[c] = ""
             df_c = df_c[c_cols]
-        fb_cols = ["ID del anuncio", "ID de la página", "Nombre de la página", "Nombre de la campaña", "Nombre del anuncio", "Día", "Contactos mensajes nuevos", "Importe gastado Q", "Presupuesto del conjunto de anuncios Q", "Inicio informe", "Fin informe", "codigo", "precio", "tipo_post", "SECUENCIA", "Nombre del conjunto", "Presupuesto del conjunto de anuncios (USD)", "Importe gastado (USD)"]
+        fb_c_h = ["ID del anuncio", "ID de la página", "Nombre de la página", "Nombre de la campaña", "Nombre del conjunto", "Nombre del anuncio", "Día", "Contactos mensajes nuevos", "Importe gastado Q", "Presupuesto Q", "Importe gastado $", "Presupuesto $", "Inicio informe", "Fin informe"]
+        fb_c_t = ["codigo", "precio", "tipo_post", "SECUENCIA"]
         if not df_fb.empty:
-            for c in fb_cols:
+            for c in fb_c_h + fb_c_t:
                 if c not in df_fb.columns: df_fb[c] = ""
-            df_fb = df_fb[fb_cols]
+            df_fb = df_fb[fb_c_h + fb_c_t]
         fn = f"reporte_Dupaza_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         with pd.ExcelWriter(fn, engine='openpyxl') as writer:
             if not df_o.empty: df_o.to_excel(writer, sheet_name='REPORTE', index=False)
             if not df_v.empty: df_v.to_excel(writer, sheet_name='VENTAS', index=False)
             if not df_c.empty: df_c.to_excel(writer, sheet_name='CONTACTOS', index=False)
             if not df_fb.empty: df_fb.to_excel(writer, sheet_name='FACEBOOK ADS', index=False)
+            if not df_u.empty: df_u.drop_duplicates(subset=["ID Usuario", "Cuenta"], inplace=True); df_u.to_excel(writer, sheet_name='USUARIOS GHL', index=False)
             pd.DataFrame().to_excel(writer, sheet_name='Hoja1', index=False)
             if not df_v.empty:
                 ws_v = writer.book['VENTAS']; idx_bus = len(v_cols) + 1; ws_v.cell(row=1, column=idx_bus).value = "BUSQUEDA"
