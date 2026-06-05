@@ -42,7 +42,7 @@ ACCOUNTS = [
         "primer_mensaje_cf": "gMCJJq0vMZYN0cz1BnUj"
     },
     {
-        "name": "R2.3",
+        "name": "R3.2",
         "location_id": "jXN4id73HVqpa75YOR1N",
         "stage_id": "d94817e9-a7fb-4ea3-bed0-d1f117001825",
         "custom_field": "xftnXlHb41aDvIx8N26d",
@@ -64,7 +64,7 @@ ACCOUNTS = [
         "primer_mensaje_cf": "at9WccT1xJ4tJRm5KpbK"
     },
     {
-        "name": "R1.2",
+        "name": "R3.3",
         "location_id": "9rHHeTsNpfJuiUkOoLdM",
         "stage_id": "59f6eff0-f06b-4f5a-b2ae-21f50ec8af32",
         "custom_field": "o7giXoy1LK8KMuzH2FNi",
@@ -247,14 +247,33 @@ def get_custom_fields_map(location_id, token):
         return {f.get("id"): f.get("name") for f in r.json().get("customFields", []) if isinstance(f, dict)}
     except: return {}
 
-def get_users_by_location(location_id, token, version=API_VERSION_OPPS):
-    url = f"https://services.leadconnectorhq.com/users/?locationId={location_id}"
-    headers = {"Authorization": f"Bearer {token}", "Version": version, "Accept": "application/json"}
+def get_users_by_location(location_id, token, log_callback, acc_name, version="2021-07-28"):
+    user_map = {}
+    user_list = []
     try:
+        url = f"https://services.leadconnectorhq.com/users/?locationId={location_id}"
+        headers = {"Authorization": f"Bearer {token}", "Version": version, "Accept": "application/json"}
         r = requests.get(url, headers=headers, timeout=30)
-        if r.status_code != 200: return {}
-        return {u.get("id"): f"{u.get('firstName','') or ''} {u.get('lastName','') or ''}".strip() or u.get("email", "Desconocido") for u in r.json().get("users", [])}
-    except: return {}
+
+        if r.status_code != 200:
+            log_callback(f"  [ERROR] No se pudo obtener usuarios para {acc_name} ({r.status_code})")
+            return user_map, user_list
+
+        data = r.json()
+        users = data.get("users", [])
+        for u in users:
+            uid = u.get("id")
+            first = u.get("firstName", "") or ""
+            last = u.get("lastName", "") or ""
+            name = f"{first} {last}".strip() or u.get("email", "Desconocido")
+            user_map[uid] = name
+            user_list.append({"Cuenta": acc_name, "ID Usuario": uid, "Nombre Resolvido": name})
+
+        log_callback(f"  - {acc_name}: {len(user_map)} usuarios cargados.")
+        return user_map, user_list
+    except Exception as e:
+        log_callback(f"  [ERROR] Excepción cargando usuarios de {acc_name}: {str(e)[:50]}")
+        return user_map, user_list
 
 def safe_post(url, token, payload, version):
     headers = {"Authorization": f"Bearer {token}", "Version": version, "Content-Type": "application/json"}
@@ -368,11 +387,10 @@ def extraer_secuencia(text):
     if match_alt: return match_alt.group(1)
     return t if len(t) <= 8 else "" # Si es corto lo tomamos como código
 
-def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
+def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback, u_map):
     token, loc, acc_name = acc["token"], acc["location_id"], acc["name"]
     sec_cf, anu_cf, pm_cf = acc["secuencia_cf"], acc["anuncio_cf"], acc["primer_mensaje_cf"]
     log_callback(f"Extraer Contactos: {acc_name}...")
-    u_map = get_users_by_location(loc, token, version=API_VERSION_CONTACTS)
     all_contacts, page, limit = [], 1, 50
     url = "https://services.leadconnectorhq.com/contacts/search"
     while True:
@@ -390,7 +408,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
     formatted_contacts = []
     for c in all_contacts:
         uid = c.get("assignedTo")
-        assigned_name = get_mapped_vendedor(u_map.get(uid, "")) if uid else "SinAsignar"
+        assigned_name = u_map.get(uid) or uid or ""
         date_iso, date_fmt, dt_local = c.get("dateAdded"), "", None
         if date_iso:
             dt_local = datetime.fromisoformat(date_iso.replace("Z", "+00:00")).astimezone(GUATEMALA_TZ)
@@ -415,10 +433,11 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
         })
     return formatted_contacts
 
-def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_callback):
+def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_callback, u_map):
     token, loc, stage, cfield, dv_id, acc_name = acc["token"], acc["location_id"], acc["stage_id"], acc["custom_field"], acc["dataventa_id"], acc["name"]
     log_callback(f"Extraer Ventas: {acc_name}...")
-    u_map, cf_names, all_opps, page, limit = get_users_by_location(loc, token), get_custom_fields_map(loc, token), [], 1, 50
+    cf_names = get_custom_fields_map(loc, token)
+    all_opps, page, limit = [], 1, 50
     url = "https://services.leadconnectorhq.com/opportunities/search"
     while True:
         # Volviendo al formato original robusto de filtros anidados
@@ -466,7 +485,9 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
             if not sale_date_iso or not (client_start <= sale_date_iso <= client_end):
                 filtered_count += 1
                 continue
-            vendedor_raw, gnam, opp_id_val = get_mapped_vendedor(u_map.get(op.get("assignedTo") or op.get("assigned_to"), "")), (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
+            assigned_id = op.get("assignedTo") or op.get("assigned_to") or op.get("assigned_to_id")
+            vendedor_raw = u_map.get(assigned_id) or assigned_id or ""
+            gnam, opp_id_val = (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
             dv_data = json.loads(dv_str) if dv_str else {}
             anu_val, _ = extraer_datos_anuncio(dv_data.get("anuncio", "") or dv_data.get("Anuncio", "")); row = {"Asignado": vendedor_raw, "Secuencia": acc_name, "Anuncio": anu_val, "fecha_iso": sale_date_iso, "Mes": int(sale_date_iso[5:7]) if sale_date_iso else 0, "Anio": int(sale_date_iso[0:4]) if sale_date_iso else 0, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
             row.update(cf_data)
@@ -686,16 +707,30 @@ class App(cctk.CTk):
 
     def execute_logic(self):
         try:
-            sd_opp, ed_opp, sd_con, ed_con = self.sales_picker.start_date, self.sales_picker.end_date, self.contacts_picker.start_date, self.contacts_picker.end_date
-            s_iso_o, e_iso_o, ghl_s_o, ghl_e_o = sd_opp.strftime("%Y-%m-%d"), ed_opp.strftime("%Y-%m-%d"), sd_opp.strftime("%Y-%m-%dT00:00:00.000Z"), ed_opp.strftime("%Y-%m-%dT23:59:59.999Z")
-            s_u_c, e_u_c = make_utc_range(sd_con, ed_con)
-            fb_s, fb_h = self.fb_picker.start_date.strftime("%Y-%m-%d"), self.fb_picker.end_date.strftime("%Y-%m-%d")
-            self.log("Extrayendo..."); res_o, res_v, res_c, res_fb = [], [], [], []
-            me_pages = obtener_paginas_autorizadas()
+            self.log("Cargando usuarios de todas las cuentas...")
+            res_o, res_v, res_c, res_fb, res_u = [], [], [], [], []
+            user_maps = {}
+
             with ThreadPoolExecutor(max_workers=5) as ex:
-                f_opp = {ex.submit(fetch_for_account, acc, ghl_s_o, ghl_e_o, s_iso_o, e_iso_o, self.log): acc for acc in ACCOUNTS}
-                f_con = {ex.submit(fetch_contacts_for_account, acc, s_u_c, e_u_c, self.log): acc for acc in ACCOUNTS}
+                # 1. Primero descargar usuarios
+                u_futures = {ex.submit(get_users_by_location, acc["location_id"], acc["token"], self.log, acc["name"]): acc["location_id"] for acc in ACCOUNTS}
+                for f in as_completed(u_futures):
+                    loc_id = u_futures[f]
+                    u_map, u_list = f.result()
+                    user_maps[loc_id] = u_map
+                    res_u.extend(u_list)
+
+                # 2. Proceder con la extracción de datos
+                sd_opp, ed_opp, sd_con, ed_con = self.sales_picker.start_date, self.sales_picker.end_date, self.contacts_picker.start_date, self.contacts_picker.end_date
+                s_iso_o, e_iso_o, ghl_s_o, ghl_e_o = sd_opp.strftime("%Y-%m-%d"), ed_opp.strftime("%Y-%m-%d"), sd_opp.strftime("%Y-%m-%dT00:00:00.000Z"), ed_opp.strftime("%Y-%m-%dT23:59:59.999Z")
+                s_u_c, e_u_c = make_utc_range(sd_con, ed_con)
+                fb_s, fb_h = self.fb_picker.start_date.strftime("%Y-%m-%d"), self.fb_picker.end_date.strftime("%Y-%m-%d")
+
+                self.log("Extrayendo modular..."); f_map = {}
+                f_opp = {ex.submit(fetch_for_account, acc, ghl_s_o, ghl_e_o, s_iso_o, e_iso_o, self.log, user_maps.get(acc["location_id"], {})): acc for acc in ACCOUNTS}
+                f_con = {ex.submit(fetch_contacts_for_account, acc, s_u_c, e_u_c, self.log, user_maps.get(acc["location_id"], {})): acc for acc in ACCOUNTS}
                 f_fb = [ex.submit(obtener_insights, acc, fb_s, fb_h, self.log) for acc in FB_AD_ACCOUNTS]
+
                 for f in as_completed(list(f_opp.keys()) + list(f_con.keys()) + f_fb):
                     if f in f_opp: o, v = f.result(); res_o.extend(o); res_v.extend(v)
                     elif f in f_con: c_data = f.result(); self.log(f"  {f_con[f]['name']}: {len(c_data)} contactos."); res_c.extend(c_data)
@@ -790,7 +825,7 @@ class App(cctk.CTk):
                     cid = o.get('ID de contacto')
                     o['Costo Lead'] = c_cost_map.get(cid, 0.0)
 
-                self.generate_excel(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb)
+                self.generate_excel(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb, res_u)
                 self.generate_dashboard_html(res_o, res_v, df_c_final.to_dict(orient="records"), res_fb, df_metas)
 
             else: self.log("Sin datos.")
@@ -1409,8 +1444,8 @@ class App(cctk.CTk):
         df_c.drop(columns=[c for c in drop_cols if c in df_c.columns], inplace=True)
         return df_c
 
-    def generate_excel(self, res_o, res_v, res_c, res_fb):
-        self.log("Compilando..."); df_o, df_v, df_c, df_fb = pd.DataFrame(res_o), pd.DataFrame(res_v), pd.DataFrame(res_c), pd.DataFrame(res_fb)
+    def generate_excel(self, res_o, res_v, res_c, res_fb, res_u):
+        self.log("Compilando..."); df_o, df_v, df_c, df_fb, df_u = pd.DataFrame(res_o), pd.DataFrame(res_v), pd.DataFrame(res_c), pd.DataFrame(res_fb), pd.DataFrame(res_u)
         if not df_o.empty: df_o["Valor del cliente potencial"] = pd.to_numeric(df_o["Valor del cliente potencial"], errors="coerce").fillna(0)
         for df in [df_o, df_v, df_c, df_fb]:
             if not df.empty:
@@ -1427,9 +1462,11 @@ class App(cctk.CTk):
             for c in v_cols:
                 if c not in df_v.columns: df_v[c] = ""
             df_v = df_v[v_cols]
-        c_cols = ["id", "fecha", "asignado", "secuencia", "Anuncio", "tipo_post", "Mes", "Anio", "Costo Directo", "Gasto Repartido", "Costo Total", "Valor Venta"]
+        c_cols = ["id", "dateAdded", "assignedToName", "secuencia", "Anuncio", "tipo_post", "Mes", "Anio", "Costo Directo", "Gasto Repartido", "Costo Total", "Valor Venta"]
         if not df_c.empty:
             if "anuncio" in df_c.columns: df_c.rename(columns={"anuncio": "Anuncio"}, inplace=True)
+            if "fecha" in df_c.columns: df_c.rename(columns={"fecha": "dateAdded"}, inplace=True)
+            if "asignado" in df_c.columns: df_c.rename(columns={"asignado": "assignedToName"}, inplace=True)
             if "Mes" not in df_c.columns: df_c["Mes"] = ""
             if "Anio" not in df_c.columns: df_c["Anio"] = ""
             for c in c_cols:
@@ -1441,6 +1478,9 @@ class App(cctk.CTk):
             if not df_v.empty: df_v.to_excel(writer, sheet_name='VENTAS', index=False)
             if not df_c.empty: df_c.to_excel(writer, sheet_name='CONTACTOS', index=False)
             if not df_fb.empty: df_fb.to_excel(writer, sheet_name='FACEBOOK ADS', index=False)
+            if not df_u.empty:
+                df_u.drop_duplicates(subset=["ID Usuario", "Cuenta"], inplace=True)
+                df_u.to_excel(writer, sheet_name='USUARIOS GHL', index=False)
             if not df_o.empty:
                 hoja1_ids = df_o[['ID de oportunidad']].astype(str).apply(lambda x: x.str.strip())
                 hoja1_ids.to_excel(writer, sheet_name='Hoja1', index=False, header=False)
