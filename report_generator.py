@@ -284,7 +284,8 @@ def safe_post(url, token, payload, version):
 
             # GHL suele dar 400 o 500 cuando sus microservicios fallan ("Failed to fetch details")
             # En esos casos, reintentamos con un delay progresivo.
-            should_retry = r.status_code in (400, 429, 500, 502, 503, 504)
+            # Se agrega 401 por errores de "Command timed out"
+            should_retry = r.status_code in (400, 401, 429, 500, 502, 503, 504)
             if should_retry:
                 time.sleep(attempt * 3)
                 continue
@@ -727,6 +728,7 @@ class App(cctk.CTk):
                 fb_s, fb_h = self.fb_picker.start_date.strftime("%Y-%m-%d"), self.fb_picker.end_date.strftime("%Y-%m-%d")
 
                 self.log("Extrayendo modular..."); f_map = {}
+                me_pages = obtener_paginas_autorizadas()
                 f_opp = {ex.submit(fetch_for_account, acc, ghl_s_o, ghl_e_o, s_iso_o, e_iso_o, self.log, user_maps.get(acc["location_id"], {})): acc for acc in ACCOUNTS}
                 f_con = {ex.submit(fetch_contacts_for_account, acc, s_u_c, e_u_c, self.log, user_maps.get(acc["location_id"], {})): acc for acc in ACCOUNTS}
                 f_fb = [ex.submit(obtener_insights, acc, fb_s, fb_h, self.log) for acc in FB_AD_ACCOUNTS]
