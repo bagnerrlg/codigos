@@ -260,14 +260,19 @@ def safe_post(url, token, payload, version):
     headers = {"Authorization": f"Bearer {token}", "Version": version, "Content-Type": "application/json"}
     for attempt in range(1, 6):
         try:
-            r = requests.post(url, headers=headers, json=payload, timeout=30)
+            r = requests.post(url, headers=headers, json=payload, timeout=60)
             if r.status_code in (200, 201): return r.json()
-            if r.status_code == 429:
-                time.sleep(attempt * 2)
+
+            # GHL suele dar 400 o 500 cuando sus microservicios fallan ("Failed to fetch details")
+            # En esos casos, reintentamos con un delay progresivo.
+            should_retry = r.status_code in (400, 429, 500, 502, 503, 504)
+            if should_retry:
+                time.sleep(attempt * 3)
                 continue
+
             return {"__error_status": r.status_code, "__error_text": r.text}
-        except:
-            time.sleep(attempt * 1.5)
+        except Exception as e:
+            time.sleep(attempt * 2)
             continue
     return {}
 
@@ -368,7 +373,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
     sec_cf, anu_cf, pm_cf = acc["secuencia_cf"], acc["anuncio_cf"], acc["primer_mensaje_cf"]
     log_callback(f"Extraer Contactos: {acc_name}...")
     u_map = get_users_by_location(loc, token, version=API_VERSION_CONTACTS)
-    all_contacts, page, limit = [], 1, 100
+    all_contacts, page, limit = [], 1, 50
     url = "https://services.leadconnectorhq.com/contacts/search"
     while True:
         payload = {"locationId": loc, "page": page, "pageLimit": limit, "filters": [{"field": "dateAdded", "operator": "range", "value": {"gt": start_utc, "lt": end_utc}}]}
@@ -413,7 +418,7 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback):
 def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_callback):
     token, loc, stage, cfield, dv_id, acc_name = acc["token"], acc["location_id"], acc["stage_id"], acc["custom_field"], acc["dataventa_id"], acc["name"]
     log_callback(f"Extraer Ventas: {acc_name}...")
-    u_map, cf_names, all_opps, page, limit = get_users_by_location(loc, token), get_custom_fields_map(loc, token), [], 1, 100
+    u_map, cf_names, all_opps, page, limit = get_users_by_location(loc, token), get_custom_fields_map(loc, token), [], 1, 50
     url = "https://services.leadconnectorhq.com/opportunities/search"
     while True:
         # Volviendo al formato original robusto de filtros anidados
