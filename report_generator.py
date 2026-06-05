@@ -150,6 +150,13 @@ VENDEDOR_MAP = {
     "ODILIA NINETTE CALEL CARAU": "ODILIA NINETH CALEL",
 }
 
+# Vendedores Freelance (No se les asigna gasto de Facebook)
+FREELANCE_VENDEDORES = [
+    "BYRON ORTIZ",
+    "ESTHER LOPEZ",
+    "SONIA CHIROY"
+]
+
 API_VERSION_OPPS = "2023-02-21"
 API_VERSION_CONTACTS = "2021-07-28"
 GUATEMALA_TZ = pytz.timezone("America/Guatemala")
@@ -1295,9 +1302,12 @@ class App(cctk.CTk):
             return df_c
 
         # 1. Normalizar columnas base
-        for col in ['fecha_iso', 'secuencia', 'anuncio']:
+        for col in ['fecha_iso', 'secuencia', 'anuncio', 'asignado']:
             if col not in df_c.columns: df_c[col] = ""
             else: df_c[col] = df_c[col].astype(str).str.strip().str.upper()
+
+        # Identificar Freelance (No participan en reparto de costos)
+        df_c['is_freelance'] = df_c['asignado'].isin([str(v).upper() for v in FREELANCE_VENDEDORES])
 
         if not df_fb.empty:
             for col in ['Día', 'SECUENCIA', 'codigo']:
@@ -1324,6 +1334,8 @@ class App(cctk.CTk):
         rotation_counters = {}
 
         def assign_top_ad(row, top_df):
+            if row.get('is_freelance'): return str(row.get('anuncio', ''))
+
             curr_anu = str(row.get('anuncio', '')).strip()
             if curr_anu != "" and curr_anu != "NAN" and curr_anu != "NONE": return curr_anu
 
@@ -1340,9 +1352,11 @@ class App(cctk.CTk):
 
         df_c['anuncio'] = df_c.apply(lambda r: assign_top_ad(r, top3_ads), axis=1)
 
-        # 3. Gasto Directo por Anuncio
+        # 3. Gasto Directo por Anuncio (Solo para leads Digitales)
         fb_grouped = df_fb.groupby(['Día', 'SECUENCIA', 'codigo'])['Importe gastado'].sum().reset_index()
-        c_counts = df_c.groupby(['fecha_iso', 'secuencia', 'anuncio']).size().reset_index(name='contact_count')
+
+        # Contar solo contactos que NO son freelance para el divisor del gasto
+        c_counts = df_c[~df_c['is_freelance']].groupby(['fecha_iso', 'secuencia', 'anuncio']).size().reset_index(name='contact_count')
 
         direct_costs = pd.merge(
             c_counts,
@@ -1361,12 +1375,14 @@ class App(cctk.CTk):
         )
         df_c['Costo Directo'] = pd.to_numeric(df_c['cost_per_contact'], errors='coerce').fillna(0.0)
 
-        # 4. Gasto Repartido (Huérfanos)
+        # 4. Gasto Repartido (Huérfanos) -> Solo entre leads Digitales
         fb_attributed_keys = set(zip(direct_costs['fecha_iso'], direct_costs['secuencia'], direct_costs['anuncio']))
         df_fb['is_orphan'] = df_fb.apply(lambda r: (r['Día'], r['SECUENCIA'], r['codigo']) not in fb_attributed_keys, axis=1)
 
         orphan_spend = df_fb[df_fb['is_orphan']].groupby(['Día', 'SECUENCIA'])['Importe gastado'].sum().reset_index(name='total_orphan_spend')
-        seq_total_contacts = df_c.groupby(['fecha_iso', 'secuencia']).size().reset_index(name='seq_total')
+
+        # El divisor para el gasto huérfano son los contactos digitales de esa secuencia/día
+        seq_total_contacts = df_c[~df_c['is_freelance']].groupby(['fecha_iso', 'secuencia']).size().reset_index(name='seq_total')
 
         allocation_base = pd.merge(orphan_spend, seq_total_contacts, left_on=['Día', 'SECUENCIA'], right_on=['fecha_iso', 'secuencia'])
         allocation_base['orphan_cost_per_contact'] = allocation_base['total_orphan_spend'] / allocation_base['seq_total'].replace(0, 1)
@@ -1379,10 +1395,12 @@ class App(cctk.CTk):
         )
         df_c['Gasto Repartido'] = pd.to_numeric(df_c['orphan_cost_per_contact'], errors='coerce').fillna(0.0)
 
-        # 5. Costo Total
+        # 5. Costo Total (Forzar 0 para Freelance)
+        df_c.loc[df_c['is_freelance'], 'Costo Directo'] = 0.0
+        df_c.loc[df_c['is_freelance'], 'Gasto Repartido'] = 0.0
         df_c['Costo Total'] = df_c['Costo Directo'] + df_c['Gasto Repartido']
 
-        drop_cols = ['cost_per_contact', 'orphan_cost_per_contact']
+        drop_cols = ['cost_per_contact', 'orphan_cost_per_contact', 'is_freelance']
         df_c.drop(columns=[c for c in drop_cols if c in df_c.columns], inplace=True)
         return df_c
 
