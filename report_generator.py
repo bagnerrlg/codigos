@@ -835,7 +835,7 @@ class App(cctk.CTk):
         finally: self.after(0, lambda: self.generate_btn.configure(state="normal", text="🚀 GENERAR EXCEL"))
 
     def generate_dashboard_html(self, res_o, res_v, res_c, res_fb, df_metas):
-        self.log("Generando Dashboard HTML...")
+        self.log("Generando Dashboards HTML...")
         import json
         import pandas as pd
         from datetime import datetime
@@ -845,7 +845,6 @@ class App(cctk.CTk):
                 if data is None: return []
                 df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
                 if df.empty: return []
-                # Limpiar infinitos antes de convertir a JSON
                 df.replace([float('inf'), float('-inf')], 0, inplace=True)
                 def clean_name(c):
                     s = str(c).lower().strip().replace(" ", "_")
@@ -872,116 +871,28 @@ class App(cctk.CTk):
             "contactos": prepare_json(res_c)
         }
 
-        html_content = r"""<!DOCTYPE html>
+        main_html = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>DUPAZA PRO - Dashboard</title>
+    <title>DUPAZA PRO - Dashboard General</title>
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-        :root {
-            --bg-dark: #090e1a;
-            --card-dark: #121a2b;
-            --accent-primary: #3b82f6;
-            --accent-secondary: #6366f1;
-            --text-muted: #94a3b8;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; border: 1px solid #e2e8f0; }
         .kpi-val { font-size: 28px; font-weight: 800; color: #0f172a; }
         .kpi-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-
-        /* Estilos Dashboard Personal Unificados */
-        .personal-mode { color: #0f172a; }
-        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .gradient-text { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .rank-badge { background: linear-gradient(135deg, #76933c 0%, #4f6228 100%); box-shadow: 0 0 10px rgba(118, 147, 60, 0.2); }
-        .active-rank { border: 2px solid #76933c; background: rgba(118, 147, 60, 0.05); }
     </style>
 </head>
-<body class="p-6" id="body-main">
+<body class="p-6">
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b pb-6">
-            <div><h1 class="text-3xl font-black text-slate-800" id="main-title">📊 DUPAZA DASHBOARD</h1></div>
+            <div><h1 class="text-3xl font-black text-slate-800">📊 DUPAZA DASHBOARD</h1></div>
             <div class="text-right text-[10px] text-slate-400 font-bold uppercase">TIMESTAMP_HERE</div>
         </header>
-
-        <!-- DASHBOARD PERSONAL (Visible solo cuando hay un asesor filtrado) -->
-        <div id="personal-dashboard" class="hidden space-y-8 mb-12">
-            <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div class="lg:col-span-8 space-y-8">
-                    <!-- User Profile Hero -->
-                    <div class="glass-card p-8 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 p-8 opacity-5"><i class="fa-solid fa-user-tie text-9xl"></i></div>
-                        <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
-                            <div class="relative group">
-                                <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-                                <img src="https://i.pravatar.cc/300?u=user" id="user-avatar" alt="Usuario" class="relative w-32 h-32 rounded-full border-2 border-white/10 object-cover shadow-2xl">
-                                <div id="user-rank-badge" class="rank-badge absolute -bottom-2 -right-2 px-3 py-1 rounded-full text-xs font-black text-white italic border-2 border-[#121a2b]">#? RANK</div>
-                            </div>
-                            <div class="flex-1 text-center md:text-left">
-                                <div class="flex flex-col md:flex-row md:items-end gap-3 mb-4">
-                                    <h2 id="display-name" class="text-3xl font-black text-slate-800">---</h2>
-                                    <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-md border border-slate-200 uppercase tracking-widest mb-1">Agente Comercial</span>
-                                </div>
-                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Venta Periodo</span>
-                                        <span id="stat-monthly-sales" class="text-lg font-bold text-blue-600">Q 0</span>
-                                    </div>
-                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Inversión</span>
-                                        <span id="stat-monthly-investment" class="text-lg font-bold text-rose-600">Q 0</span>
-                                    </div>
-                                    <div class="hidden md:block bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Q META</span>
-                                        <span id="stat-total-count" class="text-lg font-bold text-emerald-600">Q 0</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Metrics Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span><div id="metric-sales" class="text-2xl font-black mt-1 text-white">Q 0.00</div></div>
-                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ganancia Est. (10%-Inv)</span><div id="metric-profit" class="text-2xl font-black mt-1 text-emerald-400">Q 0.00</div></div>
-                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Inversión Atribuida</span><div id="metric-investment" class="text-2xl font-black mt-1 text-amber-400">Q 0.00</div></div>
-                    </div>
-
-                    <!-- Percentage Metrics -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div class="glass-card p-6 flex items-center justify-between">
-                            <div class="flex gap-4 items-center">
-                                <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center font-black text-blue-600 text-xl" id="perc-expense-sales">0.0</div>
-                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Gasto vrs Venta</h4><p class="text-xs text-blue-500 font-semibold mt-1">Marketing Efficiency</p></div>
-                            </div>
-                            <i id="icon-expense-sales" class="fa-solid fa-circle-check text-slate-300 text-xl"></i>
-                        </div>
-                        <div class="glass-card p-6 flex items-center justify-between">
-                            <div class="flex gap-4 items-center">
-                                <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center font-black text-emerald-600 text-xl" id="perc-inv-profit">0.0</div>
-                                <div><h4 class="text-sm font-bold uppercase text-slate-500">Alcance de la meta</h4><p class="text-xs text-emerald-600 font-semibold mt-1">Goal Achievement</p></div>
-                            </div>
-                            <i id="icon-inv-profit" class="fa-solid fa-circle-exclamation text-slate-300 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Ranking Sidebar -->
-                <aside class="lg:col-span-4 h-full">
-                    <div class="glass-card p-8 h-full">
-                        <div class="flex items-center justify-between mb-8">
-                            <h3 class="text-xl font-black flex items-center gap-3"><i class="fa-solid fa-crown text-amber-500"></i>Top Ranking</h3>
-                        </div>
-                        <div id="ranking-list" class="space-y-4"></div>
-                    </div>
-                </aside>
-            </main>
-        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-7 gap-4 mb-8 bg-white p-4 rounded-2xl shadow-sm border" id="filter-bar">
             <div><label class="block text-[10px] font-black text-slate-400 mb-1">FECHA INICIO</label><input type="date" id="f-start" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"></div>
@@ -1023,12 +934,7 @@ class App(cctk.CTk):
             let raw = null;
             try {
                 raw = JSON.parse(document.getElementById('data').textContent);
-                console.log("Datos cargados:", raw);
-            } catch(e) {
-                console.error("Error parseando JSON:", e);
-                document.getElementById('debug').innerText = "ERROR: No se pudo cargar el JSON.";
-                return;
-            }
+            } catch(e) { console.error(e); return; }
 
             function init() {
                 try {
@@ -1046,16 +952,13 @@ class App(cctk.CTk):
                     };
                     pop("f-ger", raw.metas.map(m => m.gerente || m.gerente_regional));
                     pop("f-mar", raw.metas.map(m => m.marca || m.empresa));
-                    pop("f-ven", [...raw.contactos.map(c => c.asignado), ...raw.oportunidades.map(o => o.asignado)]);
+                    pop("f-ven", [...raw.contactos.map(c => c.assignedtoname), ...raw.oportunidades.map(o => o.asignado)]);
                     pop("f-mes", raw.oportunidades.map(o => o.mes));
                     pop("f-anu", [...raw.contactos.map(c => c.anuncio), ...raw.facebook.map(f => f.codigo)]);
 
                     document.querySelectorAll("select, input[type='date']").forEach(s => s.onchange = update);
                     update();
-                } catch(e) {
-                    console.error("Error en init:", e);
-                    document.getElementById('debug').innerText = "ERROR en init: " + e.message;
-                }
+                } catch(e) { console.error(e); }
             }
 
             function update() {
@@ -1067,6 +970,12 @@ class App(cctk.CTk):
                     const v = document.getElementById("f-ven").value.toUpperCase();
                     const mes = document.getElementById("f-mes").value;
                     const anu = document.getElementById("f-anu").value.toUpperCase();
+
+                    if (v !== "ALL") {
+                        window.open(`profile.html?vendedor=${encodeURIComponent(v)}&start=${start}&end=${end}`, "_blank");
+                        document.getElementById("f-ven").value = "ALL";
+                        return;
+                    }
 
                     const seqMap = raw.metas.reduce((acc, c) => {
                         const s = (c.sub_anillo || c.secuencia || "").toUpperCase().trim();
@@ -1085,9 +994,8 @@ class App(cctk.CTk):
                         const mDate = (!start || d >= start) && (!end || d <= end);
                         const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                         const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
-                        const mV = (v === "ALL" || (c.asignado || "").trim().toUpperCase() === v);
                         const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
-                        return mDate && mG && mM && mV && mA;
+                        return mDate && mG && mM && mA;
                     });
 
                     const f_o = raw.oportunidades.filter(o => {
@@ -1096,10 +1004,9 @@ class App(cctk.CTk):
                         const mDate = (!start || d >= start) && (!end || d <= end);
                         const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                         const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
-                        const mV = (v === "ALL" || (o.asignado || "").trim().toUpperCase() === v);
                         const mMes = (mes === "ALL" || String(o.mes) === String(mes));
                         const mA = (anu === "ALL" || (o.anuncio || "").toUpperCase() === anu);
-                        return mDate && mG && mM && mV && mMes && mA;
+                        return mDate && mG && mM && mMes && mA;
                     });
 
                     const f_fb = raw.facebook.filter(f => {
@@ -1112,98 +1019,18 @@ class App(cctk.CTk):
                         return mDate && mG && mM && mA;
                     });
 
-                    const tGto = (v !== "ALL")
-                        ? f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0)
-                        : f_fb.reduce((a, f) => a + Number(f.importe_gastado || 0), 0);
-
+                    const tGto = f_fb.reduce((a, f) => a + Number(f.importe_gastado || 0), 0);
                     const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
                     const tLds = f_c.length;
 
                     document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
                     document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
                     document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
-                    // Peso de mercadeo: (Venta / Gasto) * 100
                     document.getElementById("kpi-roas").innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(0) + "%" : "0.0%";
 
-                    // --- Lógica Dashboard Personal ---
-                    const personalSection = document.getElementById("personal-dashboard");
-                    const bodyMain = document.getElementById("body-main");
-                    const mainTitle = document.getElementById("main-title");
-
-                    if (v !== "ALL") {
-                        personalSection.classList.remove("hidden");
-                        mainTitle.classList.add("gradient-text");
-
-                        document.getElementById("display-name").innerText = v;
-                        document.getElementById("stat-monthly-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
-                        document.getElementById("stat-monthly-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
-
-                        // --- Calcular Meta para el Usuario Seleccionado ---
-                        const sDt = new Date(start + "T00:00:00");
-                        const eDt = new Date(end + "T23:59:59");
-                        const monthsInRange = [];
-                        let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
-                        while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
-
-                        const userMetas = raw.metas.filter(x => {
-                            const mV = (x.vendedor || "").toUpperCase() === v;
-                            const mMes = monthsInRange.includes(Number(x.mes));
-                            return mV && mMes;
-                        });
-                        const uMetaTotal = userMetas.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
-                        document.getElementById("stat-total-count").innerText = "Q" + Math.round(uMetaTotal).toLocaleString();
-
-                        document.getElementById("metric-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
-                        document.getElementById("metric-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
-                        const profit = (tVta * 0.10) - tGto;
-                        document.getElementById("metric-profit").innerText = "Q" + Math.round(profit).toLocaleString();
-
-                        const gv = tVta > 0 ? (tGto / tVta) * 100 : 0;
-                        const alcMeta = uMetaTotal > 0 ? (tVta / uMetaTotal) * 100 : 0;
-
-                        document.getElementById("perc-expense-sales").innerText = gv.toFixed(1) + "%";
-                        document.getElementById("perc-inv-profit").innerText = alcMeta.toFixed(1) + "%";
-
-                        document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
-
-                        // --- Ranking Logic ---
-                        const rankings = {};
-                        raw.oportunidades.forEach(op => {
-                            const name = (op.asignado || "").toUpperCase().trim();
-                            if (name) rankings[name] = (rankings[name] || 0) + Number(op.valor_del_cliente_potencial || 0);
-                        });
-                        const sortedRank = Object.entries(rankings).sort((a,b) => b[1] - a[1]);
-                        const myRank = sortedRank.findIndex(r => r[0] === v) + 1;
-                        document.getElementById("user-rank-badge").innerText = `#${myRank || "?"} RANK`;
-
-                        const rankList = document.getElementById("ranking-list");
-                        rankList.innerHTML = "";
-                        sortedRank.slice(0, 5).forEach(([name, val], i) => {
-                            const isMe = name === v;
-                            const div = document.createElement("div");
-                            div.className = `flex items-center gap-4 p-4 rounded-2xl transition-all ${isMe ? 'active-rank scale-[1.05]' : 'bg-white/5'}`;
-                            div.innerHTML = `
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${i===0?'bg-amber-500 text-slate-900':'bg-slate-700 text-white'}">${i+1}</div>
-                                <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${isMe ? 'TÚ: ' : ''}${name}</div></div>
-                                <div class="text-right text-[10px] font-black text-emerald-400">Q${Math.round(val/1000)}k</div>
-                            `;
-                            rankList.appendChild(div);
-                        });
-
-                    } else {
-                        personalSection.classList.add("hidden");
-                        bodyMain.classList.remove("personal-mode");
-                        mainTitle.classList.remove("gradient-text");
-                    }
-
                     render(f_o, f_c, f_fb, tVta, tGto, start, end);
-                    const dbg = `Opps: ${raw.oportunidades.length} (filt: ${f_o.length}) | FB: ${raw.facebook.length} (filt: ${f_fb.length}) | Leads: ${raw.contactos.length} (filt: ${f_c.length}) | Metas: ${raw.metas.length} | seqMapKeys: ${Object.keys(seqMap).length}`;
-                    console.log(dbg);
-                    document.getElementById('debug').innerText = dbg;
-                } catch(e) {
-                    console.error("Error en update:", e);
-                    document.getElementById('debug').innerText = "ERROR en update: " + e.message;
-                }
+                    document.getElementById('debug').innerText = `Opps: ${raw.oportunidades.length} (filt: ${f_o.length}) | FB: ${raw.facebook.length} (filt: ${f_fb.length}) | Leads: ${raw.contactos.length} (filt: ${f_c.length})`;
+                } catch(e) { console.error(e); }
             }
 
             function render(fo, fc, ffb, tv, tg, start, end) {
@@ -1211,21 +1038,8 @@ class App(cctk.CTk):
                 const config = { responsive: true };
 
                 const daily = {};
-                const isVFiltered = document.getElementById("f-ven").value !== "ALL";
-
-                fc.forEach(c => {
-                    const d = c.fecha_iso || "N/A";
-                    if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
-                    daily[d].leads += 1;
-                    if(isVFiltered) daily[d].spend += Number(c.costo_total || 0);
-                });
-                if(!isVFiltered) {
-                    ffb.forEach(f => {
-                        const d = f.dia || "N/A";
-                        if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
-                        daily[d].spend += Number(f.importe_gastado || 0);
-                    });
-                }
+                fc.forEach(c => { const d = c.fecha_iso || "N/A"; if(!daily[d]) daily[d] = { leads: 0, spend: 0 }; daily[d].leads += 1; });
+                ffb.forEach(f => { const d = f.dia || "N/A"; if(!daily[d]) daily[d] = { leads: 0, spend: 0 }; daily[d].spend += Number(f.importe_gastado || 0); });
                 const sortedDays = Object.keys(daily).sort();
 
                 Plotly.newPlot("ch-leads", [
@@ -1237,114 +1051,182 @@ class App(cctk.CTk):
                 const sortedM = Object.entries(vbm).sort((a,b) => b[1] - a[1]);
                 Plotly.newPlot("ch-marca", [{ labels: sortedM.map(x => x[0]), values: sortedM.map(x => x[1]), type: "pie", hole: .4, marker: { colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"] } }], { ...layout, showlegend: true }, config);
 
-                const activeG = document.getElementById("f-ger").value.toUpperCase();
-                const activeM = document.getElementById("f-mar").value.toUpperCase();
-                const activeV = document.getElementById("f-ven").value.toUpperCase();
-
                 const sDt = new Date(start + "T00:00:00");
                 const eDt = new Date(end + "T23:59:59");
                 const monthsInRange = [];
                 let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
-                while (curr <= eDt) {
-                    monthsInRange.push(curr.getMonth() + 1);
-                    curr.setMonth(curr.getMonth() + 1);
-                }
+                while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
 
-                const metasF = raw.metas.filter(x => {
-                    const mG = (activeG === "ALL" || (x.gerente || x.gerente_regional || "").toUpperCase() === activeG);
-                    const mM = (activeM === "ALL" || (x.marca || x.empresa || "").toUpperCase() === activeM);
-                    const mV = (activeV === "ALL" || (x.vendedor || "").toUpperCase() === activeV);
-                    const mMes = monthsInRange.includes(Number(x.mes));
-                    return mG && mM && mV && mMes;
-                });
-
+                const metasF = raw.metas.filter(x => monthsInRange.includes(Number(x.mes)));
                 const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
-                const diffMs = eDt - sDt;
-                const diffDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-
-                let totalMonthDays = 0;
-                let monthCounter = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
-                while (monthCounter <= eDt) {
-                    if (monthsInRange.includes(monthCounter.getMonth() + 1)) {
-                        totalMonthDays += new Date(monthCounter.getFullYear(), monthCounter.getMonth() + 1, 0).getDate();
-                    }
-                    monthCounter.setMonth(monthCounter.getMonth() + 1);
-                }
-                if (totalMonthDays === 0) totalMonthDays = 30;
-
-                const trend = (tv / diffDays) * totalMonthDays;
-
                 const perc = tMeta > 0 ? (tv / tMeta) * 100 : 0;
                 document.getElementById("kpi-meta").innerText = Math.round(perc) + "%";
                 Plotly.newPlot("ch-meta", [{
                     domain: { x: [0, 1], y: [0, 1] },
                     value: tv,
-                    title: { text: "Cumplimiento (Meta: Q" + Math.round(tMeta).toLocaleString() + ")" },
+                    title: { text: "Cumplimiento (Meta Global: Q" + Math.round(tMeta).toLocaleString() + ")" },
                     type: "indicator",
                     mode: "gauge+number",
                     number: { prefix: "Q", valueformat: ",.0f" },
-                    gauge: {
-                        axis: { range: [0, Math.max(tMeta, tv * 1.2, trend * 1.1)] },
-                        bar: { color: "#10b981" },
-                        steps: [{ range: [0, tMeta], color: "#e2e8f0" }],
-                        threshold: {
-                            line: { color: "yellow", width: 6 },
-                            thickness: 0.8,
-                            value: trend
-                        }
-                    }
-                }], { ...layout, annotations: [{
-                    x: 0.5, y: -0.1, xref: "paper", yref: "paper",
-                    text: "Tendencia: Q" + Math.round(trend).toLocaleString(),
-                    showarrow: false, font: { size: 12, color: "#f59e0b", weight: "bold" }
-                }] }, config);
+                    gauge: { axis: { range: [0, Math.max(tMeta, tv * 1.2)] }, bar: { color: "#10b981" }, steps: [{ range: [0, tMeta], color: "#e2e8f0" }] }
+                }], layout, config);
 
                 const adData = {};
-                const isVFilteredForAds = document.getElementById("f-ven").value !== "ALL";
-
-                if (!isVFilteredForAds) {
-                    ffb.forEach(f => {
-                        const a = (f.codigo || "SIN CODA").toUpperCase();
-                        if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
-                        adData[a].spend += Number(f.importe_gastado || 0);
-                    });
-                }
-
+                ffb.forEach(f => {
+                    const a = (f.codigo || "SIN CODA").toUpperCase();
+                    if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                    adData[a].spend += Number(f.importe_gastado || 0);
+                });
                 fc.forEach(c => {
                     const a = (c.anuncio || "SIN CODA").toUpperCase();
                     if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
                     adData[a].leads += 1;
-                    if (isVFilteredForAds) {
-                        adData[a].spend += Number(c.costo_total || 0);
-                    }
                 });
                 fo.forEach(o => {
                     const a = (o.anuncio || "SIN CODA").toUpperCase();
                     if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
                     adData[a].sales += Number(o.valor_del_cliente_potencial || 0);
                 });
-
                 const ads = Object.entries(adData).sort((a,b) => b[1].leads - a[1].leads).slice(0, 20);
                 Plotly.newPlot("ch-ad-perf", [
                     { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.leads), name: "Leads", type: "bar", marker: {color: "#3b82f6"} },
                     { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.sales), name: "Ventas (Q)", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#10b981", width: 3} },
                     { x: ads.map(x => x[0]), y: ads.map(x => x[1]).map(v => v.spend), name: "Gasto (Q)", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#ef4444", width: 3} }
-                ], {
-                    ...layout, showlegend: true, legend: { orientation: "h", y: -0.2 }, yaxis: { title: "Cant. Leads" }, yaxis2: { title: "Dinero (Q)", overlaying: "y", side: "right" }
-                }, config);
+                ], { ...layout, yaxis: { title: "Cant. Leads" }, yaxis2: { title: "Dinero (Q)", overlaying: "y", side: "right" } }, config);
             }
             init();
         })();
     </script>
 </body>
 </html>"""
-        final = html_content.replace("PAYLOAD_JSON", json.dumps(payload))
-        final = final.replace("TIMESTAMP_HERE", datetime.now().strftime("%d/%m/%Y %H:%M"))
-        with open("index.html", "w", encoding="utf-8") as f: f.write(final)
-        self.log("Dashboard unificado listo.")
 
+        profile_html = r"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>DUPAZA PRO - Perfil de Asesor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .gradient-text { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .rank-badge { background: linear-gradient(135deg, #76933c 0%, #4f6228 100%); box-shadow: 0 0 10px rgba(118, 147, 60, 0.2); }
+        .active-rank { border: 2px solid #76933c; background: rgba(118, 147, 60, 0.05); }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-center mb-10 border-b pb-6">
+            <div><h1 class="text-3xl font-black gradient-text">👤 PERFIL DE ASESOR</h1></div>
+            <button onclick="window.close()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-xl font-bold text-xs">CERRAR VENTANA</button>
+        </header>
 
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-8 space-y-8">
+                <div class="glass-card p-8 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-8 opacity-5"><i class="fa-solid fa-user-tie text-9xl"></i></div>
+                    <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                        <img src="https://i.pravatar.cc/300?u=user" id="user-avatar" class="w-32 h-32 rounded-full border-4 border-slate-100 object-cover shadow-2xl">
+                        <div class="flex-1 text-center md:text-left">
+                            <h2 id="display-name" class="text-4xl font-black text-slate-800 mb-2">---</h2>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-black mb-1">Venta Total</span><span id="stat-sales" class="text-xl font-black text-blue-600">Q 0</span></div>
+                                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-black mb-1">Inversión</span><span id="stat-inv" class="text-xl font-black text-rose-600">Q 0</span></div>
+                                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-black mb-1">Q META</span><span id="stat-meta" class="text-xl font-black text-emerald-600">Q 0</span></div>
+                            </div>
+                        </div>
+                        <div id="user-rank-badge" class="rank-badge px-6 py-3 rounded-2xl text-lg font-black text-white italic">#? RANK</div>
+                    </div>
+                </div>
 
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="glass-card p-8 flex items-center justify-between"><div><h4 class="text-xs font-black uppercase text-slate-400 mb-1">Peso de Mercadeo</h4><div id="perc-mkt" class="text-3xl font-black text-blue-600">0.0%</div></div><i class="fa-solid fa-chart-pie text-slate-200 text-3xl"></i></div>
+                    <div class="glass-card p-8 flex items-center justify-between"><div><h4 class="text-xs font-black uppercase text-slate-400 mb-1">Alcance de la Meta</h4><div id="perc-alcance" class="text-3xl font-black text-emerald-600">0.0%</div></div><i class="fa-solid fa-bullseye text-slate-200 text-3xl"></i></div>
+                </div>
+
+                <div class="glass-card p-8"><h4 class="text-xs font-black uppercase text-slate-400 mb-4">Ganancia Estimada (10% - Inv)</h4><div id="metric-profit" class="text-5xl font-black text-slate-800">Q 0.00</div></div>
+            </div>
+
+            <aside class="lg:col-span-4 h-full">
+                <div class="glass-card p-8 h-full">
+                    <h3 class="text-xl font-black mb-8 flex items-center gap-3"><i class="fa-solid fa-crown text-amber-500"></i>Top Ranking</h3>
+                    <div id="ranking-list" class="space-y-4"></div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script id="data" type="application/json">PAYLOAD_JSON</script>
+    <script>
+        (function() {
+            const raw = JSON.parse(document.getElementById('data').textContent);
+            const params = new URLSearchParams(window.location.search);
+            const v = params.get('vendedor');
+            const start = params.get('start');
+            const end = params.get('end');
+
+            function update() {
+                const f_c = raw.contactos.filter(c => (!start || c.fecha_iso >= start) && (!end || c.fecha_iso <= end) && (c.assignedtoname || "").toUpperCase() === v);
+                const f_o = raw.oportunidades.filter(o => (!start || o.fecha_iso >= start) && (!end || o.fecha_iso <= end) && (o.asignado || "").toUpperCase() === v);
+
+                const tGto = f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0);
+                const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
+
+                const sDt = new Date(start + "T00:00:00");
+                const eDt = new Date(end + "T23:59:59");
+                const monthsInRange = [];
+                let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
+                while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
+
+                const userMetas = raw.metas.filter(x => (x.vendedor || "").toUpperCase() === v && monthsInRange.includes(Number(x.mes)));
+                const uMetaTotal = userMetas.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
+
+                document.getElementById('display-name').innerText = v;
+                document.getElementById('stat-sales').innerText = "Q" + Math.round(tVta).toLocaleString();
+                document.getElementById('stat-inv').innerText = "Q" + Math.round(tGto).toLocaleString();
+                document.getElementById('stat-meta').innerText = "Q" + Math.round(uMetaTotal).toLocaleString();
+
+                document.getElementById('perc-mkt').innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(0) + "%" : "0.0%";
+                document.getElementById('perc-alcance').innerText = uMetaTotal > 0 ? ((tVta / uMetaTotal) * 100).toFixed(1) + "%" : "0.0%";
+                document.getElementById('metric-profit').innerText = "Q" + Math.round((tVta * 0.1) - tGto).toLocaleString();
+                document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
+
+                const rankings = {};
+                raw.oportunidades.filter(o => (!start || o.fecha_iso >= start) && (!end || o.fecha_iso <= end)).forEach(op => {
+                    const name = (op.asignado || "").toUpperCase().trim();
+                    if (name) rankings[name] = (rankings[name] || 0) + Number(op.valor_del_cliente_potencial || 0);
+                });
+                const sortedRank = Object.entries(rankings).sort((a,b) => b[1] - a[1]);
+                const myRank = sortedRank.findIndex(r => r[0] === v) + 1;
+                document.getElementById("user-rank-badge").innerText = `#${myRank || "?"} RANK`;
+
+                const rankList = document.getElementById("ranking-list");
+                sortedRank.slice(0, 5).forEach(([name, val], i) => {
+                    const isMe = name === v;
+                    const div = document.createElement("div");
+                    div.className = `flex items-center gap-4 p-4 rounded-2xl transition-all ${isMe ? 'active-rank scale-[1.05]' : 'bg-slate-50'}`;
+                    div.innerHTML = `
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${i===0?'bg-amber-500 text-slate-900':'bg-slate-700 text-white'}">${i+1}</div>
+                        <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${isMe ? 'TÚ: ' : ''}${name}</div></div>
+                        <div class="text-right text-[10px] font-black text-emerald-400">Q${Math.round(val/1000)}k</div>
+                    `;
+                    rankList.appendChild(div);
+                });
+            }
+            update();
+        })();
+    </script>
+</body>
+</html>"""
+
+        final_main = main_html.replace("PAYLOAD_JSON", json.dumps(payload)).replace("TIMESTAMP_HERE", datetime.now().strftime("%d/%m/%Y %H:%M"))
+        final_profile = profile_html.replace("PAYLOAD_JSON", json.dumps(payload))
+
+        with open("index.html", "w", encoding="utf-8") as f: f.write(final_main)
+        with open("profile.html", "w", encoding="utf-8") as f: f.write(final_profile)
+        self.log("Dashboards (General y Perfil) listos.")
 
     def process_contact_costs(self, res_c, res_fb):
         import pandas as pd
