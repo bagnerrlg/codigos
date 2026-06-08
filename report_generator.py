@@ -894,17 +894,15 @@ class App(cctk.CTk):
         .kpi-val { font-size: 28px; font-weight: 800; color: #0f172a; }
         .kpi-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
 
-        /* Estilos Dashboard Personal */
-        .personal-mode { background-color: var(--bg-dark); color: white; }
-        .personal-mode .card { background: var(--card-dark); border: 1px solid rgba(255,255,255,0.05); color: white; }
-        .personal-mode .kpi-val { color: white; }
-        .glass-card { background: var(--card-dark); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 1.25rem; transition: all 0.3s ease; }
-        .gradient-text { background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .rank-badge { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); }
-        .active-rank { border: 2px solid var(--accent-primary); background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%); }
+        /* Estilos Dashboard Personal Unificados */
+        .personal-mode { color: #0f172a; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .gradient-text { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .rank-badge { background: linear-gradient(135deg, #76933c 0%, #4f6228 100%); box-shadow: 0 0 10px rgba(118, 147, 60, 0.2); }
+        .active-rank { border: 2px solid #76933c; background: rgba(118, 147, 60, 0.05); }
     </style>
 </head>
-<body class="p-6 transition-colors duration-500" id="body-main">
+<body class="p-6" id="body-main">
     <div class="max-w-7xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b pb-6">
             <div><h1 class="text-3xl font-black text-slate-800" id="main-title">📊 DUPAZA DASHBOARD</h1></div>
@@ -926,21 +924,21 @@ class App(cctk.CTk):
                             </div>
                             <div class="flex-1 text-center md:text-left">
                                 <div class="flex flex-col md:flex-row md:items-end gap-3 mb-4">
-                                    <h2 id="display-name" class="text-3xl font-black">---</h2>
-                                    <span class="bg-blue-500/10 text-blue-400 text-[10px] font-bold px-2 py-1 rounded-md border border-blue-500/20 uppercase tracking-widest mb-1">Agente</span>
+                                    <h2 id="display-name" class="text-3xl font-black text-slate-800">---</h2>
+                                    <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-md border border-slate-200 uppercase tracking-widest mb-1">Agente Comercial</span>
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
                                         <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Venta Periodo</span>
-                                        <span id="stat-monthly-sales" class="text-lg font-bold text-blue-400">Q 0</span>
+                                        <span id="stat-monthly-sales" class="text-lg font-bold text-blue-600">Q 0</span>
                                     </div>
-                                    <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
                                         <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Inversión</span>
-                                        <span id="stat-monthly-investment" class="text-lg font-bold text-amber-400">Q 0</span>
+                                        <span id="stat-monthly-investment" class="text-lg font-bold text-rose-600">Q 0</span>
                                     </div>
-                                    <div class="hidden md:block bg-white/5 p-3 rounded-xl border border-white/5">
-                                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Ctd. Ventas</span>
-                                        <span id="stat-total-count" class="text-lg font-bold text-emerald-400">0</span>
+                                    <div class="hidden md:block bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Q META</span>
+                                        <span id="stat-total-count" class="text-lg font-bold text-emerald-600">Q 0</span>
                                     </div>
                                 </div>
                             </div>
@@ -958,17 +956,17 @@ class App(cctk.CTk):
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div class="glass-card p-6 flex items-center justify-between">
                             <div class="flex gap-4 items-center">
-                                <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-black text-indigo-400 text-xl" id="perc-expense-sales">0.0</div>
-                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Gasto vrs Venta</h4><p class="text-xs text-indigo-400 font-semibold mt-1">Marketing Efficiency</p></div>
+                                <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center font-black text-blue-600 text-xl" id="perc-expense-sales">0.0</div>
+                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Gasto vrs Venta</h4><p class="text-xs text-blue-500 font-semibold mt-1">Marketing Efficiency</p></div>
                             </div>
-                            <i id="icon-expense-sales" class="fa-solid fa-circle-check text-slate-700 text-xl"></i>
+                            <i id="icon-expense-sales" class="fa-solid fa-circle-check text-slate-300 text-xl"></i>
                         </div>
                         <div class="glass-card p-6 flex items-center justify-between">
                             <div class="flex gap-4 items-center">
-                                <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-black text-amber-400 text-xl" id="perc-inv-profit">0.0</div>
-                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Inv. s/ Ganancia</h4><p class="text-xs text-amber-400 font-semibold mt-1">ROI Analysis</p></div>
+                                <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center font-black text-emerald-600 text-xl" id="perc-inv-profit">0.0</div>
+                                <div><h4 class="text-sm font-bold uppercase text-slate-500">Alcance de la meta</h4><p class="text-xs text-emerald-600 font-semibold mt-1">Goal Achievement</p></div>
                             </div>
-                            <i id="icon-inv-profit" class="fa-solid fa-circle-exclamation text-slate-700 text-xl"></i>
+                            <i id="icon-inv-profit" class="fa-solid fa-circle-exclamation text-slate-300 text-xl"></i>
                         </div>
                     </div>
                 </div>
@@ -1124,8 +1122,8 @@ class App(cctk.CTk):
                     document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
                     document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
                     document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
-                    // Peso de mercadeo: (Gasto / Venta) * 100
-                    document.getElementById("kpi-roas").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
+                    // Peso de mercadeo: (Venta / Gasto) * 100
+                    document.getElementById("kpi-roas").innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(0) + "%" : "0.0%";
 
                     // --- Lógica Dashboard Personal ---
                     const personalSection = document.getElementById("personal-dashboard");
@@ -1134,13 +1132,26 @@ class App(cctk.CTk):
 
                     if (v !== "ALL") {
                         personalSection.classList.remove("hidden");
-                        bodyMain.classList.add("personal-mode");
                         mainTitle.classList.add("gradient-text");
 
                         document.getElementById("display-name").innerText = v;
                         document.getElementById("stat-monthly-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
                         document.getElementById("stat-monthly-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
-                        document.getElementById("stat-total-count").innerText = f_o.length;
+
+                        // --- Calcular Meta para el Usuario Seleccionado ---
+                        const sDt = new Date(start + "T00:00:00");
+                        const eDt = new Date(end + "T23:59:59");
+                        const monthsInRange = [];
+                        let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
+                        while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
+
+                        const userMetas = raw.metas.filter(x => {
+                            const mV = (x.vendedor || "").toUpperCase() === v;
+                            const mMes = monthsInRange.includes(Number(x.mes));
+                            return mV && mMes;
+                        });
+                        const uMetaTotal = userMetas.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
+                        document.getElementById("stat-total-count").innerText = "Q" + Math.round(uMetaTotal).toLocaleString();
 
                         document.getElementById("metric-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
                         document.getElementById("metric-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
@@ -1148,10 +1159,10 @@ class App(cctk.CTk):
                         document.getElementById("metric-profit").innerText = "Q" + Math.round(profit).toLocaleString();
 
                         const gv = tVta > 0 ? (tGto / tVta) * 100 : 0;
-                        const ig = (tVta * 0.10) > 0 ? (tGto / (tVta * 0.10)) * 100 : 0;
+                        const alcMeta = uMetaTotal > 0 ? (tVta / uMetaTotal) * 100 : 0;
 
-                        document.getElementById("perc-expense-sales").innerText = gv.toFixed(1);
-                        document.getElementById("perc-inv-profit").innerText = ig.toFixed(1);
+                        document.getElementById("perc-expense-sales").innerText = gv.toFixed(1) + "%";
+                        document.getElementById("perc-inv-profit").innerText = alcMeta.toFixed(1) + "%";
 
                         document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
 
