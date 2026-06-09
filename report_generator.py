@@ -921,10 +921,9 @@ class App(cctk.CTk):
                             <div id="user-rank-badge" class="rank-badge px-6 py-3 rounded-2xl text-lg font-black text-white italic">#? RANK</div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span><div id="metric-sales" class="text-2xl font-black mt-1 text-white">Q 0.00</div></div>
-                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ganancia Est. (10%-Inv)</span><div id="metric-profit" class="text-2xl font-black mt-1 text-emerald-400">Q 0.00</div></div>
-                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Inversión Atribuida</span><div id="metric-investment" class="text-2xl font-black mt-1 text-amber-400">Q 0.00</div></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span><div id="metric-sales" class="text-2xl font-black mt-1 text-slate-800">Q 0.00</div></div>
+                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ganancia Est. (10%-Inv)</span><div id="metric-profit" class="text-2xl font-black mt-1 text-emerald-600">Q 0.00</div></div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div class="glass-card p-6 flex items-center justify-between">
@@ -1115,8 +1114,8 @@ class App(cctk.CTk):
                         document.getElementById("metric-profit").innerText = "Q" + Math.round(profit).toLocaleString();
 
                         const alcMeta = uMetaTotal > 0 ? (tVta / uMetaTotal) * 100 : 0;
-                        // Peso de mercadeo individual: (Venta / Gasto) * 100
-                        document.getElementById("perc-expense-sales").innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(0) + "%" : "0.0%";
+                        // Gasto vrs Venta: (Inversión / Ventas Totales) * 100
+                        document.getElementById("perc-expense-sales").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
                         document.getElementById("perc-inv-profit").innerText = alcMeta.toFixed(1) + "%";
                         document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
 
@@ -1155,9 +1154,23 @@ class App(cctk.CTk):
                 const layout = { autosize: true, margin: {t:30, b:60, l:50, r:50}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {size: 10} };
                 const config = { responsive: true };
 
+                const isVFiltered = document.getElementById("f-ven").value !== "ALL";
+                const activeV = document.getElementById("f-ven").value.toUpperCase();
+
                 const daily = {};
-                fc.forEach(c => { const d = c.fecha_iso || "N/A"; if(!daily[d]) daily[d] = { leads: 0, spend: 0 }; daily[d].leads += 1; });
-                ffb.forEach(f => { const d = f.dia || "N/A"; if(!daily[d]) daily[d] = { leads: 0, spend: 0 }; daily[d].spend += Number(f.importe_gastado || 0); });
+                fc.forEach(c => {
+                    const d = c.fecha_iso || "N/A";
+                    if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
+                    daily[d].leads += 1;
+                    if (isVFiltered) daily[d].spend += Number(c.costo_total || 0);
+                });
+                if (!isVFiltered) {
+                    ffb.forEach(f => {
+                        const d = f.dia || "N/A";
+                        if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
+                        daily[d].spend += Number(f.importe_gastado || 0);
+                    });
+                }
                 const sortedDays = Object.keys(daily).sort();
 
                 Plotly.newPlot("ch-leads", [
@@ -1175,7 +1188,11 @@ class App(cctk.CTk):
                 let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
                 while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
 
-                const metasF = raw.metas.filter(x => monthsInRange.includes(Number(x.mes)));
+                const metasF = raw.metas.filter(x => {
+                    const mMes = monthsInRange.includes(Number(x.mes));
+                    const mV = (activeV === "ALL" || (x.vendedor || "").toUpperCase() === activeV);
+                    return mMes && mV;
+                });
                 const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
 
                 const diffMs = eDt - sDt;
@@ -1212,15 +1229,18 @@ class App(cctk.CTk):
                 }] }, config);
 
                 const adData = {};
-                ffb.forEach(f => {
-                    const a = (f.codigo || "SIN CODA").toUpperCase();
-                    if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
-                    adData[a].spend += Number(f.importe_gastado || 0);
-                });
+                if (!isVFiltered) {
+                    ffb.forEach(f => {
+                        const a = (f.codigo || "SIN CODA").toUpperCase();
+                        if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                        adData[a].spend += Number(f.importe_gastado || 0);
+                    });
+                }
                 fc.forEach(c => {
                     const a = (c.anuncio || "SIN CODA").toUpperCase();
                     if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
                     adData[a].leads += 1;
+                    if (isVFiltered) adData[a].spend += Number(c.costo_total || 0);
                 });
                 fo.forEach(o => {
                     const a = (o.anuncio || "SIN CODA").toUpperCase();
