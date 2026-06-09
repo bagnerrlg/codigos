@@ -409,7 +409,9 @@ def fetch_contacts_for_account(acc, start_utc, end_utc, log_callback, u_map):
     formatted_contacts = []
     for c in all_contacts:
         uid = c.get("assignedTo")
-        assigned_name = u_map.get(uid) or uid or ""
+        # Aplicar mapeo de vendedor para consistencia
+        raw_name = u_map.get(uid) or uid or ""
+        assigned_name = get_mapped_vendedor(raw_name)
         date_iso, date_fmt, dt_local = c.get("dateAdded"), "", None
         if date_iso:
             dt_local = datetime.fromisoformat(date_iso.replace("Z", "+00:00")).astimezone(GUATEMALA_TZ)
@@ -487,7 +489,9 @@ def fetch_for_account(acc, ghl_start, ghl_end, client_start, client_end, log_cal
                 filtered_count += 1
                 continue
             assigned_id = op.get("assignedTo") or op.get("assigned_to") or op.get("assigned_to_id")
-            vendedor_raw = u_map.get(assigned_id) or assigned_id or ""
+            # Aplicar mapeo de vendedor para consistencia
+            raw_n = u_map.get(assigned_id) or assigned_id or ""
+            vendedor_raw = get_mapped_vendedor(raw_n)
             gnam, opp_id_val = (op.get("contact", {}).get("name", "") if isinstance(op.get("contact"), dict) else ""), op.get("id", "")
             dv_data = json.loads(dv_str) if dv_str else {}
             anu_val, _ = extraer_datos_anuncio(dv_data.get("anuncio", "") or dv_data.get("Anuncio", "")); row = {"Asignado": vendedor_raw, "Secuencia": acc_name, "Anuncio": anu_val, "fecha_iso": sale_date_iso, "Mes": int(sale_date_iso[5:7]) if sale_date_iso else 0, "Anio": int(sale_date_iso[0:4]) if sale_date_iso else 0, "fase": op.get("pipelineStageName", "Cierre de Venta"), "Valor del cliente potencial": op.get("monetaryValue", 0), "asignado": vendedor_raw, "Creado": format_date_ghl(op.get("createdAt")), "Ultimo Actualizado": format_date_ghl(op.get("updatedAt")), "Seguidores": "", "Notas": " | ".join([clean_html(n.get("body", "")) for n in op.get("notes", []) if isinstance(n, dict)]), "etiquetas": ", ".join(op.get("tags", [])) if isinstance(op.get("tags"), list) else "", "estado": op.get("status", ""), "ID de contacto": op.get("contactId", ""), "Cliente": gnam, "Cod": str(opp_id_val)[:10], "MARCA": dv_data.get("marca", ""), "ANILLO": dv_data.get("anillo", ""), "UBICACION": dv_data.get("ubicacion", ""), "Mes": int(sale_date_iso[5:7]) if sale_date_iso else "", "DataVenta": dv_str, "ID de oportunidad": opp_id_val}
@@ -1006,7 +1010,11 @@ class App(cctk.CTk):
                     };
                     pop("f-ger", raw.metas.map(m => m.gerente || m.gerente_regional));
                     pop("f-mar", raw.metas.map(m => m.marca || m.empresa));
-                    pop("f-ven", [...raw.contactos.map(c => c.assignedtoname), ...raw.oportunidades.map(o => o.asignado)]);
+                    // Asegurar que usamos las llaves correctas generadas por prepare_json (siempre minúsculas)
+                    const vens = new Set();
+                    raw.contactos.forEach(c => { if(c.asignado) vens.add(c.asignado); });
+                    raw.oportunidades.forEach(o => { if(o.asignado) vens.add(o.asignado); });
+                    pop("f-ven", Array.from(vens));
                     pop("f-mes", raw.oportunidades.map(o => o.mes));
                     pop("f-anu", [...raw.contactos.map(c => c.anuncio), ...raw.facebook.map(f => f.codigo)]);
 
@@ -1045,7 +1053,7 @@ class App(cctk.CTk):
                         const mDate = (!start || d >= start) && (!end || d <= end);
                         const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                         const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
-                        const mV = (v === "ALL" || (c.assignedtoname || "").trim().toUpperCase() === v);
+                        const mV = (v === "ALL" || (c.asignado || "").trim().toUpperCase() === v);
                         const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
                         return mDate && mG && mM && mV && mA;
                     });
@@ -1107,7 +1115,8 @@ class App(cctk.CTk):
                         document.getElementById("metric-profit").innerText = "Q" + Math.round(profit).toLocaleString();
 
                         const alcMeta = uMetaTotal > 0 ? (tVta / uMetaTotal) * 100 : 0;
-                        document.getElementById("perc-expense-sales").innerText = ((tGto/tVta)*100).toFixed(1) + "%";
+                        // Peso de mercadeo individual: (Venta / Gasto) * 100
+                        document.getElementById("perc-expense-sales").innerText = tGto > 0 ? ((tVta / tGto) * 100).toFixed(0) + "%" : "0.0%";
                         document.getElementById("perc-inv-profit").innerText = alcMeta.toFixed(1) + "%";
                         document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
 
