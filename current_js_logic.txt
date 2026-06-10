@@ -1,0 +1,140 @@
+                        if (!s) return acc;
+                        if (!acc[s]) acc[s] = { gers: new Set(), marcs: new Set() };
+                        const gVal = c.gerente || c.gerente_regional || "";
+                        const mVal = c.marca || c.empresa || "";
+                        if (gVal) acc[s].gers.add(gVal.toUpperCase());
+                        if (mVal) acc[s].marcs.add(mVal.toUpperCase());
+                        return acc;
+                    }, {});
+
+                    const f_c = raw.contactos.filter(c => {
+                        const s = (c.secuencia || "").toUpperCase().trim();
+                        const d = c.fecha_iso;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mV = (v === "ALL" || (c.asignado || "").trim().toUpperCase() === v);
+                        const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mV && mA;
+                    });
+
+                    const f_o = raw.oportunidades.filter(o => {
+                        const s = (o.secuencia || "").toUpperCase().trim();
+                        const d = o.fecha_iso;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mV = (v === "ALL" || (o.asignado || "").trim().toUpperCase() === v);
+                        const mMes = (mes === "ALL" || String(o.mes) === String(mes));
+                        const mA = (anu === "ALL" || (o.anuncio || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mV && mMes && mA;
+                    });
+
+                    const f_fb = raw.facebook.filter(f => {
+                        const s = (f.secuencia || "").toUpperCase().trim();
+                        const d = f.dia;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mA = (anu === "ALL" || (f.codigo || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mA;
+                    });
+
+                    const tGto = (v !== "ALL")
+                        ? f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0)
+                        : f_fb.reduce((a, f) => a + Number(f.importe_gastado || 0), 0);
+
+                    const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
+                    const tLds = f_c.length;
+
+                    document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
+                    document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
+                    document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
+                    document.getElementById("kpi-roas").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
+
+                    if (v !== "ALL") {
+                        personalSection.classList.remove("hidden");
+                        mainTitle.classList.add("gradient-text");
+                        document.getElementById("display-name").innerText = v;
+                        document.getElementById("stat-monthly-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
+                        document.getElementById("stat-monthly-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
+
+                        const sDt = new Date(start + "T00:00:00");
+                        const eDt = new Date(end + "T23:59:59");
+                        const monthsInRange = [];
+                        let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
+                        while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
+
+                        const userMetas = raw.metas.filter(x => (x.vendedor || "").toUpperCase() === v && monthsInRange.includes(Number(x.mes)));
+                        const uMetaTotal = userMetas.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
+                        document.getElementById("stat-total-count").innerText = "Q" + Math.round(uMetaTotal).toLocaleString();
+
+                        document.getElementById("metric-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
+                        document.getElementById("metric-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
+                        const profit = (tVta * 0.10) - tGto;
+                        document.getElementById("metric-profit").innerText = "Q" + Math.round(profit).toLocaleString();
+
+                        const alcMeta = uMetaTotal > 0 ? (tVta / uMetaTotal) * 100 : 0;
+                        // Gasto vrs Venta: (Inversión / Ventas Totales) * 100
+                        document.getElementById("perc-expense-sales").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
+                        document.getElementById("perc-inv-profit").innerText = alcMeta.toFixed(1) + "%";
+                        document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
+
+                        const rankings = {};
+                        raw.oportunidades.filter(o => (!start || o.fecha_iso >= start) && (!end || o.fecha_iso <= end)).forEach(op => {
+                            const name = (op.asignado || "").toUpperCase().trim();
+                            if (name) rankings[name] = (rankings[name] || 0) + Number(op.valor_del_cliente_potencial || 0);
+                        });
+                        const sortedRank = Object.entries(rankings).sort((a,b) => b[1] - a[1]);
+                        const myRank = sortedRank.findIndex(r => r[0] === v) + 1;
+                        document.getElementById("user-rank-badge").innerText = `#${myRank || "?"} RANK`;
+
+                        const rankList = document.getElementById("ranking-list");
+                        rankList.innerHTML = "";
+                        sortedRank.slice(0, 5).forEach(([name, val], i) => {
+                            const isMe = name === v;
+                            const div = document.createElement("div");
+                            div.className = `flex items-center gap-4 p-4 rounded-2xl transition-all ${isMe ? 'active-rank scale-[1.05]' : 'bg-slate-50'}`;
+                            div.innerHTML = `
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${i===0?'bg-amber-500 text-slate-900':'bg-slate-700 text-white'}">${i+1}</div>
+                                <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${isMe ? 'TÚ: ' : ''}${name}</div></div>
+                                <div class="text-right text-[10px] font-black text-emerald-400">Q${Math.round(val/1000)}k</div>
+                            `;
+                            rankList.appendChild(div);
+                        });
+                    } else {
+                        personalSection.classList.add("hidden");
+                        mainTitle.classList.remove("gradient-text");
+                    }
+
+                    render(f_o, f_c, f_fb, tVta, tGto, start, end);
+                } catch(e) { console.error(e); }
+            }
+
+            function render(fo, fc, ffb, tv, tg, start, end) {
+                const layout = { autosize: true, margin: {t:30, b:60, l:50, r:50}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {size: 10} };
+                const config = { responsive: true };
+
+                const isVFiltered = document.getElementById("f-ven").value !== "ALL";
+                const activeV = document.getElementById("f-ven").value.toUpperCase();
+
+                const daily = {};
+                fc.forEach(c => {
+                    const d = c.fecha_iso || "N/A";
+                    if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
+                    daily[d].leads += 1;
+                    if (isVFiltered) daily[d].spend += Number(c.costo_total || 0);
+                });
+                if (!isVFiltered) {
+                    ffb.forEach(f => {
+                        const d = f.dia || "N/A";
+                        if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
+                        daily[d].spend += Number(f.importe_gastado || 0);
+                    });
+                }
+                const sortedDays = Object.keys(daily).sort();
+
+                Plotly.newPlot("ch-leads", [
+                    { x: sortedDays, y: sortedDays.map(d => daily[d].spend), name: "Gasto (Q)", type: "bar", marker: {color: "#ef4444", opacity: 0.6} },
+                    { x: sortedDays, y: sortedDays.map(d => daily[d].leads), name: "Leads", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#3b82f6", width:2} }
+                ], { ...layout, yaxis: { title: "Gasto (Q)" }, yaxis2: { title: "Leads", overlaying: "y", side: "right", showgrid: false }, showlegend: true, legend: { orientation: "h", y: -0.2 } }, config);

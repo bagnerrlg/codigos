@@ -1,0 +1,410 @@
+    def generate_dashboard_html(self, res_o, res_v, res_c, res_fb, df_metas):
+        self.log("Generando Dashboard HTML...")
+        import json
+        import pandas as pd
+        from datetime import datetime
+
+        def prepare_json(data):
+            try:
+                if data is None: return []
+                df = pd.DataFrame(data) if isinstance(data, list) else data.copy()
+                if df.empty: return []
+                df.replace([float('inf'), float('-inf')], 0, inplace=True)
+                def clean_name(c):
+                    s = str(c).lower().strip().replace(" ", "_")
+                    s = s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
+                    return "".join(ch for ch in s if ch.isalnum() or ch == "_")
+                df.columns = [clean_name(c) for c in df.columns]
+                df = df.loc[:, ~df.columns.duplicated(keep='first')]
+                for col in df.columns:
+                    if pd.api.types.is_numeric_dtype(df[col]):
+                        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+                    elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                        df[col] = df[col].apply(lambda x: x.isoformat() if hasattr(x, "isoformat") else str(x))
+                    else:
+                        df[col] = df[col].fillna("").astype(str)
+                return df.to_dict(orient="records")
+            except Exception as e:
+                print(f"Error en prepare_json: {e}")
+                return []
+
+        payload = {
+            "oportunidades": prepare_json(res_o),
+            "facebook": prepare_json(res_fb),
+            "metas": prepare_json(df_metas),
+            "contactos": prepare_json(res_c)
+        }
+
+        html_content = r"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>DUPAZA PRO - Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; border: 1px solid #e2e8f0; }
+        .kpi-val { font-size: 28px; font-weight: 800; color: #0f172a; }
+        .kpi-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 1.25rem; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .gradient-text { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .rank-badge { background: linear-gradient(135deg, #76933c 0%, #4f6228 100%); box-shadow: 0 0 10px rgba(118, 147, 60, 0.2); }
+        .active-rank { border: 2px solid #76933c; background: rgba(118, 147, 60, 0.05); }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-center mb-8 border-b pb-6">
+            <div><h1 class="text-3xl font-black text-slate-800" id="main-title">📊 DUPAZA DASHBOARD</h1></div>
+            <div class="text-right text-[10px] text-slate-400 font-bold uppercase">TIMESTAMP_HERE</div>
+        </header>
+
+        <div id="personal-dashboard" class="hidden space-y-8 mb-12">
+            <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-8 space-y-8">
+                    <div class="glass-card p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-8 opacity-5"><i class="fa-solid fa-user-tie text-9xl"></i></div>
+                        <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                            <img src="https://i.pravatar.cc/300?u=user" id="user-avatar" class="w-32 h-32 rounded-full border-4 border-slate-100 object-cover shadow-2xl">
+                            <div class="flex-1 text-center md:text-left">
+                                <h2 id="display-name" class="text-3xl font-black text-slate-800">---</h2>
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-md border border-slate-200 uppercase tracking-widest mb-1">Agente Comercial</span>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Venta Periodo</span><span id="stat-monthly-sales" class="text-lg font-bold text-blue-600">Q 0</span></div>
+                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Inversión</span><span id="stat-monthly-investment" class="text-lg font-bold text-rose-600">Q 0</span></div>
+                                    <div class="hidden md:block bg-slate-50 p-3 rounded-xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Q META</span><span id="stat-total-count" class="text-lg font-bold text-emerald-600">Q 0</span></div>
+                                </div>
+                            </div>
+                            <div id="user-rank-badge" class="rank-badge px-6 py-3 rounded-2xl text-lg font-black text-white italic">#? RANK</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span><div id="metric-sales" class="text-2xl font-black mt-1 text-slate-800">Q 0.00</div></div>
+                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ganancia Est. (10%-Inv)</span><div id="metric-profit" class="text-2xl font-black mt-1 text-emerald-600">Q 0.00</div></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="glass-card p-6 flex items-center justify-between">
+                            <div class="flex gap-4 items-center">
+                                <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center font-black text-blue-600 text-xl" id="perc-expense-sales">0.0</div>
+                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Gasto vrs Venta</h4><p class="text-xs text-blue-500 font-semibold mt-1">Marketing Efficiency</p></div>
+                            </div>
+                            <i class="fa-solid fa-circle-check text-slate-300 text-xl"></i>
+                        </div>
+                        <div class="glass-card p-6 flex items-center justify-between">
+                            <div class="flex gap-4 items-center">
+                                <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center font-black text-emerald-600 text-xl" id="perc-inv-profit">0.0</div>
+                                <div><h4 class="text-sm font-bold uppercase text-slate-500">Alcance de la meta</h4><p class="text-xs text-emerald-600 font-semibold mt-1">Goal Achievement</p></div>
+                            </div>
+                            <i class="fa-solid fa-circle-exclamation text-slate-300 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <aside class="lg:col-span-4 h-full">
+                    <div class="glass-card p-8 h-full">
+                        <h3 class="text-xl font-black mb-8 flex items-center gap-3"><i class="fa-solid fa-crown text-amber-500"></i>Top Ranking</h3>
+                        <div id="ranking-list" class="space-y-4"></div>
+                    </div>
+                </aside>
+            </main>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-7 gap-4 mb-8 bg-white p-4 rounded-2xl shadow-sm border" id="filter-bar">
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">FECHA INICIO</label><input type="date" id="f-start" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">FECHA FIN</label><input type="date" id="f-end" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">GERENTE</label><select id="f-ger" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">MARCA</label><select id="f-mar" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODAS</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">MES</label><select id="f-mes" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">ASESOR</label><select id="f-ven" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
+            <div><label class="block text-[10px] font-black text-slate-400 mb-1">ANUNCIO</label><select id="f-anu" class="w-full border rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-green-500"><option value="ALL">TODOS</option></select></div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="card text-center"><div class="kpi-label">Gasto</div><div id="kpi-gasto" class="kpi-val text-blue-600">Q 0</div></div>
+            <div class="card text-center"><div class="kpi-label">Leads</div><div id="kpi-leads" class="kpi-val">0</div></div>
+            <div class="card text-center"><div class="kpi-label">Ventas</div><div id="kpi-venta" class="kpi-val text-emerald-600">Q 0</div></div>
+            <div class="card text-center"><div class="kpi-label">PESO MERCADEO</div><div id="kpi-roas" class="kpi-val">0.0%</div></div>
+            <div class="card text-center"><div class="kpi-label">% Meta</div><div id="kpi-meta" class="kpi-val">0%</div></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Tendencia Diaria (Leads y Gasto)</h3><div id="ch-leads" class="h-full"></div></div>
+            <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Ventas vs Meta</h3><div id="ch-meta" class="h-full"></div></div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-8 mb-8">
+            <div class="card h-[400px]"><h3 class="kpi-label border-b pb-2 mb-4">Ventas por Marca</h3><div id="ch-marca" class="h-full"></div></div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-8 mb-8">
+            <div class="card h-[500px]"><h3 class="kpi-label border-b pb-2 mb-4">Rendimiento Detallado por Anuncio (Leads, Gasto y Ventas)</h3><div id="ch-ad-perf" class="h-full"></div></div>
+        </div>
+
+        <div id="debug" class="text-[10px] text-slate-400 font-mono bg-slate-100 p-4 rounded-xl">Cargando monitor...</div>
+    </div>
+
+    <script id="data" type="application/json">PAYLOAD_JSON</script>
+    <script>
+        (function() {
+            let raw = null;
+            try {
+                raw = JSON.parse(document.getElementById('data').textContent);
+            } catch(e) { console.error(e); return; }
+
+            function init() {
+                try {
+                    const dates = raw.facebook.map(f => f.dia).concat(raw.contactos.map(c => c.fecha_iso)).filter(Boolean).sort();
+                    if (dates.length) {
+                        document.getElementById("f-start").value = dates[0];
+                        document.getElementById("f-end").value = dates[dates.length - 1];
+                    }
+                    const pop = (id, list) => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        [...new Set(list)].filter(Boolean).sort().forEach(i => {
+                            const o = document.createElement("option"); o.value = i; o.textContent = i; el.appendChild(o);
+                        });
+                    };
+                    pop("f-ger", raw.metas.map(m => m.gerente || m.gerente_regional));
+                    pop("f-mar", raw.metas.map(m => m.marca || m.empresa));
+                    // Asegurar que usamos las llaves correctas generadas por prepare_json (siempre minúsculas)
+                    const vens = new Set();
+                    raw.contactos.forEach(c => { if(c.asignado) vens.add(c.asignado); });
+                    raw.oportunidades.forEach(o => { if(o.asignado) vens.add(o.asignado); });
+                    pop("f-ven", Array.from(vens));
+                    pop("f-mes", raw.oportunidades.map(o => o.mes));
+                    pop("f-anu", [...raw.contactos.map(c => c.anuncio), ...raw.facebook.map(f => f.codigo)]);
+
+                    document.querySelectorAll("select, input[type='date']").forEach(s => s.onchange = update);
+                    update();
+                } catch(e) { console.error(e); }
+            }
+
+            function update() {
+                try {
+                    const start = document.getElementById("f-start").value;
+                    const end = document.getElementById("f-end").value;
+                    const g = document.getElementById("f-ger").value.toUpperCase();
+                    const m = document.getElementById("f-mar").value.toUpperCase();
+                    const v = document.getElementById("f-ven").value.toUpperCase();
+                    const mes = document.getElementById("f-mes").value;
+                    const anu = document.getElementById("f-anu").value.toUpperCase();
+
+                    const personalSection = document.getElementById("personal-dashboard");
+                    const mainTitle = document.getElementById("main-title");
+
+                    const seqMap = raw.metas.reduce((acc, c) => {
+                        const s = (c.sub_anillo || c.secuencia || "").toUpperCase().trim();
+                        if (!s) return acc;
+                        if (!acc[s]) acc[s] = { gers: new Set(), marcs: new Set() };
+                        const gVal = c.gerente || c.gerente_regional || "";
+                        const mVal = c.marca || c.empresa || "";
+                        if (gVal) acc[s].gers.add(gVal.toUpperCase());
+                        if (mVal) acc[s].marcs.add(mVal.toUpperCase());
+                        return acc;
+                    }, {});
+
+                    const f_c = raw.contactos.filter(c => {
+                        const s = (c.secuencia || "").toUpperCase().trim();
+                        const d = c.fecha_iso;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mV = (v === "ALL" || (c.asignado || "").trim().toUpperCase() === v);
+                        const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mV && mA;
+                    });
+
+                    const f_o = raw.oportunidades.filter(o => {
+                        const s = (o.secuencia || "").toUpperCase().trim();
+                        const d = o.fecha_iso;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mV = (v === "ALL" || (o.asignado || "").trim().toUpperCase() === v);
+                        const mMes = (mes === "ALL" || String(o.mes) === String(mes));
+                        const mA = (anu === "ALL" || (o.anuncio || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mV && mMes && mA;
+                    });
+
+                    const f_fb = raw.facebook.filter(f => {
+                        const s = (f.secuencia || "").toUpperCase().trim();
+                        const d = f.dia;
+                        const mDate = (!start || d >= start) && (!end || d <= end);
+                        const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
+                        const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
+                        const mA = (anu === "ALL" || (f.codigo || "").toUpperCase() === anu);
+                        return mDate && mG && mM && mA;
+                    });
+
+                    const tGto = (v !== "ALL")
+                        ? f_c.reduce((a, c) => a + Number(c.costo_total || 0), 0)
+                        : f_fb.reduce((a, f) => a + Number(f.importe_gastado || 0), 0);
+
+                    const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
+                    const tLds = f_c.length;
+
+                    document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
+                    document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
+                    document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
+                    document.getElementById("kpi-roas").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
+
+                    if (v !== "ALL") {
+                        personalSection.classList.remove("hidden");
+                        mainTitle.classList.add("gradient-text");
+                        document.getElementById("display-name").innerText = v;
+                        document.getElementById("stat-monthly-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
+                        document.getElementById("stat-monthly-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
+
+                        const sDt = new Date(start + "T00:00:00");
+                        const eDt = new Date(end + "T23:59:59");
+                        const monthsInRange = [];
+                        let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
+                        while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
+
+                        const userMetas = raw.metas.filter(x => (x.vendedor || "").toUpperCase() === v && monthsInRange.includes(Number(x.mes)));
+                        const uMetaTotal = userMetas.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
+                        document.getElementById("stat-total-count").innerText = "Q" + Math.round(uMetaTotal).toLocaleString();
+
+                        document.getElementById("metric-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
+                        document.getElementById("metric-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
+                        const profit = (tVta * 0.10) - tGto;
+                        document.getElementById("metric-profit").innerText = "Q" + Math.round(profit).toLocaleString();
+
+                        const alcMeta = uMetaTotal > 0 ? (tVta / uMetaTotal) * 100 : 0;
+                        // Gasto vrs Venta: (Inversión / Ventas Totales) * 100
+                        document.getElementById("perc-expense-sales").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
+                        document.getElementById("perc-inv-profit").innerText = alcMeta.toFixed(1) + "%";
+                        document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
+
+                        const rankings = {};
+                        raw.oportunidades.filter(o => (!start || o.fecha_iso >= start) && (!end || o.fecha_iso <= end)).forEach(op => {
+                            const name = (op.asignado || "").toUpperCase().trim();
+                            if (name) rankings[name] = (rankings[name] || 0) + Number(op.valor_del_cliente_potencial || 0);
+                        });
+                        const sortedRank = Object.entries(rankings).sort((a,b) => b[1] - a[1]);
+                        const myRank = sortedRank.findIndex(r => r[0] === v) + 1;
+                        document.getElementById("user-rank-badge").innerText = `#${myRank || "?"} RANK`;
+
+                        const rankList = document.getElementById("ranking-list");
+                        rankList.innerHTML = "";
+                        sortedRank.slice(0, 5).forEach(([name, val], i) => {
+                            const isMe = name === v;
+                            const div = document.createElement("div");
+                            div.className = `flex items-center gap-4 p-4 rounded-2xl transition-all ${isMe ? 'active-rank scale-[1.05]' : 'bg-slate-50'}`;
+                            div.innerHTML = `
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${i===0?'bg-amber-500 text-slate-900':'bg-slate-700 text-white'}">${i+1}</div>
+                                <div class="flex-1 min-w-0"><div class="text-xs font-bold truncate">${isMe ? 'TÚ: ' : ''}${name}</div></div>
+                                <div class="text-right text-[10px] font-black text-emerald-400">Q${Math.round(val/1000)}k</div>
+                            `;
+                            rankList.appendChild(div);
+                        });
+                    } else {
+                        personalSection.classList.add("hidden");
+                        mainTitle.classList.remove("gradient-text");
+                    }
+
+                    render(f_o, f_c, f_fb, tVta, tGto, start, end);
+                } catch(e) { console.error(e); }
+            }
+
+            function render(fo, fc, ffb, tv, tg, start, end) {
+                const layout = { autosize: true, margin: {t:30, b:60, l:50, r:50}, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {size: 10} };
+                const config = { responsive: true };
+
+                const isVFiltered = document.getElementById("f-ven").value !== "ALL";
+                const activeV = document.getElementById("f-ven").value.toUpperCase();
+
+                const daily = {};
+                fc.forEach(c => {
+                    const d = c.fecha_iso || "N/A";
+                    if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
+                    daily[d].leads += 1;
+                    if (isVFiltered) daily[d].spend += Number(c.costo_total || 0);
+                });
+                if (!isVFiltered) {
+                    ffb.forEach(f => {
+                        const d = f.dia || "N/A";
+                        if(!daily[d]) daily[d] = { leads: 0, spend: 0 };
+                        daily[d].spend += Number(f.importe_gastado || 0);
+                    });
+                }
+                const sortedDays = Object.keys(daily).sort();
+
+                Plotly.newPlot("ch-leads", [
+                    { x: sortedDays, y: sortedDays.map(d => daily[d].spend), name: "Gasto (Q)", type: "bar", marker: {color: "#ef4444", opacity: 0.6} },
+                    { x: sortedDays, y: sortedDays.map(d => daily[d].leads), name: "Leads", type: "scatter", mode: "lines+markers", yaxis: "y2", line: {color: "#3b82f6", width:2} }
+                ], { ...layout, yaxis: { title: "Gasto (Q)" }, yaxis2: { title: "Leads", overlaying: "y", side: "right", showgrid: false }, showlegend: true, legend: { orientation: "h", y: -0.2 } }, config);
+
+                const vbm = fo.reduce((acc, c) => { const m = (c.marca || "OTRA").toUpperCase(); acc[m] = (acc[m] || 0) + Number(c.valor_del_cliente_potencial || 0); return acc; }, {});
+                const sortedM = Object.entries(vbm).sort((a,b) => b[1] - a[1]);
+                Plotly.newPlot("ch-marca", [{ labels: sortedM.map(x => x[0]), values: sortedM.map(x => x[1]), type: "pie", hole: .4, marker: { colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"] } }], { ...layout, showlegend: true }, config);
+
+                const sDt = new Date(start + "T00:00:00");
+                const eDt = new Date(end + "T23:59:59");
+                const monthsInRange = [];
+                let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
+                while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
+
+                const metasF = raw.metas.filter(x => {
+                    const mMes = monthsInRange.includes(Number(x.mes));
+                    const mV = (activeV === "ALL" || (x.vendedor || "").toUpperCase() === activeV);
+                    return mMes && mV;
+                });
+                const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
+
+                const diffMs = eDt - sDt;
+                const diffDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                let totalMonthDays = 0;
+                let monthCounter = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
+                while (monthCounter <= eDt) {
+                    if (monthsInRange.includes(monthCounter.getMonth() + 1)) {
+                        totalMonthDays += new Date(monthCounter.getFullYear(), monthCounter.getMonth() + 1, 0).getDate();
+                    }
+                    monthCounter.setMonth(monthCounter.getMonth() + 1);
+                }
+                if (totalMonthDays === 0) totalMonthDays = 30;
+                const trend = (tv / diffDays) * totalMonthDays;
+
+                const perc = tMeta > 0 ? (tv / tMeta) * 100 : 0;
+                Plotly.newPlot("ch-meta", [{
+                    domain: { x: [0, 1], y: [0, 1] },
+                    value: tv,
+                    title: { text: "Cumplimiento (Meta Global: Q" + Math.round(tMeta).toLocaleString() + ")" },
+                    type: "indicator",
+                    mode: "gauge+number",
+                    number: { prefix: "Q", valueformat: ",.0f" },
+                    gauge: {
+                        axis: { range: [0, Math.max(tMeta, tv * 1.2, trend * 1.1)] },
+                        bar: { color: "#10b981" },
+                        steps: [{ range: [0, tMeta], color: "#e2e8f0" }],
+                        threshold: { line: { color: "yellow", width: 6 }, thickness: 0.8, value: trend }
+                    }
+                }], { ...layout, annotations: [{
+                    x: 0.5, y: -0.1, xref: "paper", yref: "paper",
+                    text: "Tendencia: Q" + Math.round(trend).toLocaleString(),
+                    showarrow: false, font: { size: 12, color: "#f59e0b", weight: "bold" }
+                }] }, config);
+
+                const adData = {};
+                if (!isVFiltered) {
+                    ffb.forEach(f => {
+                        const a = (f.codigo || "SIN CODA").toUpperCase();
+                        if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                        adData[a].spend += Number(f.importe_gastado || 0);
+                    });
+                }
+                fc.forEach(c => {
+                    const a = (c.anuncio || "SIN CODA").toUpperCase();
+                    if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                    adData[a].leads += 1;
+                    if (isVFiltered) adData[a].spend += Number(c.costo_total || 0);
+                });
+                fo.forEach(o => {
+                    const a = (o.anuncio || "SIN CODA").toUpperCase();
+                    if (!adData[a]) adData[a] = { leads: 0, spend: 0, sales: 0 };
+                    adData[a].sales += Number(o.valor_del_cliente_potencial || 0);
+                });
+                const ads = Object.entries(adData).sort((a,b) => b[1].leads - a[1].leads).slice(0, 20);

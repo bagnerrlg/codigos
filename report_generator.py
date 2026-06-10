@@ -359,6 +359,12 @@ def cargar_metas(filepath, log_callback=None):
             df[col] = df[col].astype(str).str.strip().str.upper().replace("NAN", "").replace("NONE", "")
         # Normalizar nombres de columnas (SUB ANILLO -> SUB_ANILLO para JS)
         df.columns = [c.replace(" ", "_").replace("/", "_").replace("%", "PORC") for c in df.columns]
+
+        # Normalizar nombres de vendedores en metas usando VENDEDOR_MAP
+        v_col = next((c for c in df.columns if "VENDEDOR" in c.upper()), None)
+        if v_col:
+            df[v_col] = df[v_col].apply(lambda x: get_mapped_vendedor(x))
+
         return df
     except Exception as e:
         print(f"Error cargando metas: {e}")
@@ -791,9 +797,11 @@ class App(cctk.CTk):
                 for r in res_c:
                     r["anuncio"] = str(r.get("anuncio", "")).strip().upper()
                     r["secuencia"] = str(r.get("secuencia", "")).strip().upper()
+                    r["asignado"] = str(r.get("asignado", "")).strip().upper()
                 for r in res_o:
                     r["Anuncio"] = str(r.get("Anuncio", "")).strip().upper()
                     r["Secuencia"] = str(r.get("Secuencia", "")).strip().upper()
+                    r["asignado"] = str(r.get("asignado", "")).strip().upper()
 
                 # 1. Mapa de cruce: ID Contacto -> (Anuncio, Secuencia) para enriquecer ventas
                 c_map = {c['id']: (c.get('anuncio',''), c.get('secuencia','')) for c in res_c if c.get('id')}
@@ -912,33 +920,33 @@ class App(cctk.CTk):
                             <div class="flex-1 text-center md:text-left">
                                 <h2 id="display-name" class="text-3xl font-black text-slate-800">---</h2>
                                 <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-md border border-slate-200 uppercase tracking-widest mb-1">Agente Comercial</span>
-                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Venta Periodo</span><span id="stat-monthly-sales" class="text-lg font-bold text-blue-600">Q 0</span></div>
                                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Inversión</span><span id="stat-monthly-investment" class="text-lg font-bold text-rose-600">Q 0</span></div>
+                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Leads</span><span id="metric-leads-count" class="text-lg font-bold text-indigo-600">0</span></div>
                                     <div class="hidden md:block bg-slate-50 p-3 rounded-xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Q META</span><span id="stat-total-count" class="text-lg font-bold text-emerald-600">Q 0</span></div>
                                 </div>
                             </div>
                             <div id="user-rank-badge" class="rank-badge px-6 py-3 rounded-2xl text-lg font-black text-white italic">#? RANK</div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span><div id="metric-sales" class="text-2xl font-black mt-1 text-slate-800">Q 0.00</div></div>
-                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ganancia Est. (10%-Inv)</span><div id="metric-profit" class="text-2xl font-black mt-1 text-emerald-600">Q 0.00</div></div>
+                    <div class="grid grid-cols-1 gap-5">
+                        <div class="glass-card p-6"><span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Ventas Totales Realizadas</span><div id="metric-sales" class="text-3xl font-black mt-1 text-slate-800">Q 0.00</div></div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div class="glass-card p-6 flex items-center justify-between">
                             <div class="flex gap-4 items-center">
-                                <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center font-black text-blue-600 text-xl" id="perc-expense-sales">0.0</div>
-                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Gasto vrs Venta</h4><p class="text-xs text-blue-500 font-semibold mt-1">Marketing Efficiency</p></div>
+                                <div class="w-20 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center font-black text-blue-600 text-xl" id="perc-expense-sales">0%</div>
+                                <div><h4 class="text-sm font-bold uppercase text-slate-500">% Gasto vrs Venta</h4><p class="text-xs text-blue-500 font-semibold mt-1">Efficiency</p></div>
                             </div>
-                            <i class="fa-solid fa-circle-check text-slate-300 text-xl"></i>
+                            <i class="fa-solid fa-chart-line text-slate-200 text-2xl"></i>
                         </div>
                         <div class="glass-card p-6 flex items-center justify-between">
                             <div class="flex gap-4 items-center">
-                                <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center font-black text-emerald-600 text-xl" id="perc-inv-profit">0.0</div>
-                                <div><h4 class="text-sm font-bold uppercase text-slate-500">Alcance de la meta</h4><p class="text-xs text-emerald-600 font-semibold mt-1">Goal Achievement</p></div>
+                                <div class="w-20 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center font-black text-emerald-600 text-xl" id="perc-inv-profit">0%</div>
+                                <div><h4 class="text-sm font-bold uppercase text-slate-500">Alcance de la meta</h4><p class="text-xs text-emerald-600 font-semibold mt-1">Achievement</p></div>
                             </div>
-                            <i class="fa-solid fa-circle-exclamation text-slate-300 text-xl"></i>
+                            <i class="fa-solid fa-bullseye text-slate-200 text-2xl"></i>
                         </div>
                     </div>
                 </div>
@@ -1022,6 +1030,8 @@ class App(cctk.CTk):
                 } catch(e) { console.error(e); }
             }
 
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+
             function update() {
                 try {
                     const start = document.getElementById("f-start").value;
@@ -1039,10 +1049,10 @@ class App(cctk.CTk):
                         const s = (c.sub_anillo || c.secuencia || "").toUpperCase().trim();
                         if (!s) return acc;
                         if (!acc[s]) acc[s] = { gers: new Set(), marcs: new Set() };
-                        const gVal = c.gerente || c.gerente_regional || "";
-                        const mVal = c.marca || c.empresa || "";
-                        if (gVal) acc[s].gers.add(gVal.toUpperCase());
-                        if (mVal) acc[s].marcs.add(mVal.toUpperCase());
+                        const gVal = (c.gerente || c.gerente_regional || "").toUpperCase().trim();
+                        const mVal = (c.marca || c.empresa || "").toUpperCase().trim();
+                        if (gVal) acc[s].gers.add(gVal);
+                        if (mVal) acc[s].marcs.add(mVal);
                         return acc;
                     }, {});
 
@@ -1054,7 +1064,8 @@ class App(cctk.CTk):
                         const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
                         const mV = (v === "ALL" || (c.asignado || "").trim().toUpperCase() === v);
                         const mA = (anu === "ALL" || (c.anuncio || "").toUpperCase() === anu);
-                        return mDate && mG && mM && mV && mA;
+                        const mMes = (mes === "ALL" || String(c.mes) === String(mes));
+                        return mDate && mG && mM && mV && mA && mMes;
                     });
 
                     const f_o = raw.oportunidades.filter(o => {
@@ -1076,7 +1087,8 @@ class App(cctk.CTk):
                         const mG = (g === "ALL" || (seqMap[s] && seqMap[s].gers.has(g)));
                         const mM = (m === "ALL" || (seqMap[s] && seqMap[s].marcs.has(m)));
                         const mA = (anu === "ALL" || (f.codigo || "").toUpperCase() === anu);
-                        return mDate && mG && mM && mA;
+                        const mMes = (mes === "ALL" || String(f.mes) === String(mes));
+                        return mDate && mG && mM && mA && mMes;
                     });
 
                     const tGto = (v !== "ALL")
@@ -1086,17 +1098,17 @@ class App(cctk.CTk):
                     const tVta = f_o.reduce((a, c) => a + Number(c.valor_del_cliente_potencial || 0), 0);
                     const tLds = f_c.length;
 
-                    document.getElementById("kpi-gasto").innerText = "Q" + Math.round(tGto).toLocaleString();
-                    document.getElementById("kpi-leads").innerText = tLds.toLocaleString();
-                    document.getElementById("kpi-venta").innerText = "Q" + Math.round(tVta).toLocaleString();
-                    document.getElementById("kpi-roas").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
+                    setVal("kpi-gasto", "Q" + Math.round(tGto).toLocaleString());
+                    setVal("kpi-leads", tLds.toLocaleString());
+                    setVal("kpi-venta", "Q" + Math.round(tVta).toLocaleString());
+                    setVal("kpi-roas", tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%");
 
                     if (v !== "ALL") {
-                        personalSection.classList.remove("hidden");
-                        mainTitle.classList.add("gradient-text");
-                        document.getElementById("display-name").innerText = v;
-                        document.getElementById("stat-monthly-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
-                        document.getElementById("stat-monthly-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
+                        if (personalSection) personalSection.classList.remove("hidden");
+                        if (mainTitle) mainTitle.classList.add("gradient-text");
+                        setVal("display-name", v);
+                        setVal("stat-monthly-sales", "Q" + Math.round(tVta).toLocaleString());
+                        setVal("stat-monthly-investment", "Q" + Math.round(tGto).toLocaleString());
 
                         const sDt = new Date(start + "T00:00:00");
                         const eDt = new Date(end + "T23:59:59");
@@ -1104,29 +1116,39 @@ class App(cctk.CTk):
                         let curr = new Date(sDt.getFullYear(), sDt.getMonth(), 1);
                         while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
 
-                        const userMetas = raw.metas.filter(x => (x.vendedor || "").toUpperCase() === v && monthsInRange.includes(Number(x.mes)));
+                        const userMetas = raw.metas.filter(x => {
+                            const vMatch = (x.vendedor || "").toUpperCase() === v;
+                            const mInRange = monthsInRange.includes(Number(x.mes));
+                            const mSelect = (mes === "ALL" || String(x.mes) === String(mes));
+                            return vMatch && mInRange && mSelect;
+                        });
                         const uMetaTotal = userMetas.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
-                        document.getElementById("stat-total-count").innerText = "Q" + Math.round(uMetaTotal).toLocaleString();
+                        setVal("stat-total-count", "Q" + Math.round(uMetaTotal).toLocaleString());
 
-                        document.getElementById("metric-sales").innerText = "Q" + Math.round(tVta).toLocaleString();
-                        document.getElementById("metric-investment").innerText = "Q" + Math.round(tGto).toLocaleString();
-                        const profit = (tVta * 0.10) - tGto;
-                        document.getElementById("metric-profit").innerText = "Q" + Math.round(profit).toLocaleString();
+                        setVal("metric-sales", "Q" + Math.round(tVta).toLocaleString());
+                        setVal("metric-investment", "Q" + Math.round(tGto).toLocaleString());
+                        setVal("metric-leads-count", tLds.toLocaleString());
 
                         const alcMeta = uMetaTotal > 0 ? (tVta / uMetaTotal) * 100 : 0;
-                        // Gasto vrs Venta: (Inversión / Ventas Totales) * 100
-                        document.getElementById("perc-expense-sales").innerText = tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%";
-                        document.getElementById("perc-inv-profit").innerText = alcMeta.toFixed(1) + "%";
-                        document.getElementById("user-avatar").src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
+                        setVal("perc-expense-sales", tVta > 0 ? ((tGto / tVta) * 100).toFixed(1) + "%" : "0.0%");
+                        setVal("perc-inv-profit", alcMeta.toFixed(1) + "%");
+                        const av = document.getElementById("user-avatar"); if(av) av.src = `https://i.pravatar.cc/300?u=${encodeURIComponent(v)}`;
 
                         const rankings = {};
-                        raw.oportunidades.filter(o => (!start || o.fecha_iso >= start) && (!end || o.fecha_iso <= end)).forEach(op => {
+                        raw.oportunidades.filter(o => {
+                            const d = o.fecha_iso;
+                            const mDate = (!start || d >= start) && (!end || d <= end);
+                            const mMes = (mes === "ALL" || String(o.mes) === String(mes));
+                            const mG = (g === "ALL" || (seqMap[o.secuencia] && seqMap[o.secuencia].gers.has(g)));
+                            const mM = (m === "ALL" || (o.marca || "").toUpperCase() === m || (seqMap[o.secuencia] && seqMap[o.secuencia].marcs.has(m)));
+                            return mDate && mMes && mG && mM;
+                        }).forEach(op => {
                             const name = (op.asignado || "").toUpperCase().trim();
                             if (name) rankings[name] = (rankings[name] || 0) + Number(op.valor_del_cliente_potencial || 0);
                         });
                         const sortedRank = Object.entries(rankings).sort((a,b) => b[1] - a[1]);
                         const myRank = sortedRank.findIndex(r => r[0] === v) + 1;
-                        document.getElementById("user-rank-badge").innerText = `#${myRank || "?"} RANK`;
+                        setVal("user-rank-badge", `#${myRank || "?"} RANK`);
 
                         const rankList = document.getElementById("ranking-list");
                         rankList.innerHTML = "";
@@ -1189,9 +1211,12 @@ class App(cctk.CTk):
                 while (curr <= eDt) { monthsInRange.push(curr.getMonth() + 1); curr.setMonth(curr.getMonth() + 1); }
 
                 const metasF = raw.metas.filter(x => {
-                    const mMes = monthsInRange.includes(Number(x.mes));
+                    const mMesInRange = monthsInRange.includes(Number(x.mes));
+                    const mMesSelect = (document.getElementById("f-mes").value === "ALL" || String(x.mes) === String(document.getElementById("f-mes").value));
                     const mV = (activeV === "ALL" || (x.vendedor || "").toUpperCase() === activeV);
-                    return mMes && mV;
+                    const mG = (document.getElementById("f-ger").value.toUpperCase() === "ALL" || (x.gerente || x.gerente_regional || "").toUpperCase() === document.getElementById("f-ger").value.toUpperCase());
+                    const mM = (document.getElementById("f-mar").value.toUpperCase() === "ALL" || (x.marca || x.empresa || "").toUpperCase() === document.getElementById("f-mar").value.toUpperCase());
+                    return mMesInRange && mMesSelect && mV && mG && mM;
                 });
                 const tMeta = metasF.reduce((a, c) => a + Number(c.metas_valor || c.meta || c.metas || 0), 0);
 
@@ -1209,6 +1234,7 @@ class App(cctk.CTk):
                 const trend = (tv / diffDays) * totalMonthDays;
 
                 const perc = tMeta > 0 ? (tv / tMeta) * 100 : 0;
+                setVal("kpi-meta", perc.toFixed(0) + "%");
                 Plotly.newPlot("ch-meta", [{
                     domain: { x: [0, 1], y: [0, 1] },
                     value: tv,
