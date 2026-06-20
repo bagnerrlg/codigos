@@ -1,6 +1,12 @@
 /**
  * META EXPERT - LANZADOR DE PUBLICIDAD INTEGRADO (CLOUDFLARE WORKER)
  * Versión Unificada: Interfaz Visual + Lógica de Automatización
+ *
+ * VARIABLES DE ENTORNO REQUERIDAS EN CLOUDFLARE:
+ * - META_ACCESS_TOKEN: Token de acceso de Facebook Ads.
+ * - OPENAI_API_KEY: Key de OpenAI para generación de copy.
+ * - AD_ACCOUNT_ID: ID de la cuenta de anuncios (ej: 123456789).
+ * - WHATSAPP_1 a WHATSAPP_5: Números de WhatsApp con código de país (ej: 50212345678).
  */
 
 const API_VERSION = "v19.0";
