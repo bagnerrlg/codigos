@@ -14,10 +14,14 @@ const FIXED_TEXT = "📲 ¡Escríbenos ahora y recibe tu cotización con promoci
 
 // --- HANDLERS DE API (LOGICA DE NEGOCIO) ---
 
-function getAdAccId(env) {
-  let id = (env.AD_ACCOUNT_ID || "").trim();
+function getAdAccId(env, bodyId) {
+  let id = (bodyId || env.AD_ACCOUNT_ID || "").trim();
   if (!id) return null;
   return id.startsWith("act_") ? id : "act_" + id;
+}
+
+function getToken(env, bodyToken) {
+  return bodyToken || env.META_ACCESS_TOKEN;
 }
 
 function validateImageBytes(bytes) {
@@ -40,14 +44,16 @@ function validateImageBytes(bytes) {
   return jpeg || png;
 }
 
-async function handleGetAccounts(env) {
-  const r = await fetch(`https://graph.facebook.com/${API_VERSION}/me/accounts?access_token=${env.META_ACCESS_TOKEN}&limit=100`);
+async function handleGetAccounts(body, env) {
+  const token = getToken(env, body.access_token);
+  const r = await fetch(`https://graph.facebook.com/${API_VERSION}/me/accounts?access_token=${token}&limit=100`);
   const d = await r.json();
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
 async function handleMetaSearch(body, env) {
-  const url = `https://graph.facebook.com/${API_VERSION}/search?type=${body.type}&q=${encodeURIComponent(body.q)}&access_token=${env.META_ACCESS_TOKEN}&limit=10`;
+  const token = getToken(env, body.access_token);
+  const url = `https://graph.facebook.com/${API_VERSION}/search?type=${body.type}&q=${encodeURIComponent(body.q)}&access_token=${token}&limit=10`;
   const r = await fetch(url);
   const d = await r.json();
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
@@ -87,7 +93,8 @@ async function handleOpenAIGenerate(body, env) {
     };
     payload[kMsgs] = aiMessages;
 
-    const authHeader = "Bearer " + env.OPENAI_API_KEY;
+    const openAiKey = body.openai_api_key || env.OPENAI_API_KEY;
+    const authHeader = "Bearer " + openAiKey;
     const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -118,24 +125,27 @@ async function handleOpenAIGenerate(body, env) {
 }
 
 async function handleGetInsights(body, env) {
-  const accId = body.id || getAdAccId(env);
-  const url = `https://graph.facebook.com/${API_VERSION}/${accId}/insights?level=${body.level}&date_preset=${body.range}&fields=spend,clicks,impressions,reach&access_token=${env.META_ACCESS_TOKEN}`;
+  const accId = getAdAccId(env, body.ad_account_id);
+  const token = getToken(env, body.access_token);
+  const url = `https://graph.facebook.com/${API_VERSION}/${accId}/insights?level=${body.level}&date_preset=${body.range}&fields=spend,clicks,impressions,reach&access_token=${token}`;
   const r = await fetch(url);
   const d = await r.json();
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
 
-async function handleGetActiveCampaigns(env) {
-  const accId = getAdAccId(env);
+async function handleGetActiveCampaigns(body, env) {
+  const accId = getAdAccId(env, body.ad_account_id);
+  const token = getToken(env, body.access_token);
   if (!accId) return new Response(JSON.stringify({ error: "AD_ACCOUNT_ID no configurada" }), { status: 400 });
-  const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${accId}/campaigns?fields=name,status,objective,buying_type&access_token=${env.META_ACCESS_TOKEN}&limit=100`);
+  const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${accId}/campaigns?fields=name,status,objective,buying_type&access_token=${token}&limit=100`);
   const d = await r.json();
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
 async function handleGetAdSets(body, env) {
   const campaignId = body.campaignId;
+  const token = getToken(env, body.access_token);
 
   const url =
     `https://graph.facebook.com/${API_VERSION}/${campaignId}/adsets` +
@@ -145,7 +155,7 @@ async function handleGetAdSets(body, env) {
     `bid_amount,daily_budget,lifetime_budget,` +
     `targeting,promoted_object,` +
     `destination_type,attribution_spec` +
-    `&access_token=${env.META_ACCESS_TOKEN}` +
+    `&access_token=${token}` +
     `&limit=100`;
 
   const r = await fetch(url);
@@ -163,13 +173,14 @@ async function handleGetAdSets(body, env) {
 
 async function handleGetAds(body, env) {
   const adsetId = body.adsetId;
+  const token = getToken(env, body.access_token);
 
   const url =
     `https://graph.facebook.com/${API_VERSION}/${adsetId}/ads` +
     `?fields=` +
     `id,name,status,` +
     `creative{id,name,object_story_spec,image_url,thumbnail_url}` +
-    `&access_token=${env.META_ACCESS_TOKEN}` +
+    `&access_token=${token}` +
     `&limit=100`;
 
   const r = await fetch(url);
@@ -185,10 +196,11 @@ async function handleGetAds(body, env) {
   );
 }
 
-async function handleGetCustomAudiences(env) {
-  const accId = getAdAccId(env);
+async function handleGetCustomAudiences(body, env) {
+  const accId = getAdAccId(env, body.ad_account_id);
+  const token = getToken(env, body.access_token);
   if (!accId) return new Response(JSON.stringify({ error: "AD_ACCOUNT_ID no configurada" }), { status: 400 });
-  const url = `https://graph.facebook.com/${API_VERSION}/${accId}/customaudiences?fields=name,description,approximate_count_lower_bound&access_token=${env.META_ACCESS_TOKEN}`;
+  const url = `https://graph.facebook.com/${API_VERSION}/${accId}/customaudiences?fields=name,description,approximate_count_lower_bound&access_token=${token}`;
   const r = await fetch(url);
   const d = await r.json();
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
@@ -196,7 +208,8 @@ async function handleGetCustomAudiences(env) {
 
 async function handleGetInstagramAccounts(body, env) {
   const pageId = body.pageId;
-  const url = `https://graph.facebook.com/${API_VERSION}/${pageId}?fields=instagram_business_account&access_token=${env.META_ACCESS_TOKEN}`;
+  const token = getToken(env, body.access_token);
+  const url = `https://graph.facebook.com/${API_VERSION}/${pageId}?fields=instagram_business_account&access_token=${token}`;
   const r = await fetch(url);
   const d = await r.json();
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
@@ -204,7 +217,8 @@ async function handleGetInstagramAccounts(body, env) {
 
 async function handleGetMessageTemplates(body, env) {
   const pageId = body.pageId;
-  const url = `https://graph.facebook.com/${API_VERSION}/${pageId}/message_templates?access_token=${env.META_ACCESS_TOKEN}`;
+  const token = getToken(env, body.access_token);
+  const url = `https://graph.facebook.com/${API_VERSION}/${pageId}/message_templates?access_token=${token}`;
   const r = await fetch(url);
   const d = await r.json();
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
@@ -212,7 +226,7 @@ async function handleGetMessageTemplates(body, env) {
 
 async function handleGetWhatsAppNumbers(body, env) {
   const pageId = body.pageId;
-  const token = env.META_ACCESS_TOKEN;
+  const token = getToken(env, body.access_token);
   try {
     const pRes = await fetch(`https://graph.facebook.com/${API_VERSION}/${pageId}?fields=whatsapp_business_account&access_token=${token}`);
     const pData = await pRes.json();
@@ -226,8 +240,8 @@ async function handleGetWhatsAppNumbers(body, env) {
   return new Response(JSON.stringify({ data: [] }), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleValidateSetup(env) {
-  const token = env.META_ACCESS_TOKEN;
+async function handleValidateSetup(body, env) {
+  const token = getToken(env, body.access_token);
   const results = {
     token: { status: 'ok', message: 'Verificando...' },
     account: { status: 'ok', message: 'Verificando...' },
@@ -252,7 +266,7 @@ async function handleValidateSetup(env) {
       }
     }
 
-    const finalAccId = getAdAccId(env);
+    const finalAccId = getAdAccId(env, body.ad_account_id);
     if (finalAccId) {
       const aRes = await fetch(`https://graph.facebook.com/${API_VERSION}/${finalAccId}?fields=account_status,disable_reason,currency&access_token=${token}`);
       const aData = await aRes.json();
@@ -272,12 +286,13 @@ async function handleValidateSetup(env) {
   }
 }
 
-async function handleCheckPermissions(env) {
-  return await handleValidateSetup(env);
+async function handleCheckPermissions(body, env) {
+  return await handleValidateSetup(body, env);
 }
 
-async function handleGetTokenInfo(env) {
-  const r = await fetch(`https://graph.facebook.com/debug_token?input_token=${env.META_ACCESS_TOKEN}&access_token=${env.META_ACCESS_TOKEN}`);
+async function handleGetTokenInfo(body, env) {
+  const token = getToken(env, body.access_token);
+  const r = await fetch(`https://graph.facebook.com/debug_token?input_token=${token}&access_token=${token}`);
   const d = await r.json();
   console.log("Resultado debug_token:", JSON.stringify(d));
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
@@ -285,10 +300,11 @@ async function handleGetTokenInfo(env) {
 
 async function handleUpdateStatus(body, env) {
   const { id, status } = body;
+  const token = getToken(env, body.access_token);
   const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, access_token: env.META_ACCESS_TOKEN })
+    body: JSON.stringify({ status, access_token: token })
   });
   const d = await r.json();
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
@@ -297,6 +313,7 @@ async function handleUpdateStatus(body, env) {
 async function handleDebugPost(body, env) {
 
   const postId = body.postId;
+  const token = getToken(env, body.access_token);
 
   const url =
     `https://graph.facebook.com/${API_VERSION}/${postId}` +
@@ -308,7 +325,7 @@ async function handleDebugPost(body, env) {
       "permalink_url",
       "created_time"
     ].join(",") +
-    `&access_token=${env.META_ACCESS_TOKEN}`;
+    `&access_token=${token}`;
 
   const r = await fetch(url);
 
@@ -360,9 +377,9 @@ function getCTA(channel) {
 async function handleGetFullReport(body, env) {
   try {
 
-    const acc = getAdAccId(env);
+    const acc = getAdAccId(env, body.ad_account_id);
     const { start, end } = body;
-    const token = env.META_ACCESS_TOKEN;
+    const token = getToken(env, body.access_token);
 
     const time_range = JSON.stringify({
       since: start,
@@ -756,6 +773,7 @@ async function handleGetFullReport(body, env) {
 async function handleDebugAdSet(body, env) {
 
   const adsetId = body.adsetId;
+  const token = getToken(env, body.access_token);
 
   const url =
     `https://graph.facebook.com/${API_VERSION}/${adsetId}` +
@@ -778,7 +796,7 @@ async function handleDebugAdSet(body, env) {
 
       "effective_status"
     ].join(",") +
-    `&access_token=${env.META_ACCESS_TOKEN}`;
+    `&access_token=${token}`;
 
   const r = await fetch(url);
 
@@ -795,7 +813,7 @@ async function handleDebugAdSet(body, env) {
 }
 async function handleResolveRegions(body, env) {
   const depts = body.depts || [];
-  const token = env.META_ACCESS_TOKEN;
+  const token = getToken(env, body.access_token);
   const promises = depts.map(async (dept) => {
     try {
       const r = await fetch(`https://graph.facebook.com/${API_VERSION}/search?type=adgeolocation&q=${encodeURIComponent(dept)}&location_types=['region']&access_token=${token}`);
@@ -826,8 +844,8 @@ async function handleResolveRegions(body, env) {
 async function handleUploadMedia(bodyJson, env) {
   const { fileName, fileType, base64 } = bodyJson;
   const isImg = (fileType || "").startsWith("image/");
-  const token = env.META_ACCESS_TOKEN;
-  const acc = getAdAccId(env);
+  const token = getToken(env, bodyJson.access_token);
+  const acc = getAdAccId(env, bodyJson.ad_account_id);
 
   try {
     console.log("Cuenta:", acc);
@@ -1053,8 +1071,8 @@ function normalizeObjective(objective) {
 
 async function handleCreateAdvancedAd(body, env) {
   const config = body.config;
-  const token = env.META_ACCESS_TOKEN;
-  const acc = getAdAccId(env);
+  const token = getToken(env, body.access_token);
+  const acc = getAdAccId(env, body.ad_account_id);
 
   console.log(`[Worker] Iniciando publicación en cuenta: ${acc}`);
   console.log(`[Worker] Config recibida:`, JSON.stringify(config, null, 2));
@@ -1221,7 +1239,7 @@ async function handleCreateAdvancedAd(body, env) {
 
       let promoted_object = {};
 
-      const WA_MAP = {
+    const WA_MAP = body.whatsapp_numbers || {
         WHATSAPP_1: env.WHATSAPP_1,
         WHATSAPP_2: env.WHATSAPP_2,
         WHATSAPP_3: env.WHATSAPP_3,
@@ -2105,15 +2123,15 @@ async function handleCreateAdvancedAd(body, env) {
 
 // --- INTERFAZ VISUAL ---
 
-function generateHTML(env) {
-  const meta_token = env.META_ACCESS_TOKEN ? "Configurado (oculto)" : "No configurado";
+function generateHTML(env, initialData = null) {
+  const meta_token = (initialData && initialData.access_token) ? "Sesión Dinámica (Landing)" : (env.META_ACCESS_TOKEN ? "Configurado (oculto)" : "No configurado");
   const openai_key = env.OPENAI_API_KEY ? "Configurado (oculto)" : "No configurado";
-  const ad_acc_id = env.AD_ACCOUNT_ID || "";
-  const whatsapp_1 = env.WHATSAPP_1 || "";
-  const whatsapp_2 = env.WHATSAPP_2 || "";
-  const whatsapp_3 = env.WHATSAPP_3 || "";
-  const whatsapp_4 = env.WHATSAPP_4 || "";
-  const whatsapp_5 = env.WHATSAPP_5 || "";
+  const ad_acc_id = (initialData && initialData.ad_account_id) || env.AD_ACCOUNT_ID || "";
+  const whatsapp_1 = (initialData && initialData.whatsapp_numbers && initialData.whatsapp_numbers.WHATSAPP_1) || env.WHATSAPP_1 || "";
+  const whatsapp_2 = (initialData && initialData.whatsapp_numbers && initialData.whatsapp_numbers.WHATSAPP_2) || env.WHATSAPP_2 || "";
+  const whatsapp_3 = (initialData && initialData.whatsapp_numbers && initialData.whatsapp_numbers.WHATSAPP_3) || env.WHATSAPP_3 || "";
+  const whatsapp_4 = (initialData && initialData.whatsapp_numbers && initialData.whatsapp_numbers.WHATSAPP_4) || env.WHATSAPP_4 || "";
+  const whatsapp_5 = (initialData && initialData.whatsapp_numbers && initialData.whatsapp_numbers.WHATSAPP_5) || env.WHATSAPP_5 || "";
 
   let html = `<!DOCTYPE html>
 <html lang="es">
@@ -2311,16 +2329,42 @@ function generateHTML(env) {
 
 <script>
     window.onerror = function(msg, url, line, col, error) { alert("Error en la App: " + msg + "\\nLínea: " + line); console.error(error); return false; };
+    window.INITIAL_DATA = JSON.parse('[INITIAL_DATA_JSON]');
     const DEPTS_GT = ["Alta Verapaz", "Baja Verapaz", "Chimaltenango", "Chiquimula", "El Progreso", "Escuintla", "Guatemala", "Huehuetenango", "Izabal", "Jalapa", "Jutiapa", "Petén", "Quetzaltenango", "Quiché", "Retalhuleu", "Sacatepéquez", "San Marcos", "Santa Rosa", "Sololá", "Suchitepéquez", "Totonicapán", "Zacapa"];
 
     function loadWhatsAppNumbers() {
       const wa = document.getElementById('wa-num');
-      wa.innerHTML = '<option value="">Seleccione número...</option>' +
-        '<option value="WHATSAPP_1">WhatsApp 1</option>' +
-        '<option value="WHATSAPP_2">WhatsApp 2</option>' +
-        '<option value="WHATSAPP_3">WhatsApp 3</option>' +
-        '<option value="WHATSAPP_4">WhatsApp 4</option>' +
-        '<option value="WHATSAPP_5">WhatsApp 5</option>';
+      wa.innerHTML = '<option value="">Seleccione número...</option>';
+
+      const numbers = {
+        WHATSAPP_1: document.getElementById('wa1').value,
+        WHATSAPP_2: document.getElementById('wa2').value,
+        WHATSAPP_3: document.getElementById('wa3').value,
+        WHATSAPP_4: document.getElementById('wa4').value,
+        WHATSAPP_5: document.getElementById('wa5').value
+      };
+
+      Object.keys(numbers).forEach(key => {
+        if (numbers[key] && numbers[key] !== "No configurado" && numbers[key] !== "") {
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.innerText = key.replace('_', ' ') + (numbers[key].length > 5 ? (' (' + numbers[key] + ')') : '');
+          wa.appendChild(opt);
+        }
+      });
+
+      if (wa.options.length > 1) {
+        wa.selectedIndex = 1;
+      }
+    }
+
+    function getSession() {
+      return {
+        access_token: INITIAL_DATA.access_token || "",
+        openai_api_key: INITIAL_DATA.openai_api_key || "",
+        ad_account_id: INITIAL_DATA.ad_account_id || "",
+        whatsapp_numbers: INITIAL_DATA.whatsapp_numbers || null
+      };
     }
 
     window.onload=async()=>{
@@ -2328,6 +2372,17 @@ function generateHTML(env) {
       document.getElementById('rep-start').value = today;
       document.getElementById('rep-end').value = today;
       document.getElementById('sd').value = today;
+
+      if (INITIAL_DATA.campaign_code) {
+        document.getElementById('cn').value = INITIAL_DATA.campaign_code;
+      }
+      if (INITIAL_DATA.ad_code) {
+        const adNameInput = document.getElementById('ad-name');
+        adNameInput.value = INITIAL_DATA.ad_code;
+        adNameInput.readOnly = true;
+        adNameInput.classList.add('bg-slate-100');
+      }
+
       loadWhatsAppNumbers();
       const dl = document.getElementById('dept-list');
       DEPTS_GT.forEach(dept => { const div = document.createElement('label'); div.className = 'flex items-center gap-2 bg-slate-100 p-2 rounded cursor-pointer hover:bg-slate-200 transition'; div.innerHTML = '<input type="checkbox" value="' + dept + '" class="dept-check"> <span class="text-[10px] font-bold">' + dept + '</span>'; dl.appendChild(div); });
@@ -2335,42 +2390,58 @@ function generateHTML(env) {
     };
 
     async function fetchAccounts() {
-      try { const r = await fetch('/api/get-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' } }); const d = await r.json(); const s = document.getElementById('pgs'); s.innerHTML = '<option value="">Página de Facebook...</option>'; if (d.data) { d.data.forEach(p => s.add(new Option(p.name, p.id))); } } catch (e) { console.error("Error fetching accounts:", e); }
+      try { const r = await fetch('/api/get-accounts', { method: 'POST', body: JSON.stringify(getSession()) }); const d = await r.json(); const s = document.getElementById('pgs'); s.innerHTML = '<option value="">Página de Facebook...</option>'; if (d.data) { d.data.forEach(p => s.add(new Option(p.name, p.id))); if (s.options.length > 1) { s.selectedIndex = 1; updatePageDetails(s.value); } } } catch (e) { console.error("Error fetching accounts:", e); }
     }
 
     async function fetchActiveCampaigns() {
       const sc = document.getElementById('sel-camp');
       sc.innerHTML = '<option value="">Cargando campañas...</option>';
-      try { const r = await fetch('/api/get-active-campaigns', { method: 'POST', headers: { 'Content-Type': 'application/json' } }); const d = await r.json(); sc.innerHTML = '<option value="NEW">+ Crear Nueva Campaña</option>'; if (d.data) d.data.forEach(c => sc.add(new Option(c.name, c.id))); } catch (e) { console.error("Error fetching campaigns:", e); }
+      try {
+        const r = await fetch('/api/get-active-campaigns', { method: 'POST', body: JSON.stringify(getSession()) });
+        const d = await r.json();
+        sc.innerHTML = '<option value="NEW">+ Crear Nueva Campaña</option>';
+        if (d.data) {
+          d.data.forEach(c => sc.add(new Option(c.name, c.id)));
+          if (INITIAL_DATA.campaign_code) {
+            for (let i=0; i<sc.options.length; i++) {
+              if (sc.options[i].text.startsWith(INITIAL_DATA.campaign_code)) {
+                sc.selectedIndex = i;
+                loadAdSets(sc.value);
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) { console.error("Error fetching campaigns:", e); }
     }
 
     async function fetchCustomAudiences() {
-      try { const r = await fetch('/api/get-custom-audiences', { method: 'POST', headers: { 'Content-Type': 'application/json' } }); const d = await r.json(); const sa = document.getElementById('sel-audience'); sa.innerHTML = '<option value="">+ Crear Público Manual</option>'; if (d.data) d.data.forEach(a => sa.add(new Option(a.name, a.id))); } catch (e) { console.error("Error fetching audiences:", e); }
+      try { const r = await fetch('/api/get-custom-audiences', { method: 'POST', body: JSON.stringify(getSession()) }); const d = await r.json(); const sa = document.getElementById('sel-audience'); sa.innerHTML = '<option value="">+ Crear Público Manual</option>'; if (d.data) d.data.forEach(a => sa.add(new Option(a.name, a.id))); } catch (e) { console.error("Error fetching audiences:", e); }
     }
 
     async function loadAdSets(campId) {
       const s = document.getElementById('sel-adset'); const campConfig = document.getElementById('camp-new-config');
       if (campId === "NEW" || !campId) { s.innerHTML = '<option value="NEW">+ Crear Nuevo Conjunto</option>'; campConfig.classList.toggle('hidden', campId !== "NEW"); return; }
       campConfig.classList.add('hidden'); s.innerHTML = '<option value="">Cargando conjuntos...</option>';
-      try { const r = await fetch('/api/get-adsets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaignId: campId }) }); const d = await r.json(); s.innerHTML = '<option value="NEW">+ Crear Nuevo Conjunto</option>'; if (d.data) d.data.forEach(as => s.add(new Option(as.name, as.id))); } catch (e) { console.error("Exception loadAdSets:", e); }
+      try { const r = await fetch('/api/get-adsets', { method: 'POST', body: JSON.stringify({ ...getSession(), campaignId: campId }) }); const d = await r.json(); s.innerHTML = '<option value="NEW">+ Crear Nuevo Conjunto</option>'; if (d.data) d.data.forEach(as => s.add(new Option(as.name, as.id))); } catch (e) { console.error("Exception loadAdSets:", e); }
     }
 
     async function loadAds(adsetId) {
       const s = document.getElementById('sel-ad'); const adsetConfig = document.getElementById('adset-new-config');
       if (adsetId === "NEW" || !adsetId) { s.innerHTML = '<option value="NEW">+ Crear Nuevo Anuncio</option>'; adsetConfig.classList.toggle('hidden', adsetId !== "NEW"); return; }
       adsetConfig.classList.add('hidden'); s.innerHTML = '<option value="">Cargando anuncios...</option>';
-      try { const r = await fetch('/api/get-ads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adsetId }) }); const d = await r.json(); s.innerHTML = '<option value="NEW">+ Crear Nuevo Anuncio</option>'; if (d.data) d.data.forEach(ad => s.add(new Option(ad.name, ad.id))); } catch (e) { console.error("Exception loadAds:", e); }
+      try { const r = await fetch('/api/get-ads', { method: 'POST', body: JSON.stringify({ ...getSession(), adsetId: adsetId }) }); const d = await r.json(); s.innerHTML = '<option value="NEW">+ Crear Nuevo Anuncio</option>'; if (d.data) d.data.forEach(ad => s.add(new Option(ad.name, ad.id))); } catch (e) { console.error("Exception loadAds:", e); }
     }
 
     async function loadAdDetails(adId) {
       if (adId === "NEW") return;
-      try { const r = await fetch('/api/get-ad-details', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adId }) }); const d = await r.json(); if (d.data) { document.getElementById('ad-name').value = d.data.name; document.getElementById('pt').value = d.data.creative?.object_story_spec?.link_data?.message || d.data.creative?.object_story_spec?.video_data?.message || ""; document.getElementById('hd').value = d.data.creative?.name || ""; } } catch (e) { console.error("Error loadAdDetails:", e); }
+      try { const r = await fetch('/api/get-ad-details', { method: 'POST', body: JSON.stringify({ ...getSession(), adId }) }); const d = await r.json(); if (d.data) { document.getElementById('ad-name').value = d.data.name; document.getElementById('pt').value = d.data.creative?.object_story_spec?.link_data?.message || d.data.creative?.object_story_spec?.video_data?.message || ""; document.getElementById('hd').value = d.data.creative?.name || ""; } } catch (e) { console.error("Error loadAdDetails:", e); }
     }
 
     async function updatePageDetails(pageId){
       if(!pageId) return;
       try {
-        const r1 = await fetch('/api/get-instagram-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pageId }) });
+        const r1 = await fetch('/api/get-instagram-accounts', { method: 'POST', body: JSON.stringify({ ...getSession(), pageId }) });
         const d1 = await r1.json();
         const sig = document.getElementById('sel-ig');
         sig.innerHTML = '<option value="">Perfil de Instagram...</option>';
@@ -2380,8 +2451,8 @@ function generateHTML(env) {
         const st = document.getElementById('sel-template');
         st.innerHTML = '<option value="">Cargando plantillas...</option>';
         const [r2, r3] = await Promise.all([
-          fetch('/api/get-message-templates', { method:'POST', headers: {'Content-Type':'application/json'}, body:JSON.stringify({pageId}) }),
-          fetch('/api/get-whatsapp-numbers', { method:'POST', headers: {'Content-Type':'application/json'}, body:JSON.stringify({pageId}) })
+          fetch('/api/get-message-templates', { method:'POST', body:JSON.stringify({ ...getSession(), pageId }) }),
+          fetch('/api/get-whatsapp-numbers', { method:'POST', body:JSON.stringify({ ...getSession(), pageId }) })
         ]);
         const d2 = await r2.json();
         st.innerHTML = '<option value="NEW">+ Crear Nueva Plantilla</option>';
@@ -2411,14 +2482,14 @@ function generateHTML(env) {
 
     async function toggleStatus(id, currentStatus){
       const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-      try { const r=await fetch('/api/update-status',{method:'POST',body:JSON.stringify({id, status:newStatus})}); const d=await r.json(); if(d.error) alert('Error: ' + d.error.message); loadDash(); } catch(e){ console.error("toggleStatus error:", e); }
+      try { const r=await fetch('/api/update-status',{method:'POST',body:JSON.stringify({ ...getSession(), id, status:newStatus})}); const d=await r.json(); if(d.error) alert('Error: ' + d.error.message); loadDash(); } catch(e){ console.error("toggleStatus error:", e); }
     }
 
     async function loadDash(){
       document.getElementById('ldr').classList.remove('hidden');
       const start = document.getElementById('rep-start').value; const end = document.getElementById('rep-end').value;
       try {
-        const r=await fetch('/api/get-full-report',{method:'POST',body:JSON.stringify({start, end})}); const d=await r.json(); if(d.error) { alert('Error: ' + d.error); return; }
+        const r=await fetch('/api/get-full-report',{method:'POST',body:JSON.stringify({ ...getSession(), start, end})}); const d=await r.json(); if(d.error) { alert('Error: ' + d.error); return; }
         const container = document.getElementById('dash-main'); container.innerHTML = '';
         d.data.forEach(camp => {
           const msgs = camp.metrics?.actions?.find(a => a.action_type === 'onsite_conversion.messaging_first_reply') || { value:0 };
@@ -2479,7 +2550,7 @@ function generateHTML(env) {
       try {
         const file = document.getElementById('fi').files[0]; let base64Image = null;
         if (file && file.type.startsWith('image/')) { base64Image = await new Promise((resolve) => { const reader = new FileReader(); reader.onload = e => resolve(e.target.result); reader.readAsDataURL(file); }); }
-        const r=await fetch('/api/openai-generate',{ method:'POST', body:JSON.stringify({ prompt: 'Genera un anuncio de Facebook Ads (Copywriting experto) para el producto: ' + document.getElementById('cn').value + '. Si hay una imagen, analízala para resaltar sus características.', image: base64Image }) });
+        const r=await fetch('/api/openai-generate',{ method:'POST', body:JSON.stringify({ ...getSession(), prompt: 'Genera un anuncio de Facebook Ads (Copywriting experto) para el producto: ' + document.getElementById('cn').value + '. Si hay una imagen, analízala para resaltar sus características.', image: base64Image }) });
         const d=await r.json();
         if (d.error) throw new Error(d.error);
         const aiMsg = d.choices && d.choices[0] && d.choices[0].message ? d.choices[0].message : null; if (!aiMsg || !aiMsg.content) throw new Error('No se recibió contenido de la IA');
@@ -2495,7 +2566,7 @@ function generateHTML(env) {
     async function checkPerms(){
       const ldr = document.getElementById('ldr'); ldr.classList.remove('hidden'); setLdr('Analizando Token y Cuenta...');
       try {
-        const [r1, r2] = await Promise.all([ fetch('/api/check-permissions', {method:'POST'}), fetch('/api/debug-token', {method:'POST'}) ]); const d1 = await r1.json(); const d2 = await r2.json();
+        const [r1, r2] = await Promise.all([ fetch('/api/check-permissions', {method:'POST', body: JSON.stringify(getSession())}), fetch('/api/debug-token', {method:'POST', body: JSON.stringify(getSession())}) ]); const d1 = await r1.json(); const d2 = await r2.json();
         let report = "--- REPORTE DE SALUD ---\\n\\n"; if(d1.token) report += 'TOKEN: ' + d1.token.status.toUpperCase() + ' - ' + d1.token.message + '\\n'; if(d1.account) report += 'CUENTA: ' + d1.account.status.toUpperCase() + ' - ' + d1.account.message + '\\n'; if(d2.data) { const expires = d2.data.expires_at ? new Date(d2.data.expires_at * 1000).toLocaleString() : "Nunca"; report += 'EXPIRA: ' + expires + '\\n'; report += 'TIPO: ' + d2.data.type + '\\n'; }
         ldr.classList.add('hidden'); alert(report);
       } catch(e) { ldr.classList.add('hidden'); alert('Error en verificación: ' + e.message); }
@@ -2504,15 +2575,17 @@ function generateHTML(env) {
     async function launchAd(){
       try {
         const isNewAd = document.getElementById('sel-ad').value === 'NEW'; const f=document.getElementById('fi').files[0]; const pageId = document.getElementById('pgs').value; const waNumber = document.getElementById('wa-num').value; const waChecked = document.getElementById('dest-wa').checked;
+        const adSetName = document.getElementById('asn').value;
+        if(document.getElementById('sel-adset').value === 'NEW' && !adSetName.trim()) { alert('El nombre del conjunto de anuncios es obligatorio.'); return; }
         if (waChecked && !waNumber) { alert('Seleccione un número de WhatsApp'); return; }
         if(isNewAd && !f) { alert('Debe subir una imagen o video para un anuncio nuevo.'); return; }
         if(!pageId) { alert('Seleccione una página emisora.'); return; }
         const ldr = document.getElementById('ldr'); const log = document.getElementById('ldr-log'); log.innerHTML = ''; ldr.classList.remove('hidden');
         setLdr('Verificando acceso a Meta...');
-        try { const vr = await fetch('/api/check-permissions', {method:'POST'}); const vd = await vr.json(); if(vd.token?.status === 'error') throw new Error('Token inválido: ' + vd.token.message); setLdr('Acceso validado correctamente.'); if(vd.account?.status === 'error') { setLdr('Aviso de Cuenta: ' + vd.account.message); if(!confirm('Aviso de Cuenta: ' + vd.account.message + '\\n¿Desea intentar publicar de todos modos?')) { ldr.classList.add('hidden'); return; } } } catch(ve) { setLdr('Error de validación: ' + ve.message); setTimeout(() => ldr.classList.add('hidden'), 3000); return; }
+        try { const vr = await fetch('/api/check-permissions', {method:'POST', body: JSON.stringify(getSession())}); const vd = await vr.json(); if(vd.token?.status === 'error') throw new Error('Token inválido: ' + vd.token.message); setLdr('Acceso validado correctamente.'); if(vd.account?.status === 'error') { setLdr('Aviso de Cuenta: ' + vd.account.message); if(!confirm('Aviso de Cuenta: ' + vd.account.message + '\\n¿Desea intentar publicar de todos modos?')) { ldr.classList.add('hidden'); return; } } } catch(ve) { setLdr('Error de validación: ' + ve.message); setTimeout(() => ldr.classList.add('hidden'), 3000); return; }
 
         let resolvedRegions = []; const depts = Array.from(document.querySelectorAll('.dept-check:checked')).map(c => c.value);
-        if(depts.length > 0) { setLdr("Resolviendo " + depts.length + " ubicaciones en Meta..."); try { const rr = await fetch('/api/resolve-regions', {method:'POST', body:JSON.stringify({depts})}); const rd = await rr.json(); resolvedRegions = rd.regions || []; setLdr("Ubicaciones resueltas: " + resolvedRegions.length); } catch(re) { setLdr('Error resolviendo ubicaciones: ' + re.message); } }
+        if(depts.length > 0) { setLdr("Resolviendo " + depts.length + " ubicaciones en Meta..."); try { const rr = await fetch('/api/resolve-regions', {method:'POST', body:JSON.stringify({ ...getSession(), depts })}); const rd = await rr.json(); resolvedRegions = rd.regions || []; setLdr("Ubicaciones resueltas: " + resolvedRegions.length); } catch(re) { setLdr('Error resolviendo ubicaciones: ' + re.message); } }
 
         let mediaId = null, mediaType = null;
         if(f) {
@@ -2520,14 +2593,18 @@ function generateHTML(env) {
           try {
             const base64 = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result.split(',')[1]); reader.onerror = reject; reader.readAsDataURL(f); });
             setLdr("Subiendo " + (f.size/1024/1024).toFixed(2) + "MB a Meta...");
-            const mr = await fetch('/api/upload-media', { method:'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileName: f.name, fileType: f.type, fileSize: f.size, base64: base64 }) });
+            const mr = await fetch('/api/upload-media', { method:'POST', body: JSON.stringify({ ...getSession(), fileName: f.name, fileType: f.type, fileSize: f.size, base64: base64 }) });
             const md = await mr.json(); if(md.error) throw new Error(md.error); mediaId = md.image_hash || md.video_id || md.id; mediaType = md.type; setLdr("Archivo subido exitosamente ID: " + mediaId);
           } catch(me) { setLdr('Error subiendo archivo: ' + me.message); setTimeout(() => ldr.classList.add('hidden'), 5000); return; }
         }
 
         setLdr('Publicando anuncio final en Meta...');
-        const config={ mediaId, mediaType, resolvedRegions, campaignId:document.getElementById('sel-camp').value, campaignName:document.getElementById('cn').value, objective:document.getElementById('ob').value, adSetId:document.getElementById('sel-adset').value, adSetName:document.getElementById('asn').value, budgetAmount:document.getElementById('ba').value, startDate:document.getElementById('sd').value, messagingDestinations: { messenger: document.getElementById('dest-msg').checked, instagram: document.getElementById('dest-ig').checked, whatsapp: document.getElementById('dest-wa').checked }, whatsappNumber: document.getElementById('wa-num').value, audienceId: document.getElementById('sel-audience').value, manualAudience: { depts: Array.from(document.querySelectorAll('.dept-check:checked')).map(c => c.value), ageMin: document.getElementById('ami').value, interests: document.getElementById('adsug').value }, platforms: { facebook: document.getElementById('plat-fb').checked, instagram: document.getElementById('plat-ig').checked, audience_network: document.getElementById('plat-an').checked, messenger: document.getElementById('plat-msg').checked }, adId: document.getElementById('sel-ad').value, adName: document.getElementById('ad-name').value, pageId: document.getElementById('pgs').value, instagramId: document.getElementById('sel-ig').value, format: document.getElementById('ad-format').value, templateId: document.getElementById('sel-template').value, newTemplate: { text: document.getElementById('tpl-text').value, response: document.getElementById('tpl-res').value }, primaryText:document.getElementById('pt').value, headline:document.getElementById('hd').value || document.getElementById('ad-name').value, status:'PAUSED' };
-        const r=await fetch('/api/create-advanced-ad',{ method:'POST', headers: {'Content-Type': 'application/json'}, body:JSON.stringify({config}) }); const res=await r.json();
+        const rawHeadline = document.getElementById('hd').value;
+        const adCode = INITIAL_DATA.ad_code || "";
+        const finalHeadline = rawHeadline ? (rawHeadline + " *" + adCode) : (document.getElementById('ad-name').value || adCode);
+
+        const config={ mediaId, mediaType, resolvedRegions, campaignId:document.getElementById('sel-camp').value, campaignName:document.getElementById('cn').value, objective:document.getElementById('ob').value, adSetId:document.getElementById('sel-adset').value, adSetName:document.getElementById('asn').value, budgetAmount:document.getElementById('ba').value, startDate:document.getElementById('sd').value, messagingDestinations: { messenger: document.getElementById('dest-msg').checked, instagram: document.getElementById('dest-ig').checked, whatsapp: document.getElementById('dest-wa').checked }, whatsappNumber: document.getElementById('wa-num').value, audienceId: document.getElementById('sel-audience').value, manualAudience: { depts: Array.from(document.querySelectorAll('.dept-check:checked')).map(c => c.value), ageMin: document.getElementById('ami').value, interests: document.getElementById('adsug').value }, platforms: { facebook: document.getElementById('plat-fb').checked, instagram: document.getElementById('plat-ig').checked, audience_network: document.getElementById('plat-an').checked, messenger: document.getElementById('plat-msg').checked }, adId: document.getElementById('sel-ad').value, adName: document.getElementById('ad-name').value, pageId: document.getElementById('pgs').value, instagramId: document.getElementById('sel-ig').value, format: document.getElementById('ad-format').value, templateId: document.getElementById('sel-template').value, newTemplate: { text: document.getElementById('tpl-text').value, response: document.getElementById('tpl-res').value }, primaryText:document.getElementById('pt').value, headline:finalHeadline, status:'PAUSED' };
+        const r=await fetch('/api/create-advanced-ad',{ method:'POST', body:JSON.stringify({ ...getSession(), config }) }); const res=await r.json();
         if(res.success){ setLdr('¡ÉXITO! Operación completada.'); setTimeout(() => { ldr.classList.add('hidden'); alert('¡ÉXITO! Campaña/Anuncio listo. ID: ' + res.adId); tab('dash'); loadDash(); }, 1500); } else { setLdr('Error Meta: ' + res.error); setTimeout(() => ldr.classList.add('hidden'), 5000); alert('ERROR: ' + res.error); }
       } catch(e) { console.error("Error fatal en launchAd:", e); alert('Error fatal: ' + e.message); const ldr = document.getElementById('ldr'); if(ldr) ldr.classList.add('hidden'); }
     }
@@ -2548,6 +2625,7 @@ function generateHTML(env) {
   html = html.replace('[WHATSAPP_3]', whatsapp_3);
   html = html.replace('[WHATSAPP_4]', whatsapp_4);
   html = html.replace('[WHATSAPP_5]', whatsapp_5);
+  html = html.replace('[INITIAL_DATA_JSON]', JSON.stringify(initialData || {}));
 
   return new Response(html, { headers: { "Content-Type": "text/html;charset=UTF-8" } });
 }
@@ -2559,68 +2637,61 @@ export default {
     const url = new URL(request.url);
     if (request.method === "GET") return generateHTML(env);
     if (request.method === "POST") {
-      if (url.pathname === "/api/get-accounts") return await handleGetAccounts(env);
-      if (url.pathname === "/api/search") {
+      if (url.pathname === "/" || url.pathname === "") {
         const b = await request.json();
+        return generateHTML(env, b);
+      }
+      const b = await request.json();
+      if (url.pathname === "/api/get-accounts") return await handleGetAccounts(b, env);
+      if (url.pathname === "/api/search") {
         return await handleMetaSearch(b, env);
       }
       if (url.pathname === "/api/openai-generate") {
-        const b = await request.json();
         return await handleOpenAIGenerate(b, env);
       }
       if (url.pathname === "/api/get-insights") {
-        const b = await request.json();
         return await handleGetInsights(b, env);
       }
-      if (url.pathname === "/api/get-active-campaigns") return await handleGetActiveCampaigns(env);
+      if (url.pathname === "/api/get-active-campaigns") return await handleGetActiveCampaigns(b, env);
       if (url.pathname === "/api/get-adsets") {
-        const b = await request.json();
         return await handleGetAdSets(b, env);
       }
       if (url.pathname === "/api/get-ads") {
-        const b = await request.json();
         return await handleGetAds(b, env);
       }
       if (url.pathname === "/api/debug-post") {
-        const b = await request.json();
         return await handleDebugPost(b, env);
       }
-      if (url.pathname === "/api/get-custom-audiences") return await handleGetCustomAudiences(env);
+      if (url.pathname === "/api/get-custom-audiences") return await handleGetCustomAudiences(b, env);
       if (url.pathname === "/api/get-instagram-accounts") {
-        const b = await request.json();
         return await handleGetInstagramAccounts(b, env);
       }
       if (url.pathname === "/api/get-message-templates") {
-        const b = await request.json();
         return await handleGetMessageTemplates(b, env);
       }
       if (url.pathname === "/api/get-whatsapp-numbers") {
-        const b = await request.json();
         return await handleGetWhatsAppNumbers(b, env);
       }
-      if (url.pathname === "/api/check-permissions") return await handleCheckPermissions(env);
-      if (url.pathname === "/api/debug-token") return await handleGetTokenInfo(env);
+      if (url.pathname === "/api/check-permissions") return await handleCheckPermissions(b, env);
+      if (url.pathname === "/api/debug-token") return await handleGetTokenInfo(b, env);
       if (url.pathname === "/api/update-status") {
-        const b = await request.json();
         return await handleUpdateStatus(b, env);
       }
       if (url.pathname === "/api/get-full-report") {
-        const b = await request.json();
         return await handleGetFullReport(b, env);
       }
       if (url.pathname === "/api/debug-adset") {
-        const b = await request.json();
         return await handleDebugAdSet(b, env);
       }
       if (url.pathname === "/api/get-ad-details") {
-        const b = await request.json();
-        const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${b.adId}?fields=name,status,creative{id,name,object_story_spec}&access_token=${env.META_ACCESS_TOKEN}`);
+        const token = getToken(env, b.access_token);
+        const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${b.adId}?fields=name,status,creative{id,name,object_story_spec}&access_token=${token}`);
         const d = await r.json();
         return new Response(JSON.stringify({ data: d }), { headers: { "Content-Type": "application/json" } });
       }
-      if (url.pathname === "/api/resolve-regions") return await handleResolveRegions(await request.json(), env);
-      if (url.pathname === "/api/upload-media") return await handleUploadMedia(await request.json(), env);
-      if (url.pathname === "/api/create-advanced-ad") return await handleCreateAdvancedAd(await request.json(), env);
+      if (url.pathname === "/api/resolve-regions") return await handleResolveRegions(b, env);
+      if (url.pathname === "/api/upload-media") return await handleUploadMedia(b, env);
+      if (url.pathname === "/api/create-advanced-ad") return await handleCreateAdvancedAd(b, env);
     }
     return new Response("Not Found", { status: 404 });
   }
