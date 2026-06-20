@@ -345,10 +345,11 @@ function getCTA(channel) {
 
   };
 
-  return CTA_MAP[channel] || {
+  const result = CTA_MAP[channel] || {
     type: "MESSAGE_PAGE"
   };
-
+  console.log(`[Worker] getCTA(${channel}) ->`, JSON.stringify(result));
+  return result;
 }
 async function handleGetFullReport(body, env) {
   try {
@@ -1050,6 +1051,7 @@ async function handleCreateAdvancedAd(body, env) {
   const acc = getAdAccId(env);
 
   console.log(`[Worker] Iniciando publicación en cuenta: ${acc}`);
+  console.log(`[Worker] Config recibida:`, JSON.stringify(config, null, 2));
 
   // Audit permissions again in logs
   try {
@@ -1158,6 +1160,9 @@ async function handleCreateAdvancedAd(body, env) {
 
     if (config.messagingDestinations?.whatsapp)
       destinations.push("WHATSAPP");
+
+    console.log(`[Worker] Destinations detectados:`, destinations);
+
     destinationType = "MESSENGER";
 
     if (destinations.length === 1) {
@@ -1208,6 +1213,9 @@ async function handleCreateAdvancedAd(body, env) {
         "MESSAGING_MESSENGER_WHATSAPP";
 
     }
+
+    console.log(`[Worker] destinationType final: ${destinationType}`);
+
     if (adSetId === "NEW") {
 
       let promoted_object = {};
@@ -1382,7 +1390,10 @@ async function handleCreateAdvancedAd(body, env) {
       console.log(
         `[Worker] Conjunto creado correctamente: ${adSetId}`
       );
+    }
 
+    // Debug AdSet info always (NEW or EXISTING)
+    try {
       const adSetInfo = await fetch(
         `https://graph.facebook.com/${API_VERSION}/${adSetId}` +
         `?fields=id,name,destination_type,promoted_object` +
@@ -1390,9 +1401,11 @@ async function handleCreateAdvancedAd(body, env) {
       ).then(r => r.json());
 
       console.log(
-        "[FULL ADSET INFO]",
+        "[Worker] INFO ADSET ACTUAL EN META:",
         JSON.stringify(adSetInfo, null, 2)
       );
+    } catch (e) {
+      console.error("[Worker] Error consultando info del AdSet:", e.message);
     }
 
     let creativeId;
@@ -1459,6 +1472,8 @@ async function handleCreateAdvancedAd(body, env) {
           "MESSAGING_INSTAGRAM_DIRECT_MESSENGER",
           "MESSAGING_INSTAGRAM_DIRECT_MESSENGER_WHATSAPP"
         ].includes(destinationType);
+
+      console.log(`[Worker] isMultiDestination: ${isMultiDestination}`);
 
       const cb = {
 
@@ -1550,7 +1565,9 @@ async function handleCreateAdvancedAd(body, env) {
 
           // ← AGREGAR ESTO
           // quitar CTA fija para permitir DOF
-          delete cb.object_story_spec.link_data.call_to_action;
+          if (cb.object_story_spec.link_data) {
+            delete cb.object_story_spec.link_data.call_to_action;
+          }
 
           // PERO conservar link porque Meta lo exige
           cb.object_story_spec.link_data.link =
@@ -1704,12 +1721,17 @@ async function handleCreateAdvancedAd(body, env) {
         };
 
         // SINGLE DESTINATION
-
         if (!isMultiDestination) {
+      const cta =
+        destinationType === "WHATSAPP"
+          ? getCTA("whatsapp")
+          : destinationType === "MESSENGER"
+            ? getCTA("messenger")
+            : destinationType === "INSTAGRAM_DIRECT"
+              ? getCTA("instagram")
+              : getCTA("messenger");
 
-          cb.object_story_spec.video_data.call_to_action =
-            getCTA(config.channel);
-
+      cb.object_story_spec.video_data.call_to_action = cta;
         }
 
         // MULTI DESTINATION
@@ -1718,12 +1740,15 @@ async function handleCreateAdvancedAd(body, env) {
 
           // IMPORTANTE:
           // quitar CTA fija
-          delete cb.object_story_spec.link_data.call_to_action;
+          if (cb.object_story_spec.video_data) {
+            delete cb.object_story_spec.video_data.call_to_action;
+          }
 
           // IMPORTANTE:
-          // mantener link
-          cb.object_story_spec.link_data.link =
-            `https://facebook.com/${config.pageId}`;
+          // mantener link. Para DOF, Meta a veces requiere link_data incluso en videos
+          cb.object_story_spec.link_data = {
+            link: `https://facebook.com/${config.pageId}`
+          };
 
           cb.object_story_spec.link_data.page_welcome_message =
             JSON.stringify({
@@ -1891,6 +1916,7 @@ async function handleCreateAdvancedAd(body, env) {
           2
         )
       );
+      console.log("[Worker] Payload completo para AdCreative:", JSON.stringify(cb, null, 2));
       const ctr = await fetch(
         `https://graph.facebook.com/${API_VERSION}/${acc}/adcreatives`,
         {
@@ -1903,6 +1929,7 @@ async function handleCreateAdvancedAd(body, env) {
       );
 
       const creativeRaw = await ctr.text();
+      console.log("[Worker] Respuesta de Meta AdCreative (Raw):", creativeRaw);
 
       let ctrd = {};
 
@@ -1942,42 +1969,31 @@ async function handleCreateAdvancedAd(body, env) {
       }
 
       creativeId = ctrd.id;
-
-const inspect = await fetch(
-  `https://graph.facebook.com/${API_VERSION}/${creativeId}` +
-  `?fields=id,object_story_spec,asset_feed_spec,degrees_of_freedom_spec` +
-  `&access_token=${token}`
-);
-
-      const inspectText = await inspect.text();
-
-      console.log(
-        "[CREATIVE META RESPONSE]",
-        inspectText
-      );
-
-      console.log(
-        `[Worker] AdCreative creado: ${creativeId}`
-      );
+      console.log(`[Worker] AdCreative creado: ${creativeId}`);
     }
+
     if (!creativeId && config.adId === "NEW") {
+      throw new Error("creativeId vacío");
+    }
 
-      throw new Error(
-        "creativeId vacío"
+    // Inspect Creative to get DOF spec
+    let creativeInspectData = {};
+    try {
+      const creativeInspect = await fetch(
+        `https://graph.facebook.com/${API_VERSION}/${creativeId}` +
+        `?fields=id,object_story_spec,asset_feed_spec,degrees_of_freedom_spec` +
+        `&access_token=${token}`
       );
-
-    } const creativeInspect = await fetch(
-      `https://graph.facebook.com/${API_VERSION}/${creativeId}` +
-      `?fields=id,object_story_spec,degrees_of_freedom_spec` +
-      `&access_token=${token}`
-    );
-
-    const creativeInspectData =
-      await creativeInspect.json();
+      creativeInspectData = await creativeInspect.json();
+      console.log("[Worker] INFO CREATIVE ACTUAL EN META:", JSON.stringify(creativeInspectData, null, 2));
+    } catch (e) {
+      console.error("[Worker] Error consultando info del Creative:", e.message);
+    }
 
 
     if (config.adId !== "NEW") {
       console.log(`[Worker] Actualizando Anuncio existente: ${config.adId}`);
+      console.log(`[Worker] adSetId para update: ${adSetId}`);
       const adBody = {
         name: config.adName,
         adset_id: adSetId,
@@ -2038,6 +2054,7 @@ const inspect = await fetch(
           token
       };
 
+      console.log("[Worker] Payload para crear Anuncio:", JSON.stringify(adBody, null, 2));
       const adr = await fetch(
         `https://graph.facebook.com/${API_VERSION}/${acc}/ads`,
         {
@@ -2050,6 +2067,7 @@ const inspect = await fetch(
       );
 
       const res = await adr.json();
+      console.log("[Worker] Respuesta de Meta Ad (JSON):", JSON.stringify(res, null, 2));
 
       if (
         !adr.ok ||
