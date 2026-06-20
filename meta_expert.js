@@ -1169,22 +1169,17 @@ async function handleCreateAdvancedAd(body, env) {
 
     console.log(`[Worker] Destinations detectados:`, destinations);
 
-    destinationType = "MESSENGER";
-
-    if (destinations.length === 1) {
-
+    // Prioridad y mapeo de destination_type
+    if (destinations.length === 0) {
+      destinationType = "MESSENGER";
+    } else if (destinations.length === 1) {
       if (destinations[0] === "INSTAGRAM_DIRECT") {
-
-        destinationType =
-          "MESSAGING_INSTAGRAM_DIRECT";
-
+        destinationType = "MESSAGING_INSTAGRAM_DIRECT";
+      } else if (destinations[0] === "WHATSAPP") {
+        destinationType = "WHATSAPP";
       } else {
-
-        destinationType =
-          destinations[0];
-
+        destinationType = "MESSENGER";
       }
-
     }
     else if (destinations.length === 3) {
 
@@ -1234,8 +1229,8 @@ async function handleCreateAdvancedAd(body, env) {
         WHATSAPP_5: env.WHATSAPP_5
       };
 
-      const whatsappNumber =
-        WA_MAP[config.whatsappNumber] || null;
+      let whatsappNumber =
+        WA_MAP[config.whatsappNumber] || config.whatsappNumber || null;
 
       console.log(
         "[WHATSAPP MAP]",
@@ -1249,11 +1244,11 @@ async function handleCreateAdvancedAd(body, env) {
         destinations.includes("WHATSAPP") &&
         whatsappNumber
       ) {
-
-        promoted_object.whatsapp_phone_number =
-          String(whatsappNumber)
-            .replace(/\D/g, "");
-
+        // Asegurar que sea solo números
+        const cleanNumber = String(whatsappNumber).replace(/\D/g, "");
+        if (cleanNumber) {
+          promoted_object.whatsapp_phone_number = cleanNumber;
+        }
       }
 
       // custom_event_type ANTES de validar vacío
@@ -1531,53 +1526,28 @@ async function handleCreateAdvancedAd(body, env) {
             destinations
           }, null, 2)
         );
-        // SINGLE DESTINATION
-        if (!isMultiDestination) {
+    // Asignar link y CTA base
+    cb.object_story_spec.link_data.link =
+      destinationLink || `https://facebook.com/${config.pageId}`;
 
-          cb.object_story_spec.link_data.link =
-            destinationLink;
+    // Determinar CTA primaria (sirve de fallback en multi-destino)
+    const primaryCTA =
+      destinationType === "WHATSAPP"
+        ? getCTA("whatsapp")
+        : (destinations.includes("WHATSAPP") ? getCTA("whatsapp") : getCTA("messenger"));
 
-          console.log(
-            "[CTA INPUT]",
-            JSON.stringify({
-              channel: config.channel,
-              destinations,
-              destinationType,
-              messagingDestinations: config.messagingDestinations
-            }, null, 2)
-          );
-
-          const cta =
-            destinationType === "WHATSAPP"
-              ? getCTA("whatsapp")
-              : destinationType === "MESSENGER"
-                ? getCTA("messenger")
-                : destinationType === "INSTAGRAM_DIRECT"
-                  ? getCTA("instagram")
-                  : getCTA("messenger");
-
-          console.log(
-            "[CTA OUTPUT]",
-            JSON.stringify(cta, null, 2)
-          );
-
-          cb.object_story_spec.link_data.call_to_action =
-            cta;
-
+    // SINGLE DESTINATION
+    if (!isMultiDestination) {
+      cb.object_story_spec.link_data.call_to_action = primaryCTA;
         }
 
         // MULTI DESTINATION
         else {
+      // Para DOF, Meta a veces prefiere que link_data tenga la CTA primaria o ninguna.
+      // Probaremos dejando la de WhatsApp si está disponible para darle peso.
+      cb.object_story_spec.link_data.call_to_action = primaryCTA;
 
-          // ← AGREGAR ESTO
-          // quitar CTA fija para permitir DOF
-          if (cb.object_story_spec.link_data) {
-            delete cb.object_story_spec.link_data.call_to_action;
-          }
-
-          // PERO conservar link porque Meta lo exige
-          cb.object_story_spec.link_data.link =
-            `https://facebook.com/${config.pageId}`;
+      // Pero conservar link porque Meta lo exige
           cb.object_story_spec.link_data.page_welcome_message =
             JSON.stringify({
 
@@ -1726,34 +1696,26 @@ async function handleCreateAdvancedAd(body, env) {
 
         };
 
+        // Determinar CTA primaria
+        const primaryCTA =
+          destinationType === "WHATSAPP"
+            ? getCTA("whatsapp")
+            : (destinations.includes("WHATSAPP") ? getCTA("whatsapp") : getCTA("messenger"));
+
         // SINGLE DESTINATION
         if (!isMultiDestination) {
-      const cta =
-        destinationType === "WHATSAPP"
-          ? getCTA("whatsapp")
-          : destinationType === "MESSENGER"
-            ? getCTA("messenger")
-            : destinationType === "INSTAGRAM_DIRECT"
-              ? getCTA("instagram")
-              : getCTA("messenger");
-
-      cb.object_story_spec.video_data.call_to_action = cta;
+          cb.object_story_spec.video_data.call_to_action = primaryCTA;
         }
 
         // MULTI DESTINATION
-
         else {
-
-          // IMPORTANTE:
-          // quitar CTA fija
-          if (cb.object_story_spec.video_data) {
-            delete cb.object_story_spec.video_data.call_to_action;
-          }
-
-          // IMPORTANTE:
-          // mantener link. Para DOF, Meta a veces requiere link_data incluso en videos
+          // Para Video multi-destino, Meta requiere que video_data NO tenga CTA
+          // pero que asset_feed_spec SI las tenga.
+          // Sin embargo, para que funcione el 'DOF_MESSAGING_DESTINATION',
+          // necesitamos un link_data base.
           cb.object_story_spec.link_data = {
-            link: `https://facebook.com/${config.pageId}`
+            link: `https://facebook.com/${config.pageId}`,
+            call_to_action: primaryCTA
           };
 
           cb.object_story_spec.link_data.page_welcome_message =
@@ -2030,20 +1992,14 @@ async function handleCreateAdvancedAd(body, env) {
     else if (creativeId) {
 
       console.log("Creando el anuncio final...");
-      const degreesOfFreedomSpec =
-        creativeInspectData?.degrees_of_freedom_spec;
 
       const creativeObject = {
         creative_id: creativeId
       };
 
-      if (
-        isMultiDestination &&
-        degreesOfFreedomSpec
-      ) {
-        creativeObject.degrees_of_freedom_spec =
-          degreesOfFreedomSpec;
-      }
+      // Si es multi-destino, NO pasamos el degrees_of_freedom_spec si solo trae OPT_OUTs
+      // ya que Meta lo activa automáticamente al detectar asset_feed_spec.
+      // Solo lo pasaríamos si quisiéramos FORZAR un enrolamiento específico.
 
       const adBody = {
         name: config.adName,
@@ -2150,14 +2106,14 @@ async function handleCreateAdvancedAd(body, env) {
 // --- INTERFAZ VISUAL ---
 
 function generateHTML(env) {
-  const meta_token = env.META_ACCESS_TOKEN || "";
-  const openai_key = env.OPENAI_API_KEY || "";
+  const meta_token = env.META_ACCESS_TOKEN ? "Configurado (oculto)" : "No configurado";
+  const openai_key = env.OPENAI_API_KEY ? "Configurado (oculto)" : "No configurado";
   const ad_acc_id = env.AD_ACCOUNT_ID || "";
-  const whatsapp_1 = env.WHATSAPP_1 || "";
-  const whatsapp_2 = env.WHATSAPP_2 || "";
-  const whatsapp_3 = env.WHATSAPP_3 || "";
-  const whatsapp_4 = env.WHATSAPP_4 || "";
-  const whatsapp_5 = env.WHATSAPP_5 || "";
+  const whatsapp_1 = env.WHATSAPP_1 ? "Configurado" : "No configurado";
+  const whatsapp_2 = env.WHATSAPP_2 ? "Configurado" : "No configurado";
+  const whatsapp_3 = env.WHATSAPP_3 ? "Configurado" : "No configurado";
+  const whatsapp_4 = env.WHATSAPP_4 ? "Configurado" : "No configurado";
+  const whatsapp_5 = env.WHATSAPP_5 ? "Configurado" : "No configurado";
 
   let html = `<!DOCTYPE html>
 <html lang="es">
@@ -2335,15 +2291,15 @@ function generateHTML(env) {
       <div class="max-w-xl mx-auto w-full space-y-6">
         <h1 class="text-2xl font-black mb-8 text-slate-800">Configuración</h1>
         <div class="card space-y-4">
-          <div><label class="text-[10px] font-black uppercase text-slate-400">Meta Token</label><input type="password" id="mt" value="[META_TOKEN]" class="w-full border p-3 rounded-lg bg-slate-50"></div>
-          <div><label class="text-[10px] font-black uppercase text-slate-400">OpenAI Key</label><input type="password" id="ok" value="[OPENAI_KEY]" class="w-full border p-3 rounded-lg bg-slate-50"></div>
-          <div><label class="text-[10px] font-black uppercase text-slate-400">Ad Account ID</label><input type="text" id="aa" value="[AD_ACC_ID]" class="w-full border p-3 rounded-lg bg-slate-50"></div>
+          <div><label class="text-[10px] font-black uppercase text-slate-400">Meta Token</label><input type="text" id="mt" value="[META_TOKEN]" readonly class="w-full border p-3 rounded-lg bg-slate-100"></div>
+          <div><label class="text-[10px] font-black uppercase text-slate-400">OpenAI Key</label><input type="text" id="ok" value="[OPENAI_KEY]" readonly class="w-full border p-3 rounded-lg bg-slate-100"></div>
+          <div><label class="text-[10px] font-black uppercase text-slate-400">Ad Account ID</label><input type="text" id="aa" value="[AD_ACC_ID]" readonly class="w-full border p-3 rounded-lg bg-slate-100"></div>
           <hr class="my-4"><h3 class="font-black text-sm text-slate-700 uppercase">Números WhatsApp Configurados</h3>
-          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 1</label><input type="text" id="wa1" value="[WHATSAPP_1]" readonly class="w-full border p-3 rounded-lg bg-slate-50"></div>
-          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 2</label><input type="text" id="wa2" value="[WHATSAPP_2]" readonly class="w-full border p-3 rounded-lg bg-slate-50"></div>
-          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 3</label><input type="text" id="wa3" value="[WHATSAPP_3]" readonly class="w-full border p-3 rounded-lg bg-slate-50"></div>
-          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 4</label><input type="text" id="wa4" value="[WHATSAPP_4]" readonly class="w-full border p-3 rounded-lg bg-slate-50"></div>
-          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 5</label><input type="text" id="wa5" value="[WHATSAPP_5]" readonly class="w-full border p-3 rounded-lg bg-slate-50"></div>
+          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 1</label><input type="text" id="wa1" value="[WHATSAPP_1]" readonly class="w-full border p-3 rounded-lg bg-slate-100"></div>
+          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 2</label><input type="text" id="wa2" value="[WHATSAPP_2]" readonly class="w-full border p-3 rounded-lg bg-slate-100"></div>
+          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 3</label><input type="text" id="wa3" value="[WHATSAPP_3]" readonly class="w-full border p-3 rounded-lg bg-slate-100"></div>
+          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 4</label><input type="text" id="wa4" value="[WHATSAPP_4]" readonly class="w-full border p-3 rounded-lg bg-slate-100"></div>
+          <div><label class="text-[10px] font-black uppercase text-slate-400">WhatsApp 5</label><input type="text" id="wa5" value="[WHATSAPP_5]" readonly class="w-full border p-3 rounded-lg bg-slate-100"></div>
           <p class="text-[10px] text-slate-400 font-bold uppercase italic">Los valores se toman de las variables de entorno de Cloudflare para mayor seguridad.</p>
           <div class="flex gap-2"><button onclick="checkPerms()" class="flex-1 bg-blue-100 text-blue-700 py-4 rounded-xl font-black uppercase tracking-widest text-xs mt-4 border border-blue-200">Verificar Permisos</button><button onclick="alert('Configuración guardada (Local). Use Cloudflare para cambios permanentes.')" class="flex-1 bg-slate-800 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs mt-4">Guardar</button></div>
         </div>
@@ -2467,21 +2423,47 @@ function generateHTML(env) {
         d.data.forEach(camp => {
           const msgs = camp.metrics?.actions?.find(a => a.action_type === 'onsite_conversion.messaging_first_reply') || { value:0 };
           const campDiv = document.createElement('div'); campDiv.className = 'bg-white rounded-xl shadow-sm border overflow-hidden mb-4';
+
           const header = document.createElement('div'); header.className = 'p-4 bg-slate-50 flex justify-between items-center cursor-pointer hover:bg-slate-100';
           header.onclick = () => { const c = campDiv.querySelector('.adsets-container'); if (c) c.classList.toggle('hidden'); };
-          header.innerHTML = '<div class="flex items-center gap-4"><div class="w-3 h-3 rounded-full ' + (camp.status === "ACTIVE" ? "bg-emerald-500" : "bg-slate-300") + '"></div><div><p class="text-xs font-black uppercase text-slate-400">Campaña</p><p class="font-bold text-slate-700">' + camp.name + '</p></div></div>' +
-            '<div class="flex gap-8 text-right items-center"><div><p class="text-[10px] font-black text-slate-400 uppercase">Gasto</p><p class="font-bold text-slate-700">$' + camp.spend.toFixed(2) + '</p></div><div><p class="text-[10px] font-black text-slate-400 uppercase">Mensajes</p><p class="font-bold text-blue-600">' + msgs.value + '</p></div><div><p class="text-[10px] font-black text-slate-400 uppercase">Imp</p><p class="font-bold text-slate-700">' + camp.impressions + '</p></div><div><p class="text-[10px] font-black text-slate-400 uppercase">Alcance</p><p class="font-bold text-slate-700">' + camp.reach + '</p></div><button onclick="event.stopPropagation(); toggleStatus(\\\'' + camp.id + '\\\', \\\'' + camp.status + '\\\')" class="px-4 py-2 ' + (camp.status === "ACTIVE" ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600") + ' rounded-lg text-[10px] font-black uppercase">' + (camp.status === "ACTIVE" ? "Pausar" : "Activar") + '</button></div>';
+
+          let headerHTML = '<div class="flex items-center gap-4"><div class="w-3 h-3 rounded-full ' + (camp.status === "ACTIVE" ? "bg-emerald-500" : "bg-slate-300") + '"></div><div><p class="text-xs font-black uppercase text-slate-400">Campaña</p><p class="font-bold text-slate-700">' + camp.name + '</p></div></div>' +
+            '<div class="flex gap-8 text-right items-center"><div><p class="text-[10px] font-black text-slate-400 uppercase">Gasto</p><p class="font-bold text-slate-700">$' + camp.spend.toFixed(2) + '</p></div><div><p class="text-[10px] font-black text-slate-400 uppercase">Mensajes</p><p class="font-bold text-blue-600">' + msgs.value + '</p></div><div><p class="text-[10px] font-black text-slate-400 uppercase">Imp</p><p class="font-bold text-slate-700">' + camp.impressions + '</p></div><div><p class="text-[10px] font-black text-slate-400 uppercase">Alcance</p><p class="font-bold text-slate-700">' + camp.reach + '</p></div><div class="btn-placeholder"></div></div>';
+          header.innerHTML = headerHTML;
+
+          const campBtn = document.createElement('button');
+          campBtn.className = 'px-4 py-2 ' + (camp.status === "ACTIVE" ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600") + ' rounded-lg text-[10px] font-black uppercase';
+          campBtn.innerText = camp.status === "ACTIVE" ? "Pausar" : "Activar";
+          campBtn.onclick = (e) => { e.stopPropagation(); toggleStatus(camp.id, camp.status); };
+          header.querySelector('.btn-placeholder').appendChild(campBtn);
 
           const adsetsContainer = document.createElement('div'); adsetsContainer.className = 'adsets-container hidden border-t';
           camp.adsets.forEach(as => {
             const amsgs = as.metrics?.actions?.find(a => a.action_type === 'onsite_conversion.messaging_first_reply') || { value:0 };
             const asDiv = document.createElement('div'); asDiv.className = 'p-4 border-b ml-8 bg-white';
-            asDiv.innerHTML = '<div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full ' + (as.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300') + '"></div><p class="text-sm font-bold text-slate-600">AS: ' + as.name + '</p></div><div class="flex gap-6 text-right items-center"><span class="text-[10px] font-bold text-slate-500">$' + as.spend.toFixed(2) + ' | ' + amsgs.value + ' MSGs | ' + as.impressions + ' Imp | ' + as.reach + ' Alcance</span><button onclick="toggleStatus(\\\'' + as.id + '\\\', \\\'' + as.status + '\\\')" class="text-[10px] font-black uppercase ' + (as.status === 'ACTIVE' ? 'text-red-500' : 'text-emerald-500') + '">' + (as.status === 'ACTIVE' ? 'OFF' : 'ON') + '</button></div></div>';
+
+            asDiv.innerHTML = '<div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full ' + (as.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300') + '"></div><p class="text-sm font-bold text-slate-600">AS: ' + as.name + '</p></div><div class="flex gap-6 text-right items-center"><span class="text-[10px] font-bold text-slate-500">$' + as.spend.toFixed(2) + ' | ' + amsgs.value + ' MSGs | ' + as.impressions + ' Imp | ' + as.reach + ' Alcance</span><div class="as-btn-placeholder"></div></div></div>';
+
+            const asBtn = document.createElement('button');
+            asBtn.className = 'text-[10px] font-black uppercase ' + (as.status === 'ACTIVE' ? 'text-red-500' : 'text-emerald-500');
+            asBtn.innerText = as.status === 'ACTIVE' ? 'OFF' : 'ON';
+            asBtn.onclick = () => toggleStatus(as.id, as.status);
+            asDiv.querySelector('.as-btn-placeholder').appendChild(asBtn);
+
             const adsGrid = document.createElement('div'); adsGrid.className = 'grid grid-cols-1 gap-2';
             as.ads.forEach(ad => {
               const admsgs = ad.metrics?.actions?.find(a => a.action_type === 'onsite_conversion.messaging_first_reply') || { value:0 };
               const adDiv = document.createElement('div'); adDiv.className = 'bg-slate-50 p-4 rounded-xl ml-4 mb-4 border border-slate-100 shadow-sm';
-              adDiv.innerHTML = '<div class="flex flex-col md:flex-row gap-6"><div class="shrink-0 flex justify-center"><img src="' + ad.image + '" class="w-48 h-48 rounded-lg bg-slate-200 object-cover shadow-inner border border-white"></div><div class="flex-1 flex flex-col justify-between"><div><div class="flex items-center gap-2 mb-2"><div class="w-2 h-2 rounded-full ' + (ad.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300') + '"></div><span class="text-[10px] font-black uppercase text-slate-400 tracking-widest">' + ad.status + '</span></div><p class="text-lg font-black text-slate-800 leading-tight mb-4">' + ad.name + '</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-3 rounded-lg border border-slate-100"><div><p class="text-[9px] font-black text-slate-400 uppercase">Gasto</p><p class="font-bold text-slate-700">$' + ad.spend.toFixed(2) + '</p></div><div><p class="text-[9px] font-black text-slate-400 uppercase">Mensajes</p><p class="font-bold text-blue-600">' + admsgs.value + '</p></div><div><p class="text-[9px] font-black text-slate-400 uppercase">Imp</p><p class="font-bold text-slate-700">' + ad.impressions + '</p></div><div><p class="text-[9px] font-black text-slate-400 uppercase">Alcance</p><p class="font-bold text-slate-700">' + ad.reach + '</p></div></div></div><div class="flex justify-end mt-4"><button onclick="toggleStatus(\\\'' + ad.id + '\\\', \\\'' + ad.status + '\\\')" class="flex items-center gap-2 px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition ' + (ad.status === 'ACTIVE' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100') + '">' + (ad.status === 'ACTIVE' ? 'Pausar' : 'Activar') + '</button></div></div></div>'; adsGrid.appendChild(adDiv);
+
+              adDiv.innerHTML = '<div class="flex flex-col md:flex-row gap-6"><div class="shrink-0 flex justify-center"><img src="' + ad.image + '" class="w-48 h-48 rounded-lg bg-slate-200 object-cover shadow-inner border border-white"></div><div class="flex-1 flex flex-col justify-between"><div><div class="flex items-center gap-2 mb-2"><div class="w-2 h-2 rounded-full ' + (ad.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300') + '"></div><span class="text-[10px] font-black uppercase text-slate-400 tracking-widest">' + ad.status + '</span></div><p class="text-lg font-black text-slate-800 leading-tight mb-4">' + ad.name + '</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-3 rounded-lg border border-slate-100"><div><p class="text-[9px] font-black text-slate-400 uppercase">Gasto</p><p class="font-bold text-slate-700">$' + ad.spend.toFixed(2) + '</p></div><div><p class="text-[9px] font-black text-slate-400 uppercase">Mensajes</p><p class="font-bold text-blue-600">' + admsgs.value + '</p></div><div><p class="text-[9px] font-black text-slate-400 uppercase">Imp</p><p class="font-bold text-slate-700">' + ad.impressions + '</p></div><div><p class="text-[9px] font-black text-slate-400 uppercase">Alcance</p><p class="font-bold text-slate-700">' + ad.reach + '</p></div></div></div><div class="flex justify-end mt-4 ad-btn-placeholder"></div></div></div>';
+
+              const adBtn = document.createElement('button');
+              adBtn.className = 'flex items-center gap-2 px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition ' + (ad.status === 'ACTIVE' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100');
+              adBtn.innerText = ad.status === 'ACTIVE' ? 'Pausar' : 'Activar';
+              adBtn.onclick = () => toggleStatus(ad.id, ad.status);
+              adDiv.querySelector('.ad-btn-placeholder').appendChild(adBtn);
+
+              adsGrid.appendChild(adDiv);
             });
             asDiv.appendChild(adsGrid); adsetsContainer.appendChild(asDiv);
           });
