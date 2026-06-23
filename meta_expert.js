@@ -2383,6 +2383,18 @@ function generateHTML(env, initialData = null) {
         adNameInput.classList.add('bg-slate-100');
       }
 
+      if (INITIAL_DATA.ad_headline) {
+        document.getElementById('hd').value = INITIAL_DATA.ad_headline;
+      }
+
+      if (INITIAL_DATA.ad_text) {
+        document.getElementById('pt').value = INITIAL_DATA.ad_text;
+      }
+
+      if (INITIAL_DATA.image_url) {
+        document.getElementById('dropzone').innerHTML = '<img src="' + INITIAL_DATA.image_url + '" class="max-h-full rounded-xl shadow-lg border-2 border-white">';
+      }
+
       loadWhatsAppNumbers();
       const dl = document.getElementById('dept-list');
       DEPTS_GT.forEach(dept => { const div = document.createElement('label'); div.className = 'flex items-center gap-2 bg-slate-100 p-2 rounded cursor-pointer hover:bg-slate-200 transition'; div.innerHTML = '<input type="checkbox" value="' + dept + '" class="dept-check"> <span class="text-[10px] font-bold">' + dept + '</span>'; dl.appendChild(div); });
@@ -2596,6 +2608,16 @@ function generateHTML(env, initialData = null) {
             const mr = await fetch('/api/upload-media', { method:'POST', body: JSON.stringify({ ...getSession(), fileName: f.name, fileType: f.type, fileSize: f.size, base64: base64 }) });
             const md = await mr.json(); if(md.error) throw new Error(md.error); mediaId = md.image_hash || md.video_id || md.id; mediaType = md.type; setLdr("Archivo subido exitosamente ID: " + mediaId);
           } catch(me) { setLdr('Error subiendo archivo: ' + me.message); setTimeout(() => ldr.classList.add('hidden'), 5000); return; }
+        } else if (isNewAd && INITIAL_DATA.image_url) {
+          setLdr("Descargando imagen desde URL...");
+          try {
+            const imgRes = await fetch(INITIAL_DATA.image_url);
+            const blob = await imgRes.blob();
+            const base64 = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result.split(',')[1]); reader.readAsDataURL(blob); });
+            setLdr("Subiendo imagen de URL a Meta...");
+            const mr = await fetch('/api/upload-media', { method:'POST', body: JSON.stringify({ ...getSession(), fileName: "image_from_url.jpg", fileType: blob.type || "image/jpeg", base64: base64 }) });
+            const md = await mr.json(); if(md.error) throw new Error(md.error); mediaId = md.image_hash || md.id; mediaType = "img"; setLdr("Imagen de URL subida exitosamente");
+          } catch(me) { setLdr('Error con imagen de URL: ' + me.message); setTimeout(() => ldr.classList.add('hidden'), 5000); return; }
         }
 
         setLdr('Publicando anuncio final en Meta...');
