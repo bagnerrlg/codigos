@@ -12,16 +12,27 @@
 const API_VERSION = "v19.0";
 const FIXED_TEXT = "📲 ¡Escríbenos ahora y recibe tu cotización con promoción especial!\n📦 Entregas a todo el país\n💯 Garantía asegurada";
 
+async function safeJson(response) {
+  try {
+    const text = await response.text();
+    if (!text || !text.trim()) return {};
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("safeJson error:", e.message);
+    return { error: { message: "Invalid JSON response" } };
+  }
+}
+
 // --- HANDLERS DE API (LOGICA DE NEGOCIO) ---
 
-function getAdAccId(env, bodyId) {
-  let id = (bodyId || env.AD_ACCOUNT_ID || "").trim();
+function getAdAccId(env, b, headers) {
+  let id = (b?.ad_account_id || b?.config?.ad_account_id || headers?.get("x-meta-ad-account-id") || env.AD_ACCOUNT_ID || "").trim();
   if (!id) return null;
   return id.startsWith("act_") ? id : "act_" + id;
 }
 
-function getToken(env, bodyToken) {
-  return bodyToken || env.META_ACCESS_TOKEN;
+function getToken(env, b, headers) {
+  return b?.access_token || b?.config?.access_token || headers?.get("x-meta-access-token") || env.META_ACCESS_TOKEN;
 }
 
 function validateImageBytes(bytes) {
@@ -54,22 +65,22 @@ function validateImageBytes(bytes) {
   return jpeg || png || webp;
 }
 
-async function handleGetAccounts(body, env) {
-  const token = getToken(env, body.access_token);
+async function handleGetAccounts(body, env, headers) {
+  const token = getToken(env, body, headers);
   const r = await fetch(`https://graph.facebook.com/${API_VERSION}/me/accounts?access_token=${token}&limit=100`);
-  const d = await r.json();
+  const d = await safeJson(r);
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleMetaSearch(body, env) {
-  const token = getToken(env, body.access_token);
+async function handleMetaSearch(body, env, headers) {
+  const token = getToken(env, body, headers);
   const url = `https://graph.facebook.com/${API_VERSION}/search?type=${body.type}&q=${encodeURIComponent(body.q)}&access_token=${token}&limit=10`;
   const r = await fetch(url);
-  const d = await r.json();
+  const d = await safeJson(r);
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleOpenAIGenerate(body, env) {
+async function handleOpenAIGenerate(body, env, headers) {
   try {
     const userPrompt = body.prompt || "Genera un anuncio para este producto.";
     const kRole = ["r", "o", "l", "e"].join("");
@@ -114,7 +125,7 @@ async function handleOpenAIGenerate(body, env) {
       body: JSON.stringify(payload)
     });
 
-    const openAiData = await openAiResponse.json();
+    const openAiData = await safeJson(openAiResponse);
     if (openAiData.error) {
       console.error("OpenAI Error:", JSON.stringify(openAiData.error));
       return new Response(JSON.stringify({ error: openAiData.error.message || "Error de OpenAI" }), {
@@ -134,28 +145,28 @@ async function handleOpenAIGenerate(body, env) {
   }
 }
 
-async function handleGetInsights(body, env) {
-  const accId = getAdAccId(env, body.ad_account_id);
-  const token = getToken(env, body.access_token);
+async function handleGetInsights(body, env, headers) {
+  const accId = getAdAccId(env, body, headers);
+  const token = getToken(env, body, headers);
   const url = `https://graph.facebook.com/${API_VERSION}/${accId}/insights?level=${body.level}&date_preset=${body.range}&fields=spend,clicks,impressions,reach&access_token=${token}`;
   const r = await fetch(url);
-  const d = await r.json();
+  const d = await safeJson(r);
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
 
-async function handleGetActiveCampaigns(body, env) {
-  const accId = getAdAccId(env, body.ad_account_id);
-  const token = getToken(env, body.access_token);
+async function handleGetActiveCampaigns(body, env, headers) {
+  const accId = getAdAccId(env, body, headers);
+  const token = getToken(env, body, headers);
   if (!accId) return new Response(JSON.stringify({ error: "AD_ACCOUNT_ID no configurada" }), { status: 400 });
   const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${accId}/campaigns?fields=name,status,objective,buying_type&access_token=${token}&limit=100`);
-  const d = await r.json();
+  const d = await safeJson(r);
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleGetAdSets(body, env) {
+async function handleGetAdSets(body, env, headers) {
   const campaignId = body.campaignId;
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
 
   const url =
     `https://graph.facebook.com/${API_VERSION}/${campaignId}/adsets` +
@@ -169,7 +180,7 @@ async function handleGetAdSets(body, env) {
     `&limit=100`;
 
   const r = await fetch(url);
-  const d = await r.json();
+  const d = await safeJson(r);
 
   return new Response(
     JSON.stringify(d),
@@ -181,9 +192,9 @@ async function handleGetAdSets(body, env) {
   );
 }
 
-async function handleGetAds(body, env) {
+async function handleGetAds(body, env, headers) {
   const adsetId = body.adsetId;
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
 
   const url =
     `https://graph.facebook.com/${API_VERSION}/${adsetId}/ads` +
@@ -206,52 +217,52 @@ async function handleGetAds(body, env) {
   );
 }
 
-async function handleGetCustomAudiences(body, env) {
-  const accId = getAdAccId(env, body.ad_account_id);
-  const token = getToken(env, body.access_token);
+async function handleGetCustomAudiences(body, env, headers) {
+  const accId = getAdAccId(env, body, headers);
+  const token = getToken(env, body, headers);
   if (!accId) return new Response(JSON.stringify({ error: "AD_ACCOUNT_ID no configurada" }), { status: 400 });
   const url = `https://graph.facebook.com/${API_VERSION}/${accId}/customaudiences?fields=name,description,approximate_count_lower_bound&access_token=${token}`;
   const r = await fetch(url);
-  const d = await r.json();
+  const d = await safeJson(r);
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleGetInstagramAccounts(body, env) {
+async function handleGetInstagramAccounts(body, env, headers) {
   const pageId = body.pageId;
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
   const url = `https://graph.facebook.com/${API_VERSION}/${pageId}?fields=instagram_business_account&access_token=${token}`;
   const r = await fetch(url);
-  const d = await r.json();
+  const d = await safeJson(r);
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleGetMessageTemplates(body, env) {
+async function handleGetMessageTemplates(body, env, headers) {
   const pageId = body.pageId;
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
   const url = `https://graph.facebook.com/${API_VERSION}/${pageId}/message_templates?access_token=${token}`;
   const r = await fetch(url);
-  const d = await r.json();
+  const d = await safeJson(r);
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleGetWhatsAppNumbers(body, env) {
+async function handleGetWhatsAppNumbers(body, env, headers) {
   const pageId = body.pageId;
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
   try {
     const pRes = await fetch(`https://graph.facebook.com/${API_VERSION}/${pageId}?fields=whatsapp_business_account&access_token=${token}`);
-    const pData = await pRes.json();
+    const pData = await safeJson(pRes);
     if (pData.whatsapp_business_account && pData.whatsapp_business_account.id) {
       const wabaId = pData.whatsapp_business_account.id;
       const nRes = await fetch(`https://graph.facebook.com/${API_VERSION}/${wabaId}/phone_numbers?access_token=${token}`);
-      const nData = await nRes.json();
+      const nData = await safeJson(nRes);
       return new Response(JSON.stringify(nData), { headers: { "Content-Type": "application/json" } });
     }
   } catch (e) { }
   return new Response(JSON.stringify({ data: [] }), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleValidateSetup(body, env) {
-  const token = getToken(env, body.access_token);
+async function handleValidateSetup(body, env, headers) {
+  const token = getToken(env, body, headers);
   const results = {
     token: { status: 'ok', message: 'Verificando...' },
     account: { status: 'ok', message: 'Verificando...' },
@@ -260,7 +271,7 @@ async function handleValidateSetup(body, env) {
 
   try {
     const pRes = await fetch(`https://graph.facebook.com/${API_VERSION}/me/permissions?access_token=${token}`);
-    const pData = await pRes.json();
+    const pData = await safeJson(pRes);
     if (pData.error) {
       results.token = { status: 'error', message: pData.error.message };
     } else {
@@ -276,10 +287,10 @@ async function handleValidateSetup(body, env) {
       }
     }
 
-    const finalAccId = getAdAccId(env, body.ad_account_id);
+    const finalAccId = getAdAccId(env, body, headers);
     if (finalAccId) {
       const aRes = await fetch(`https://graph.facebook.com/${API_VERSION}/${finalAccId}?fields=account_status,disable_reason,currency&access_token=${token}`);
-      const aData = await aRes.json();
+      const aData = await safeJson(aRes);
       if (aData.error) {
         results.account = { status: 'error', message: aData.error.message };
       } else {
@@ -296,34 +307,34 @@ async function handleValidateSetup(body, env) {
   }
 }
 
-async function handleCheckPermissions(body, env) {
-  return await handleValidateSetup(body, env);
+async function handleCheckPermissions(body, env, headers) {
+  return await handleValidateSetup(body, env, headers);
 }
 
-async function handleGetTokenInfo(body, env) {
-  const token = getToken(env, body.access_token);
+async function handleGetTokenInfo(body, env, headers) {
+  const token = getToken(env, body, headers);
   const r = await fetch(`https://graph.facebook.com/debug_token?input_token=${token}&access_token=${token}`);
-  const d = await r.json();
+  const d = await safeJson(r);
   console.log("Resultado debug_token:", JSON.stringify(d));
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleUpdateStatus(body, env) {
+async function handleUpdateStatus(body, env, headers) {
   const { id, status } = body;
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
   const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status, access_token: token })
   });
-  const d = await r.json();
+  const d = await safeJson(r);
   return new Response(JSON.stringify(d), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleDebugPost(body, env) {
+async function handleDebugPost(body, env, headers) {
 
   const postId = body.postId;
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
 
   const url =
     `https://graph.facebook.com/${API_VERSION}/${postId}` +
@@ -339,7 +350,7 @@ async function handleDebugPost(body, env) {
 
   const r = await fetch(url);
 
-  const d = await r.json();
+  const d = await safeJson(r);
 
   return new Response(
     JSON.stringify(d, null, 2),
@@ -384,12 +395,12 @@ function getCTA(channel) {
   console.log(`[Worker] getCTA(${channel}) ->`, JSON.stringify(result));
   return result;
 }
-async function handleGetFullReport(body, env) {
+async function handleGetFullReport(body, env, headers) {
   try {
 
-    const acc = getAdAccId(env, body.ad_account_id);
+    const acc = getAdAccId(env, body, headers);
     const { start, end } = body;
-    const token = getToken(env, body.access_token);
+    const token = getToken(env, body, headers);
 
     const time_range = JSON.stringify({
       since: start,
@@ -472,9 +483,9 @@ async function handleGetFullReport(body, env) {
       fetch(adUrl)
     ]);
 
-    const campData = await campRes.json();
-    const adsetData = await adsetRes.json();
-    const adData = await adRes.json();
+    const campData = await safeJson(campRes);
+    const adsetData = await safeJson(adsetRes);
+    const adData = await safeJson(adRes);
 
     if (campData.error) {
       throw new Error(campData.error.message);
@@ -780,10 +791,10 @@ async function handleGetFullReport(body, env) {
     );
   }
 }
-async function handleDebugAdSet(body, env) {
+async function handleDebugAdSet(body, env, headers) {
 
   const adsetId = body.adsetId;
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
 
   const url =
     `https://graph.facebook.com/${API_VERSION}/${adsetId}` +
@@ -810,7 +821,7 @@ async function handleDebugAdSet(body, env) {
 
   const r = await fetch(url);
 
-  const d = await r.json();
+  const d = await safeJson(r);
 
   return new Response(
     JSON.stringify(d),
@@ -821,13 +832,13 @@ async function handleDebugAdSet(body, env) {
     }
   );
 }
-async function handleResolveRegions(body, env) {
+async function handleResolveRegions(body, env, headers) {
   const depts = body.depts || [];
-  const token = getToken(env, body.access_token);
+  const token = getToken(env, body, headers);
   const promises = depts.map(async (dept) => {
     try {
       const r = await fetch(`https://graph.facebook.com/${API_VERSION}/search?type=adgeolocation&q=${encodeURIComponent(dept)}&location_types=['region']&access_token=${token}`);
-      const d = await r.json();
+      const d = await safeJson(r);
       if (d.data && d.data.length > 0) {
         const match =
           d.data.find(it =>
@@ -851,11 +862,11 @@ async function handleResolveRegions(body, env) {
   return new Response(JSON.stringify({ regions: results.filter(r => r !== null) }), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleUploadMedia(bodyJson, env) {
+async function handleUploadMedia(bodyJson, env, headers) {
   const { fileName, fileType, base64 } = bodyJson;
   const isImg = (fileType || "").startsWith("image/");
-  const token = getToken(env, bodyJson.access_token);
-  const acc = getAdAccId(env, bodyJson.ad_account_id);
+  const token = getToken(env, bodyJson, headers);
+  const acc = getAdAccId(env, bodyJson, headers);
 
   try {
     console.log("Cuenta:", acc);
@@ -1079,10 +1090,10 @@ function normalizeObjective(objective) {
   return map[objective] || objective;
 }
 
-async function handleCreateAdvancedAd(body, env) {
+async function handleCreateAdvancedAd(body, env, headers) {
   const config = body.config;
-  const token = getToken(env, body.access_token);
-  const acc = getAdAccId(env, body.ad_account_id);
+  const token = getToken(env, body, headers);
+  const acc = getAdAccId(env, body, headers);
 
   console.log(`[Worker] Iniciando publicación en cuenta: ${acc}`);
   console.log(`[Worker] Config recibida:`, JSON.stringify(config, null, 2));
@@ -1090,7 +1101,7 @@ async function handleCreateAdvancedAd(body, env) {
   // Audit permissions again in logs
   try {
     const pRes = await fetch(`https://graph.facebook.com/${API_VERSION}/me/permissions?access_token=${token}`);
-    const pData = await pRes.json();
+    const pData = await safeJson(pRes);
     console.log(`[Worker] Permisos detectados: ${JSON.stringify(pData.data)}`);
   } catch (e) { console.error("[Worker] Error verificando permisos internos:", e.message); }
 
@@ -1175,7 +1186,7 @@ async function handleCreateAdvancedAd(body, env) {
       );
       const pageInfo = await fetch(
         `https://graph.facebook.com/${API_VERSION}/${config.pageId}?metadata=1&access_token=${token}`
-      ).then(r => r.json());
+      ).then(r => safeJson(r));
 
       console.log(
         "[PAGE METADATA]",
@@ -1396,7 +1407,7 @@ async function handleCreateAdvancedAd(body, env) {
         );
 
       const asrd =
-        await asr.json();
+        await safeJson(asr);
 
       if (
         !asr.ok
@@ -1427,7 +1438,7 @@ async function handleCreateAdvancedAd(body, env) {
         `https://graph.facebook.com/${API_VERSION}/${adSetId}` +
         `?fields=id,name,destination_type,promoted_object` +
         `&access_token=${token}`
-      ).then(r => r.json());
+      ).then(r => safeJson(r));
 
       console.log(
         "[Worker] INFO ADSET ACTUAL EN META:",
@@ -1448,7 +1459,7 @@ async function handleCreateAdvancedAd(body, env) {
         `https://graph.facebook.com/${API_VERSION}/${config.adId}?fields=creative{id,object_story_spec}&access_token=${token}`
       );
 
-      const adrd = await adr.json();
+      const adrd = await safeJson(adr);
 
       const spec = adrd.creative?.object_story_spec;
 
@@ -1980,7 +1991,7 @@ async function handleCreateAdvancedAd(body, env) {
         `?fields=id,object_story_spec,asset_feed_spec,degrees_of_freedom_spec` +
         `&access_token=${token}`
       );
-      creativeInspectData = await creativeInspect.json();
+      creativeInspectData = await safeJson(creativeInspect);
       console.log("[Worker] INFO CREATIVE ACTUAL EN META:", JSON.stringify(creativeInspectData, null, 2));
     } catch (e) {
       console.error("[Worker] Error consultando info del Creative:", e.message);
@@ -2008,7 +2019,7 @@ async function handleCreateAdvancedAd(body, env) {
           access_token: token
         })
       });
-      const res = await adr.json();
+      const res = await safeJson(adr);
       if (res.error) {
         console.error("Error Meta Ads (Update):", JSON.stringify(res.error));
         throw new Error("Error actualizando anuncio: " + (res.error.message || JSON.stringify(res.error)));
@@ -2056,7 +2067,7 @@ async function handleCreateAdvancedAd(body, env) {
         }
       );
 
-      const res = await adr.json();
+      const res = await safeJson(adr);
       console.log("[Worker] Respuesta de Meta Ad (JSON):", JSON.stringify(res, null, 2));
 
       if (
@@ -2082,7 +2093,7 @@ async function handleCreateAdvancedAd(body, env) {
         `https://graph.facebook.com/${API_VERSION}/${res.id}` +
         `?fields=id,adset{id,destination_type,promoted_object}` +
         `&access_token=${token}`
-      ).then(r => r.json());
+      ).then(r => safeJson(r));
 
       console.log(
         "[FINAL AD DESTINATION]",
@@ -2093,7 +2104,7 @@ async function handleCreateAdvancedAd(body, env) {
         `https://graph.facebook.com/${API_VERSION}/${res.id}` +
         `?fields=id,name,creative{object_story_spec,asset_feed_spec}` +
         `&access_token=${token}`
-      ).then(r => r.json());
+      ).then(r => safeJson(r));
 
       console.log(
         "[FINAL AD INFO]",
@@ -2105,7 +2116,7 @@ async function handleCreateAdvancedAd(body, env) {
         `https://graph.facebook.com/${API_VERSION}/${res.id}` +
         `?fields=id,name,adset{id,destination_type,promoted_object}` +
         `&access_token=${token}`
-      ).then(r => r.json());
+      ).then(r => safeJson(r));
 
       console.log(
         "[FINAL AD INFO EXTENDED]",
@@ -2666,72 +2677,94 @@ function generateHTML(env, initialData = null) {
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-
-    // Definir headers de CORS
+    const origin = request.headers.get("Origin");
     const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept",
       "Access-Control-Max-Age": "86400",
     };
 
-    // Manejar preflight (OPTIONS)
+    if (origin) {
+      corsHeaders["Access-Control-Allow-Origin"] = origin;
+      corsHeaders["Access-Control-Allow-Credentials"] = "true";
+    } else {
+      corsHeaders["Access-Control-Allow-Origin"] = "*";
+    }
+
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
-    let response;
-    if (request.method === "GET") {
-      response = await generateHTML(env);
-    }
-    else if (request.method === "POST") {
-      if (url.pathname === "/" || url.pathname === "") {
-        const b = await request.json();
-        response = await generateHTML(env, b);
-      } else {
-        const b = await request.json();
-        if (url.pathname === "/api/get-accounts") response = await handleGetAccounts(b, env);
-        else if (url.pathname === "/api/search") response = await handleMetaSearch(b, env);
-        else if (url.pathname === "/api/openai-generate") response = await handleOpenAIGenerate(b, env);
-        else if (url.pathname === "/api/get-insights") response = await handleGetInsights(b, env);
-        else if (url.pathname === "/api/get-active-campaigns") response = await handleGetActiveCampaigns(b, env);
-        else if (url.pathname === "/api/get-adsets") response = await handleGetAdSets(b, env);
-        else if (url.pathname === "/api/get-ads") response = await handleGetAds(b, env);
-        else if (url.pathname === "/api/debug-post") response = await handleDebugPost(b, env);
-        else if (url.pathname === "/api/get-custom-audiences") response = await handleGetCustomAudiences(b, env);
-        else if (url.pathname === "/api/get-instagram-accounts") response = await handleGetInstagramAccounts(b, env);
-        else if (url.pathname === "/api/get-message-templates") response = await handleGetMessageTemplates(b, env);
-        else if (url.pathname === "/api/get-whatsapp-numbers") response = await handleGetWhatsAppNumbers(b, env);
-        else if (url.pathname === "/api/check-permissions") response = await handleCheckPermissions(b, env);
-        else if (url.pathname === "/api/debug-token") response = await handleGetTokenInfo(b, env);
-        else if (url.pathname === "/api/update-status") response = await handleUpdateStatus(b, env);
-        else if (url.pathname === "/api/get-full-report") response = await handleGetFullReport(b, env);
-        else if (url.pathname === "/api/debug-adset") response = await handleDebugAdSet(b, env);
-        else if (url.pathname === "/api/get-ad-details") {
-          const token = getToken(env, b.access_token);
-          const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${b.adId}?fields=name,status,creative{id,name,object_story_spec}&access_token=${token}`);
-          const d = await r.json();
-          response = new Response(JSON.stringify({ data: d }), { headers: { "Content-Type": "application/json" } });
-        }
-        else if (url.pathname === "/api/resolve-regions") response = await handleResolveRegions(b, env);
-        else if (url.pathname === "/api/upload-media") response = await handleUploadMedia(b, env);
-        else if (url.pathname === "/api/create-advanced-ad") response = await handleCreateAdvancedAd(b, env);
+    try {
+      const url = new URL(request.url);
+      let response;
+
+      if (request.method === "GET") {
+        response = generateHTML(env);
       }
+      else if (request.method === "POST") {
+        let b = {};
+        try {
+          const text = await request.text();
+          if (text && text.trim()) {
+            b = JSON.parse(text);
+          }
+        } catch (e) {
+          b = {};
+        }
+
+        const path = url.pathname.replace(/\/$/, "");
+        if (path === "/" || path === "" || path === "/api/facebook/launch") {
+          response = generateHTML(env, b);
+        } else {
+          if (path === "/api/get-accounts") response = await handleGetAccounts(b, env, request.headers);
+          else if (path === "/api/search") response = await handleMetaSearch(b, env, request.headers);
+          else if (path === "/api/openai-generate") response = await handleOpenAIGenerate(b, env, request.headers);
+          else if (path === "/api/get-insights") response = await handleGetInsights(b, env, request.headers);
+          else if (path === "/api/get-active-campaigns") response = await handleGetActiveCampaigns(b, env, request.headers);
+          else if (path === "/api/get-adsets") response = await handleGetAdSets(b, env, request.headers);
+          else if (path === "/api/get-ads") response = await handleGetAds(b, env, request.headers);
+          else if (path === "/api/debug-post") response = await handleDebugPost(b, env, request.headers);
+          else if (path === "/api/get-custom-audiences") response = await handleGetCustomAudiences(b, env, request.headers);
+          else if (path === "/api/get-instagram-accounts") response = await handleGetInstagramAccounts(b, env, request.headers);
+          else if (path === "/api/get-message-templates") response = await handleGetMessageTemplates(b, env, request.headers);
+          else if (path === "/api/get-whatsapp-numbers") response = await handleGetWhatsAppNumbers(b, env, request.headers);
+          else if (path === "/api/check-permissions") response = await handleCheckPermissions(b, env, request.headers);
+          else if (path === "/api/debug-token") response = await handleGetTokenInfo(b, env, request.headers);
+          else if (path === "/api/update-status") response = await handleUpdateStatus(b, env, request.headers);
+          else if (path === "/api/get-full-report") response = await handleGetFullReport(b, env, request.headers);
+          else if (path === "/api/debug-adset") response = await handleDebugAdSet(b, env, request.headers);
+          else if (path === "/api/get-ad-details") {
+            const token = getToken(env, b, request.headers);
+            const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${b.adId}?fields=name,status,creative{id,name,object_story_spec}&access_token=${token}`);
+            const d = await safeJson(r);
+            response = new Response(JSON.stringify({ data: d }), { headers: { "Content-Type": "application/json" } });
+          }
+          else if (path === "/api/resolve-regions") response = await handleResolveRegions(b, env, request.headers);
+          else if (path === "/api/upload-media") response = await handleUploadMedia(b, env, request.headers);
+          else if (path === "/api/create-advanced-ad") response = await handleCreateAdvancedAd(b, env, request.headers);
+        }
+      }
+
+      if (!response) {
+        response = new Response("Not Found", { status: 404 });
+      }
+
+      // Añadir CORS a los headers existentes de forma segura
+      const finalResponse = new Response(response.body, response);
+      Object.entries(corsHeaders).forEach(([k, v]) => finalResponse.headers.set(k, v));
+      finalResponse.headers.set("Vary", "Origin");
+
+      return finalResponse;
+
+    } catch (err) {
+      return new Response(JSON.stringify({ error: err.message }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
-
-    if (!response) {
-      response = new Response("Not Found", { status: 404 });
-    }
-
-    // Clonar respuesta para añadir headers de CORS (ya que Response de fetch suele ser inmutable)
-    const newHeaders = new Headers(response.headers);
-    Object.keys(corsHeaders).forEach(k => newHeaders.set(k, corsHeaders[k]));
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: newHeaders
-    });
   }
 };
