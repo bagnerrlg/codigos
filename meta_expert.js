@@ -41,7 +41,17 @@ function validateImageBytes(bytes) {
     bytes[2] === 78 &&
     bytes[3] === 71;
 
-  return jpeg || png;
+  const webp =
+    bytes[0] === 82 && // R
+    bytes[1] === 73 && // I
+    bytes[2] === 70 && // F
+    bytes[3] === 70 && // F
+    bytes[8] === 87 && // W
+    bytes[9] === 69 && // E
+    bytes[10] === 66 && // B
+    bytes[11] === 80; // P
+
+  return jpeg || png || webp;
 }
 
 async function handleGetAccounts(body, env) {
