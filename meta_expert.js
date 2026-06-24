@@ -2413,7 +2413,14 @@ function generateHTML(env, initialData = null) {
       }
 
       if (INITIAL_DATA.image_url) {
-        document.getElementById('dropzone').innerHTML = '<img src="' + INITIAL_DATA.image_url + '" class="max-h-full rounded-xl shadow-lg border-2 border-white">';
+        let displayUrl = INITIAL_DATA.image_url;
+        if (displayUrl.startsWith('file:')) {
+          displayUrl = 'https://res.cloudinary.com/' + displayUrl.substring(5);
+        }
+        if (displayUrl.includes('cloudinary.com') && displayUrl.endsWith('.webp')) {
+           displayUrl = displayUrl.replace(/\.webp$/, '.jpg');
+        }
+        document.getElementById('dropzone').innerHTML = '<img src="' + displayUrl + '" class="max-h-full rounded-xl shadow-lg border-2 border-white">';
       }
 
       loadWhatsAppNumbers();
@@ -2632,12 +2639,34 @@ function generateHTML(env, initialData = null) {
         } else if (isNewAd && INITIAL_DATA.image_url) {
           setLdr("Descargando imagen desde URL...");
           try {
-            const imgRes = await fetch(INITIAL_DATA.image_url);
+            let targetUrl = INITIAL_DATA.image_url;
+            if (targetUrl.startsWith('file:')) {
+              targetUrl = 'https://res.cloudinary.com/' + targetUrl.substring(5);
+            }
+            // Si es Cloudinary y es webp, intentar pedir el jpg (Meta prefiere JPG/PNG)
+            if (targetUrl.includes('cloudinary.com') && targetUrl.endsWith('.webp')) {
+              targetUrl = targetUrl.replace(/\.webp$/, '.jpg');
+            }
+
+            const imgRes = await fetch(targetUrl);
             const blob = await imgRes.blob();
             const base64 = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result.split(',')[1]); reader.readAsDataURL(blob); });
+
             setLdr("Subiendo imagen de URL a Meta...");
-            const mr = await fetch('/api/upload-media', { method:'POST', body: JSON.stringify({ ...getSession(), fileName: "image_from_url.jpg", fileType: blob.type || "image/jpeg", base64: base64 }) });
-            const md = await mr.json(); if(md.error) throw new Error(md.error); mediaId = md.image_hash || md.id; mediaType = "img"; setLdr("Imagen de URL subida exitosamente");
+            const mr = await fetch('/api/upload-media', {
+              method:'POST',
+              body: JSON.stringify({
+                ...getSession(),
+                fileName: targetUrl.split('/').pop() || "image_from_url.jpg",
+                fileType: blob.type || "image/jpeg",
+                base64: base64
+              })
+            });
+            const md = await safeJson(mr);
+            if(md.error) throw new Error(md.error);
+            mediaId = md.image_hash || md.id;
+            mediaType = "img";
+            setLdr("Imagen de URL subida exitosamente");
           } catch(me) { setLdr('Error con imagen de URL: ' + me.message); setTimeout(() => ldr.classList.add('hidden'), 5000); return; }
         }
 
