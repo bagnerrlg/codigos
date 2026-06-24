@@ -2329,7 +2329,7 @@ function generateHTML(env, initialData = null) {
 
 <script>
     window.onerror = function(msg, url, line, col, error) { alert("Error en la App: " + msg + "\\nLínea: " + line); console.error(error); return false; };
-    window.INITIAL_DATA = JSON.parse('[INITIAL_DATA_JSON]');
+    window.INITIAL_DATA = JSON.parse(document.getElementById('initial-data').textContent);
     const DEPTS_GT = ["Alta Verapaz", "Baja Verapaz", "Chimaltenango", "Chiquimula", "El Progreso", "Escuintla", "Guatemala", "Huehuetenango", "Izabal", "Jalapa", "Jutiapa", "Petén", "Quetzaltenango", "Quiché", "Retalhuleu", "Sacatepéquez", "San Marcos", "Santa Rosa", "Sololá", "Suchitepéquez", "Totonicapán", "Zacapa"];
 
     function loadWhatsAppNumbers() {
@@ -2647,7 +2647,7 @@ function generateHTML(env, initialData = null) {
   html = html.replace('[WHATSAPP_3]', whatsapp_3);
   html = html.replace('[WHATSAPP_4]', whatsapp_4);
   html = html.replace('[WHATSAPP_5]', whatsapp_5);
-  html = html.replace('[INITIAL_DATA_JSON]', JSON.stringify(initialData || {}));
+  html = html.replace('<script>', `<script id="initial-data" type="application/json">${JSON.stringify(initialData || {})}</script>\n<script>`);
 
   return new Response(html, { headers: { "Content-Type": "text/html;charset=UTF-8" } });
 }
@@ -2657,64 +2657,71 @@ function generateHTML(env, initialData = null) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (request.method === "GET") return generateHTML(env);
-    if (request.method === "POST") {
+
+    // Definir headers de CORS
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Max-Age": "86400",
+    };
+
+    // Manejar preflight (OPTIONS)
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    let response;
+    if (request.method === "GET") {
+      response = await generateHTML(env);
+    }
+    else if (request.method === "POST") {
       if (url.pathname === "/" || url.pathname === "") {
         const b = await request.json();
-        return generateHTML(env, b);
+        response = await generateHTML(env, b);
+      } else {
+        const b = await request.json();
+        if (url.pathname === "/api/get-accounts") response = await handleGetAccounts(b, env);
+        else if (url.pathname === "/api/search") response = await handleMetaSearch(b, env);
+        else if (url.pathname === "/api/openai-generate") response = await handleOpenAIGenerate(b, env);
+        else if (url.pathname === "/api/get-insights") response = await handleGetInsights(b, env);
+        else if (url.pathname === "/api/get-active-campaigns") response = await handleGetActiveCampaigns(b, env);
+        else if (url.pathname === "/api/get-adsets") response = await handleGetAdSets(b, env);
+        else if (url.pathname === "/api/get-ads") response = await handleGetAds(b, env);
+        else if (url.pathname === "/api/debug-post") response = await handleDebugPost(b, env);
+        else if (url.pathname === "/api/get-custom-audiences") response = await handleGetCustomAudiences(b, env);
+        else if (url.pathname === "/api/get-instagram-accounts") response = await handleGetInstagramAccounts(b, env);
+        else if (url.pathname === "/api/get-message-templates") response = await handleGetMessageTemplates(b, env);
+        else if (url.pathname === "/api/get-whatsapp-numbers") response = await handleGetWhatsAppNumbers(b, env);
+        else if (url.pathname === "/api/check-permissions") response = await handleCheckPermissions(b, env);
+        else if (url.pathname === "/api/debug-token") response = await handleGetTokenInfo(b, env);
+        else if (url.pathname === "/api/update-status") response = await handleUpdateStatus(b, env);
+        else if (url.pathname === "/api/get-full-report") response = await handleGetFullReport(b, env);
+        else if (url.pathname === "/api/debug-adset") response = await handleDebugAdSet(b, env);
+        else if (url.pathname === "/api/get-ad-details") {
+          const token = getToken(env, b.access_token);
+          const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${b.adId}?fields=name,status,creative{id,name,object_story_spec}&access_token=${token}`);
+          const d = await r.json();
+          response = new Response(JSON.stringify({ data: d }), { headers: { "Content-Type": "application/json" } });
+        }
+        else if (url.pathname === "/api/resolve-regions") response = await handleResolveRegions(b, env);
+        else if (url.pathname === "/api/upload-media") response = await handleUploadMedia(b, env);
+        else if (url.pathname === "/api/create-advanced-ad") response = await handleCreateAdvancedAd(b, env);
       }
-      const b = await request.json();
-      if (url.pathname === "/api/get-accounts") return await handleGetAccounts(b, env);
-      if (url.pathname === "/api/search") {
-        return await handleMetaSearch(b, env);
-      }
-      if (url.pathname === "/api/openai-generate") {
-        return await handleOpenAIGenerate(b, env);
-      }
-      if (url.pathname === "/api/get-insights") {
-        return await handleGetInsights(b, env);
-      }
-      if (url.pathname === "/api/get-active-campaigns") return await handleGetActiveCampaigns(b, env);
-      if (url.pathname === "/api/get-adsets") {
-        return await handleGetAdSets(b, env);
-      }
-      if (url.pathname === "/api/get-ads") {
-        return await handleGetAds(b, env);
-      }
-      if (url.pathname === "/api/debug-post") {
-        return await handleDebugPost(b, env);
-      }
-      if (url.pathname === "/api/get-custom-audiences") return await handleGetCustomAudiences(b, env);
-      if (url.pathname === "/api/get-instagram-accounts") {
-        return await handleGetInstagramAccounts(b, env);
-      }
-      if (url.pathname === "/api/get-message-templates") {
-        return await handleGetMessageTemplates(b, env);
-      }
-      if (url.pathname === "/api/get-whatsapp-numbers") {
-        return await handleGetWhatsAppNumbers(b, env);
-      }
-      if (url.pathname === "/api/check-permissions") return await handleCheckPermissions(b, env);
-      if (url.pathname === "/api/debug-token") return await handleGetTokenInfo(b, env);
-      if (url.pathname === "/api/update-status") {
-        return await handleUpdateStatus(b, env);
-      }
-      if (url.pathname === "/api/get-full-report") {
-        return await handleGetFullReport(b, env);
-      }
-      if (url.pathname === "/api/debug-adset") {
-        return await handleDebugAdSet(b, env);
-      }
-      if (url.pathname === "/api/get-ad-details") {
-        const token = getToken(env, b.access_token);
-        const r = await fetch(`https://graph.facebook.com/${API_VERSION}/${b.adId}?fields=name,status,creative{id,name,object_story_spec}&access_token=${token}`);
-        const d = await r.json();
-        return new Response(JSON.stringify({ data: d }), { headers: { "Content-Type": "application/json" } });
-      }
-      if (url.pathname === "/api/resolve-regions") return await handleResolveRegions(b, env);
-      if (url.pathname === "/api/upload-media") return await handleUploadMedia(b, env);
-      if (url.pathname === "/api/create-advanced-ad") return await handleCreateAdvancedAd(b, env);
     }
-    return new Response("Not Found", { status: 404 });
+
+    if (!response) {
+      response = new Response("Not Found", { status: 404 });
+    }
+
+    // Clonar respuesta para añadir headers de CORS (ya que Response de fetch suele ser inmutable)
+    const newHeaders = new Headers(response.headers);
+    Object.keys(corsHeaders).forEach(k => newHeaders.set(k, corsHeaders[k]));
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders
+    });
   }
 };
