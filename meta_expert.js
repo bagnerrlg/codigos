@@ -882,7 +882,8 @@ async function handleUploadMedia(bodyJson, env, headers) {
     }
 
     if (!base64) {
-      throw new Error("Base64 vacío");
+      console.error("[Worker] Error: Base64 vacío en handleUploadMedia. Body:", JSON.stringify(bodyJson).substring(0, 200));
+      return new Response(JSON.stringify({ success: false, error: "Base64 vacío" }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
     // Limpiar DataURL
@@ -2430,15 +2431,15 @@ function generateHTML(env, initialData = null) {
     };
 
     async function fetchAccounts() {
-      try { const r = await fetch('/api/get-accounts', { method: 'POST', body: JSON.stringify(getSession()) }); const d = await r.json(); const s = document.getElementById('pgs'); s.innerHTML = '<option value="">Página de Facebook...</option>'; if (d.data) { d.data.forEach(p => s.add(new Option(p.name, p.id))); if (s.options.length > 1) { s.selectedIndex = 1; updatePageDetails(s.value); } } } catch (e) { console.error("Error fetching accounts:", e); }
+      try { const r = await fetch('/api/get-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getSession()) }); const d = await safeJson(r); const s = document.getElementById('pgs'); s.innerHTML = '<option value="">Página de Facebook...</option>'; if (d.data) { d.data.forEach(p => s.add(new Option(p.name, p.id))); if (s.options.length > 1) { s.selectedIndex = 1; updatePageDetails(s.value); } } } catch (e) { console.error("Error fetching accounts:", e); }
     }
 
     async function fetchActiveCampaigns() {
       const sc = document.getElementById('sel-camp');
       sc.innerHTML = '<option value="">Cargando campañas...</option>';
       try {
-        const r = await fetch('/api/get-active-campaigns', { method: 'POST', body: JSON.stringify(getSession()) });
-        const d = await r.json();
+        const r = await fetch('/api/get-active-campaigns', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getSession()) });
+        const d = await safeJson(r);
         sc.innerHTML = '<option value="NEW">+ Crear Nueva Campaña</option>';
         if (d.data) {
           d.data.forEach(c => sc.add(new Option(c.name, c.id)));
@@ -2456,33 +2457,33 @@ function generateHTML(env, initialData = null) {
     }
 
     async function fetchCustomAudiences() {
-      try { const r = await fetch('/api/get-custom-audiences', { method: 'POST', body: JSON.stringify(getSession()) }); const d = await r.json(); const sa = document.getElementById('sel-audience'); sa.innerHTML = '<option value="">+ Crear Público Manual</option>'; if (d.data) d.data.forEach(a => sa.add(new Option(a.name, a.id))); } catch (e) { console.error("Error fetching audiences:", e); }
+      try { const r = await fetch('/api/get-custom-audiences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getSession()) }); const d = await safeJson(r); const sa = document.getElementById('sel-audience'); sa.innerHTML = '<option value="">+ Crear Público Manual</option>'; if (d.data) d.data.forEach(a => sa.add(new Option(a.name, a.id))); } catch (e) { console.error("Error fetching audiences:", e); }
     }
 
     async function loadAdSets(campId) {
       const s = document.getElementById('sel-adset'); const campConfig = document.getElementById('camp-new-config');
       if (campId === "NEW" || !campId) { s.innerHTML = '<option value="NEW">+ Crear Nuevo Conjunto</option>'; campConfig.classList.toggle('hidden', campId !== "NEW"); return; }
       campConfig.classList.add('hidden'); s.innerHTML = '<option value="">Cargando conjuntos...</option>';
-      try { const r = await fetch('/api/get-adsets', { method: 'POST', body: JSON.stringify({ ...getSession(), campaignId: campId }) }); const d = await r.json(); s.innerHTML = '<option value="NEW">+ Crear Nuevo Conjunto</option>'; if (d.data) d.data.forEach(as => s.add(new Option(as.name, as.id))); } catch (e) { console.error("Exception loadAdSets:", e); }
+      try { const r = await fetch('/api/get-adsets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...getSession(), campaignId: campId }) }); const d = await safeJson(r); s.innerHTML = '<option value="NEW">+ Crear Nuevo Conjunto</option>'; if (d.data) d.data.forEach(as => s.add(new Option(as.name, as.id))); } catch (e) { console.error("Exception loadAdSets:", e); }
     }
 
     async function loadAds(adsetId) {
       const s = document.getElementById('sel-ad'); const adsetConfig = document.getElementById('adset-new-config');
       if (adsetId === "NEW" || !adsetId) { s.innerHTML = '<option value="NEW">+ Crear Nuevo Anuncio</option>'; adsetConfig.classList.toggle('hidden', adsetId !== "NEW"); return; }
       adsetConfig.classList.add('hidden'); s.innerHTML = '<option value="">Cargando anuncios...</option>';
-      try { const r = await fetch('/api/get-ads', { method: 'POST', body: JSON.stringify({ ...getSession(), adsetId: adsetId }) }); const d = await r.json(); s.innerHTML = '<option value="NEW">+ Crear Nuevo Anuncio</option>'; if (d.data) d.data.forEach(ad => s.add(new Option(ad.name, ad.id))); } catch (e) { console.error("Exception loadAds:", e); }
+      try { const r = await fetch('/api/get-ads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...getSession(), adsetId: adsetId }) }); const d = await safeJson(r); s.innerHTML = '<option value="NEW">+ Crear Nuevo Anuncio</option>'; if (d.data) d.data.forEach(ad => s.add(new Option(ad.name, ad.id))); } catch (e) { console.error("Exception loadAds:", e); }
     }
 
     async function loadAdDetails(adId) {
       if (adId === "NEW") return;
-      try { const r = await fetch('/api/get-ad-details', { method: 'POST', body: JSON.stringify({ ...getSession(), adId }) }); const d = await r.json(); if (d.data) { document.getElementById('ad-name').value = d.data.name; document.getElementById('pt').value = d.data.creative?.object_story_spec?.link_data?.message || d.data.creative?.object_story_spec?.video_data?.message || ""; document.getElementById('hd').value = d.data.creative?.name || ""; } } catch (e) { console.error("Error loadAdDetails:", e); }
+      try { const r = await fetch('/api/get-ad-details', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...getSession(), adId }) }); const d = await safeJson(r); if (d.data) { document.getElementById('ad-name').value = d.data.name; document.getElementById('pt').value = d.data.creative?.object_story_spec?.link_data?.message || d.data.creative?.object_story_spec?.video_data?.message || ""; document.getElementById('hd').value = d.data.creative?.name || ""; } } catch (e) { console.error("Error loadAdDetails:", e); }
     }
 
     async function updatePageDetails(pageId){
       if(!pageId) return;
       try {
-        const r1 = await fetch('/api/get-instagram-accounts', { method: 'POST', body: JSON.stringify({ ...getSession(), pageId }) });
-        const d1 = await r1.json();
+        const r1 = await fetch('/api/get-instagram-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...getSession(), pageId }) });
+        const d1 = await safeJson(r1);
         const sig = document.getElementById('sel-ig');
         sig.innerHTML = '<option value="">Perfil de Instagram...</option>';
         if(d1.instagram_business_account) sig.add(new Option(d1.instagram_business_account.name || "Instagram vinculado", d1.instagram_business_account.id));
@@ -2491,10 +2492,10 @@ function generateHTML(env, initialData = null) {
         const st = document.getElementById('sel-template');
         st.innerHTML = '<option value="">Cargando plantillas...</option>';
         const [r2, r3] = await Promise.all([
-          fetch('/api/get-message-templates', { method:'POST', body:JSON.stringify({ ...getSession(), pageId }) }),
-          fetch('/api/get-whatsapp-numbers', { method:'POST', body:JSON.stringify({ ...getSession(), pageId }) })
+          fetch('/api/get-message-templates', { method:'POST', headers: { 'Content-Type': 'application/json' }, body:JSON.stringify({ ...getSession(), pageId }) }),
+          fetch('/api/get-whatsapp-numbers', { method:'POST', headers: { 'Content-Type': 'application/json' }, body:JSON.stringify({ ...getSession(), pageId }) })
         ]);
-        const d2 = await r2.json();
+        const d2 = await safeJson(r2);
         st.innerHTML = '<option value="NEW">+ Crear Nueva Plantilla</option>';
         if(d2.data) d2.data.forEach(t => st.add(new Option(t.name, t.id)));
         initTemplateUI();
@@ -2522,14 +2523,14 @@ function generateHTML(env, initialData = null) {
 
     async function toggleStatus(id, currentStatus){
       const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-      try { const r=await fetch('/api/update-status',{method:'POST',body:JSON.stringify({ ...getSession(), id, status:newStatus})}); const d=await r.json(); if(d.error) alert('Error: ' + d.error.message); loadDash(); } catch(e){ console.error("toggleStatus error:", e); }
+      try { const r=await fetch('/api/update-status',{method:'POST', headers: { 'Content-Type': 'application/json' }, body:JSON.stringify({ ...getSession(), id, status:newStatus})}); const d=await safeJson(r); if(d.error) alert('Error: ' + d.error.message); loadDash(); } catch(e){ console.error("toggleStatus error:", e); }
     }
 
     async function loadDash(){
       document.getElementById('ldr').classList.remove('hidden');
       const start = document.getElementById('rep-start').value; const end = document.getElementById('rep-end').value;
       try {
-        const r=await fetch('/api/get-full-report',{method:'POST',body:JSON.stringify({ ...getSession(), start, end})}); const d=await r.json(); if(d.error) { alert('Error: ' + d.error); return; }
+        const r=await fetch('/api/get-full-report',{method:'POST', headers: { 'Content-Type': 'application/json' }, body:JSON.stringify({ ...getSession(), start, end})}); const d=await safeJson(r); if(d.error) { alert('Error: ' + d.error); return; }
         const container = document.getElementById('dash-main'); container.innerHTML = '';
         d.data.forEach(camp => {
           const msgs = camp.metrics?.actions?.find(a => a.action_type === 'onsite_conversion.messaging_first_reply') || { value:0 };
@@ -2590,8 +2591,8 @@ function generateHTML(env, initialData = null) {
       try {
         const file = document.getElementById('fi').files[0]; let base64Image = null;
         if (file && file.type.startsWith('image/')) { base64Image = await new Promise((resolve) => { const reader = new FileReader(); reader.onload = e => resolve(e.target.result); reader.readAsDataURL(file); }); }
-        const r=await fetch('/api/openai-generate',{ method:'POST', body:JSON.stringify({ ...getSession(), prompt: 'Genera un anuncio de Facebook Ads (Copywriting experto) para el producto: ' + document.getElementById('cn').value + '. Si hay una imagen, analízala para resaltar sus características.', image: base64Image }) });
-        const d=await r.json();
+        const r=await fetch('/api/openai-generate',{ method:'POST', headers: { 'Content-Type': 'application/json' }, body:JSON.stringify({ ...getSession(), prompt: 'Genera un anuncio de Facebook Ads (Copywriting experto) para el producto: ' + document.getElementById('cn').value + '. Si hay una imagen, analízala para resaltar sus características.', image: base64Image }) });
+        const d=await safeJson(r);
         if (d.error) throw new Error(d.error);
         const aiMsg = d.choices && d.choices[0] && d.choices[0].message ? d.choices[0].message : null; if (!aiMsg || !aiMsg.content) throw new Error('No se recibió contenido de la IA');
         const aiResponse = aiMsg.content.replace(/\`\`\`json|\`\`\`/g, '').trim(); const res = JSON.parse(aiResponse); pt.value=res.texto || res.text; hd.value=res.titulo || res.headline;
@@ -2606,7 +2607,11 @@ function generateHTML(env, initialData = null) {
     async function checkPerms(){
       const ldr = document.getElementById('ldr'); ldr.classList.remove('hidden'); setLdr('Analizando Token y Cuenta...');
       try {
-        const [r1, r2] = await Promise.all([ fetch('/api/check-permissions', {method:'POST', body: JSON.stringify(getSession())}), fetch('/api/debug-token', {method:'POST', body: JSON.stringify(getSession())}) ]); const d1 = await r1.json(); const d2 = await r2.json();
+        const [r1, r2] = await Promise.all([
+          fetch('/api/check-permissions', {method:'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getSession())}),
+          fetch('/api/debug-token', {method:'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getSession())})
+        ]);
+        const d1 = await safeJson(r1); const d2 = await safeJson(r2);
         let report = "--- REPORTE DE SALUD ---\\n\\n"; if(d1.token) report += 'TOKEN: ' + d1.token.status.toUpperCase() + ' - ' + d1.token.message + '\\n'; if(d1.account) report += 'CUENTA: ' + d1.account.status.toUpperCase() + ' - ' + d1.account.message + '\\n'; if(d2.data) { const expires = d2.data.expires_at ? new Date(d2.data.expires_at * 1000).toLocaleString() : "Nunca"; report += 'EXPIRA: ' + expires + '\\n'; report += 'TIPO: ' + d2.data.type + '\\n'; }
         ldr.classList.add('hidden'); alert(report);
       } catch(e) { ldr.classList.add('hidden'); alert('Error en verificación: ' + e.message); }
@@ -2622,10 +2627,27 @@ function generateHTML(env, initialData = null) {
         if(!pageId) { alert('Seleccione una página emisora.'); return; }
         const ldr = document.getElementById('ldr'); const log = document.getElementById('ldr-log'); log.innerHTML = ''; ldr.classList.remove('hidden');
         setLdr('Verificando acceso a Meta...');
-        try { const vr = await fetch('/api/check-permissions', {method:'POST', body: JSON.stringify(getSession())}); const vd = await vr.json(); if(vd.token?.status === 'error') throw new Error('Token inválido: ' + vd.token.message); setLdr('Acceso validado correctamente.'); if(vd.account?.status === 'error') { setLdr('Aviso de Cuenta: ' + vd.account.message); if(!confirm('Aviso de Cuenta: ' + vd.account.message + '\\n¿Desea intentar publicar de todos modos?')) { ldr.classList.add('hidden'); return; } } } catch(ve) { setLdr('Error de validación: ' + ve.message); setTimeout(() => ldr.classList.add('hidden'), 3000); return; }
+        try {
+          const vr = await fetch('/api/check-permissions', {method:'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getSession())});
+          const vd = await safeJson(vr);
+          if(vd.token?.status === 'error') throw new Error('Token inválido: ' + vd.token.message);
+          setLdr('Acceso validado correctamente.');
+          if(vd.account?.status === 'error') {
+            setLdr('Aviso de Cuenta: ' + vd.account.message);
+            if(!confirm('Aviso de Cuenta: ' + vd.account.message + '\\n¿Desea intentar publicar de todos modos?')) { ldr.classList.add('hidden'); return; }
+          }
+        } catch(ve) { setLdr('Error de validación: ' + ve.message); setTimeout(() => ldr.classList.add('hidden'), 3000); return; }
 
         let resolvedRegions = []; const depts = Array.from(document.querySelectorAll('.dept-check:checked')).map(c => c.value);
-        if(depts.length > 0) { setLdr("Resolviendo " + depts.length + " ubicaciones en Meta..."); try { const rr = await fetch('/api/resolve-regions', {method:'POST', body:JSON.stringify({ ...getSession(), depts })}); const rd = await rr.json(); resolvedRegions = rd.regions || []; setLdr("Ubicaciones resueltas: " + resolvedRegions.length); } catch(re) { setLdr('Error resolviendo ubicaciones: ' + re.message); } }
+        if(depts.length > 0) {
+          setLdr("Resolviendo " + depts.length + " ubicaciones en Meta...");
+          try {
+            const rr = await fetch('/api/resolve-regions', {method:'POST', headers: { 'Content-Type': 'application/json' }, body:JSON.stringify({ ...getSession(), depts })});
+            const rd = await safeJson(rr);
+            resolvedRegions = rd.regions || [];
+            setLdr("Ubicaciones resueltas: " + resolvedRegions.length);
+          } catch(re) { setLdr('Error resolviendo ubicaciones: ' + re.message); }
+        }
 
         let mediaId = null, mediaType = null;
         if(f) {
@@ -2633,8 +2655,8 @@ function generateHTML(env, initialData = null) {
           try {
             const base64 = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result.split(',')[1]); reader.onerror = reject; reader.readAsDataURL(f); });
             setLdr("Subiendo " + (f.size/1024/1024).toFixed(2) + "MB a Meta...");
-            const mr = await fetch('/api/upload-media', { method:'POST', body: JSON.stringify({ ...getSession(), fileName: f.name, fileType: f.type, fileSize: f.size, base64: base64 }) });
-            const md = await mr.json(); if(md.error) throw new Error(md.error); mediaId = md.image_hash || md.video_id || md.id; mediaType = md.type; setLdr("Archivo subido exitosamente ID: " + mediaId);
+            const mr = await fetch('/api/upload-media', { method:'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...getSession(), fileName: f.name, fileType: f.type, fileSize: f.size, base64: base64 }) });
+            const md = await safeJson(mr); if(md.error) throw new Error(md.error); mediaId = md.image_hash || md.video_id || md.id; mediaType = md.type; setLdr("Archivo subido exitosamente ID: " + mediaId);
           } catch(me) { setLdr('Error subiendo archivo: ' + me.message); setTimeout(() => ldr.classList.add('hidden'), 5000); return; }
         } else if (isNewAd && INITIAL_DATA.image_url) {
           setLdr("Descargando imagen desde URL...");
@@ -2649,12 +2671,25 @@ function generateHTML(env, initialData = null) {
             }
 
             const imgRes = await fetch(targetUrl);
+            if (!imgRes.ok) throw new Error('Error al descargar imagen: ' + imgRes.status);
             const blob = await imgRes.blob();
-            const base64 = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result.split(',')[1]); reader.readAsDataURL(blob); });
+            if (blob.size === 0) throw new Error('Imagen vacía descargada');
+
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const b64 = reader.result.split(',')[1];
+                if (!b64) reject(new Error('Fallo al convertir imagen a base64'));
+                else resolve(b64);
+              };
+              reader.onerror = () => reject(new Error('Fallo al leer imagen'));
+              reader.readAsDataURL(blob);
+            });
 
             setLdr("Subiendo imagen de URL a Meta...");
             const mr = await fetch('/api/upload-media', {
               method:'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 ...getSession(),
                 fileName: targetUrl.split('/').pop() || "image_from_url.jpg",
@@ -2676,7 +2711,8 @@ function generateHTML(env, initialData = null) {
         const finalHeadline = rawHeadline ? (rawHeadline + " *" + adCode) : (document.getElementById('ad-name').value || adCode);
 
         const config={ mediaId, mediaType, resolvedRegions, campaignId:document.getElementById('sel-camp').value, campaignName:document.getElementById('cn').value, objective:document.getElementById('ob').value, adSetId:document.getElementById('sel-adset').value, adSetName:document.getElementById('asn').value, budgetAmount:document.getElementById('ba').value, startDate:document.getElementById('sd').value, messagingDestinations: { messenger: document.getElementById('dest-msg').checked, instagram: document.getElementById('dest-ig').checked, whatsapp: document.getElementById('dest-wa').checked }, whatsappNumber: document.getElementById('wa-num').value, audienceId: document.getElementById('sel-audience').value, manualAudience: { depts: Array.from(document.querySelectorAll('.dept-check:checked')).map(c => c.value), ageMin: document.getElementById('ami').value, interests: document.getElementById('adsug').value }, platforms: { facebook: document.getElementById('plat-fb').checked, instagram: document.getElementById('plat-ig').checked, audience_network: document.getElementById('plat-an').checked, messenger: document.getElementById('plat-msg').checked }, adId: document.getElementById('sel-ad').value, adName: document.getElementById('ad-name').value, pageId: document.getElementById('pgs').value, instagramId: document.getElementById('sel-ig').value, format: document.getElementById('ad-format').value, templateId: document.getElementById('sel-template').value, newTemplate: { text: document.getElementById('tpl-text').value, response: document.getElementById('tpl-res').value }, primaryText:document.getElementById('pt').value, headline:finalHeadline, status:'PAUSED' };
-        const r=await fetch('/api/create-advanced-ad',{ method:'POST', body:JSON.stringify({ ...getSession(), config }) }); const res=await r.json();
+        const r=await fetch('/api/create-advanced-ad',{ method:'POST', headers: { 'Content-Type': 'application/json' }, body:JSON.stringify({ ...getSession(), config }) });
+        const res=await safeJson(r);
         if(res.success){ setLdr('¡ÉXITO! Operación completada.'); setTimeout(() => { ldr.classList.add('hidden'); alert('¡ÉXITO! Campaña/Anuncio listo. ID: ' + res.adId); tab('dash'); loadDash(); }, 1500); } else { setLdr('Error Meta: ' + res.error); setTimeout(() => ldr.classList.add('hidden'), 5000); alert('ERROR: ' + res.error); }
       } catch(e) { console.error("Error fatal en launchAd:", e); alert('Error fatal: ' + e.message); const ldr = document.getElementById('ldr'); if(ldr) ldr.classList.add('hidden'); }
     }
@@ -2707,6 +2743,7 @@ function generateHTML(env, initialData = null) {
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin");
+    const userAgent = request.headers.get("user-agent") || "unknown";
     const corsHeaders = {
       "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept",
@@ -2735,10 +2772,12 @@ export default {
         let b = {};
         try {
           const text = await request.text();
+          console.log(`[Worker] POST ${url.pathname} | Body size: ${text.length} | UA: ${userAgent}`);
           if (text && text.trim()) {
             b = JSON.parse(text);
           }
         } catch (e) {
+          console.error(`[Worker] Body parse error on ${url.pathname}:`, e.message);
           b = {};
         }
 
