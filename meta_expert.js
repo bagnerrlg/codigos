@@ -2442,11 +2442,13 @@ function generateHTML(env, initialData = null) {
         const s = document.getElementById('pgs');
         s.innerHTML = '<option value="">Página de Facebook...</option>';
         if (d.data) {
-          d.data.forEach(p => s.add(new Option(p.name, p.id)));
+          // Filtrar IDs que empiecen con act_ ya que NO son páginas
+          const validPages = d.data.filter(p => p.id && !String(p.id).startsWith('act_'));
+          validPages.forEach(p => s.add(new Option(p.name, p.id)));
 
-          let selectedIndex = 1;
+          let selectedIndex = s.options.length > 1 ? 1 : 0;
           const targetPageId = INITIAL_DATA.page_id || INITIAL_DATA.facebook_page_id;
-          if (targetPageId) {
+          if (targetPageId && !String(targetPageId).startsWith('act_')) {
             for(let i=0; i<s.options.length; i++) {
               if (s.options[i].value === targetPageId) {
                 selectedIndex = i;
