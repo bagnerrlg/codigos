@@ -205,7 +205,7 @@ async function handleGetAds(body, env, headers) {
     `&limit=100`;
 
   const r = await fetch(url);
-  const d = await r.json();
+  const d = await safeJson(r);
 
   return new Response(
     JSON.stringify(d),
@@ -1097,7 +1097,12 @@ async function handleCreateAdvancedAd(body, env, headers) {
   const acc = getAdAccId(env, body, headers);
 
   console.log(`[Worker] Iniciando publicación en cuenta: ${acc}`);
+  console.log(`[Worker] Page ID detectado: ${config.pageId}`);
   console.log(`[Worker] Config recibida:`, JSON.stringify(config, null, 2));
+
+  if (config.pageId && config.pageId.startsWith('act_')) {
+    throw new Error("El pageId proporcionado es un ID de cuenta (act_). Se requiere un ID de página de Facebook real.");
+  }
 
   // Audit permissions again in logs
   try {
@@ -2431,7 +2436,31 @@ function generateHTML(env, initialData = null) {
     };
 
     async function fetchAccounts() {
-      try { const r = await fetch('/api/get-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getSession()) }); const d = await safeJson(r); const s = document.getElementById('pgs'); s.innerHTML = '<option value="">Página de Facebook...</option>'; if (d.data) { d.data.forEach(p => s.add(new Option(p.name, p.id))); if (s.options.length > 1) { s.selectedIndex = 1; updatePageDetails(s.value); } } } catch (e) { console.error("Error fetching accounts:", e); }
+      try {
+        const r = await fetch('/api/get-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getSession()) });
+        const d = await safeJson(r);
+        const s = document.getElementById('pgs');
+        s.innerHTML = '<option value="">Página de Facebook...</option>';
+        if (d.data) {
+          d.data.forEach(p => s.add(new Option(p.name, p.id)));
+
+          let selectedIndex = 1;
+          const targetPageId = INITIAL_DATA.page_id || INITIAL_DATA.facebook_page_id;
+          if (targetPageId) {
+            for(let i=0; i<s.options.length; i++) {
+              if (s.options[i].value === targetPageId) {
+                selectedIndex = i;
+                break;
+              }
+            }
+          }
+
+          if (s.options.length > selectedIndex) {
+            s.selectedIndex = selectedIndex;
+            updatePageDetails(s.value);
+          }
+        }
+      } catch (e) { console.error("Error fetching accounts:", e); }
     }
 
     async function fetchActiveCampaigns() {
@@ -2623,8 +2652,9 @@ function generateHTML(env, initialData = null) {
         const adSetName = document.getElementById('asn').value;
         if(document.getElementById('sel-adset').value === 'NEW' && !adSetName.trim()) { alert('El nombre del conjunto de anuncios es obligatorio.'); return; }
         if (waChecked && !waNumber) { alert('Seleccione un número de WhatsApp'); return; }
-        if(isNewAd && !f) { alert('Debe subir una imagen o video para un anuncio nuevo.'); return; }
+        if(isNewAd && !f && !INITIAL_DATA.image_url) { alert('Debe subir una imagen o video para un anuncio nuevo.'); return; }
         if(!pageId) { alert('Seleccione una página emisora.'); return; }
+        if(pageId.startsWith('act_')) { alert('Error: Se seleccionó un ID de cuenta en lugar de una página. Por favor, seleccione una página de Facebook válida.'); return; }
         const ldr = document.getElementById('ldr'); const log = document.getElementById('ldr-log'); log.innerHTML = ''; ldr.classList.remove('hidden');
         setLdr('Verificando acceso a Meta...');
         try {
