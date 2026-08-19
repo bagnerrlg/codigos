@@ -4,6 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zashome | Emprende tu Negocio Digital</title>
+
+    <!-- CSS Variables for Live Customization -->
+    <style id="custom-theme-vars">
+        :root {
+            --color-teal: #136371;
+            --color-teal-dark: #0D4853;
+            --color-gold: #FFAB00;
+            --color-gold-dark: #E09600;
+            --color-bg-dark: #091E24;
+            --color-card-bg: rgba(15, 44, 53, 0.65);
+            --color-text-main: #F1F5F9;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--color-bg-dark) !important;
+            color: var(--color-text-main) !important;
+            font-family: var(--font-main) !important;
+        }
+
+        .bg-custom-teal { background-color: var(--color-teal) !important; }
+        .bg-custom-teal-dark { background-color: var(--color-teal-dark) !important; }
+        .text-custom-teal { color: var(--color-teal) !important; }
+        .border-custom-teal { border-color: var(--color-teal) !important; }
+
+        .bg-custom-gold { background-color: var(--color-gold) !important; }
+        .text-custom-gold { color: var(--color-gold) !important; }
+        .border-custom-gold { border-color: var(--color-gold) !important; }
+
+        .hero-bg {
+            background: radial-gradient(circle at 50% 0%, var(--color-teal-dark) 0%, var(--color-bg-dark) 100%) !important;
+        }
+
+        .card-blur {
+            background: var(--color-card-bg) !important;
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .card-blur:hover {
+            border-color: var(--color-gold) !important;
+            transform: translateY(-4px);
+        }
+
+        .gold-border-card {
+            background: linear-gradient(135deg, rgba(255, 171, 0, 0.12) 0%, rgba(19, 99, 113, 0.25) 100%) !important;
+            border: 1.5px solid var(--color-gold) !important;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--color-gold) 0%, #FFD074 50%, var(--color-gold) 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+        }
+
+        .shimmer-btn {
+            background: linear-gradient(90deg, var(--color-gold) 0%, #FFD573 50%, var(--color-gold) 100%) !important;
+            background-size: 200% 100% !important;
+            color: #0F172A !important;
+        }
+
+        .editable-highlight {
+            outline: 2px dashed var(--color-gold) !important;
+            outline-offset: 4px;
+            cursor: pointer;
+        }
+    </style>
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -12,20 +79,9 @@
                 extend: {
                     colors: {
                         brand: {
-                            teal: '#136371',
-                            tealDark: '#0D4853',
-                            tealLight: '#1B8294',
-                            gold: '#FFAB00',
-                            goldDark: '#E09600',
-                            goldLight: '#FFC857',
                             dotRed: '#EE3E38',
-                            dotGreen: '#3CB052',
-                            darkBg: '#091E24',
-                            cardBg: '#0F2C35'
+                            dotGreen: '#3CB052'
                         }
-                    },
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
                     },
                     keyframes: {
                         float: {
@@ -51,64 +107,33 @@
             }
         }
     </script>
-    <!-- Google Fonts -->
+
+    <!-- Dynamic Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        .hero-bg {
-            background: radial-gradient(circle at 50% 0%, #0F3740 0%, #08171B 100%);
-        }
-        .card-blur {
-            background: rgba(15, 44, 53, 0.65);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .card-blur:hover {
-            border-color: rgba(255, 171, 0, 0.4);
-            transform: translateY(-4px);
-        }
-        .gold-border-card {
-            background: linear-gradient(135deg, rgba(255, 171, 0, 0.12) 0%, rgba(19, 99, 113, 0.25) 100%);
-            border: 1.5px solid rgba(255, 171, 0, 0.4);
-        }
-        .gradient-text {
-            background: linear-gradient(135deg, #FFAB00 0%, #FFD074 50%, #FFAB00 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .shimmer-btn {
-            background: linear-gradient(90deg, #FFAB00 0%, #FFD573 50%, #FFAB00 100%);
-            background-size: 200% 100%;
-        }
-        .shimmer-btn:hover {
-            animation: shimmer 2s linear infinite;
-        }
-    </style>
+    <link id="dynamic-fonts-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@400;700;900&family=Playfair+Display:wght@600;800&family=Plus+Jakarta+Sans:wght@400;600;800;900&family=Poppins:wght@400;600;800&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
 </head>
-<body class="bg-brand-darkBg text-slate-100 antialiased selection:bg-brand-gold selection:text-brand-darkBg">
+<body class="antialiased selection:bg-amber-400 selection:text-slate-900">
 
     <!-- TOP ANNOUNCEMENT BAR -->
-    <div class="bg-gradient-to-r from-brand-teal via-brand-gold to-brand-teal text-slate-900 text-xs sm:text-sm font-black py-2.5 px-4 text-center tracking-wide shadow-md flex items-center justify-center gap-2">
-        <span class="inline-block w-2.5 h-2.5 rounded-full bg-brand-dotGreen animate-ping"></span>
-        <span>🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTETE EN EMPRESARIO ZASHOME</span>
+    <div id="announcement-bar" class="bg-gradient-to-r from-teal-700 via-amber-500 to-teal-700 text-slate-900 text-xs sm:text-sm font-black py-2.5 px-4 text-center tracking-wide shadow-md flex items-center justify-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+        <span id="announcement-text" class="editable-text" data-key="announcementText">🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTETE EN EMPRESARIO ZASHOME</span>
     </div>
 
     <!-- WHITE BRANDING NAVBAR WITH LOGO -->
-    <nav class="bg-white py-3.5 px-4 sm:px-8 shadow-lg border-b border-slate-200 sticky top-0 z-50 transition-all duration-300">
+    <nav class="bg-white py-3.5 px-4 sm:px-8 shadow-lg border-b border-slate-200 sticky top-0 z-40 transition-all duration-300">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
             <a href="#" class="flex items-center gap-2 group">
-                <img src="images/zashome_logo.jpg" alt="Zashome Logo" class="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105">
+                <img id="nav-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105">
             </a>
             <div class="flex items-center gap-4">
-                <div class="hidden md:flex items-center gap-2 text-xs font-bold text-brand-teal uppercase tracking-wider bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
-                    <span class="w-2 h-2 rounded-full bg-brand-dotGreen"></span> Plazas Disponibles
+                <div class="hidden md:flex items-center gap-2 text-xs font-bold text-custom-teal uppercase tracking-wider bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span id="badge-nav-text" class="editable-text" data-key="badgeNavText">Plazas Disponibles</span>
                 </div>
-                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="bg-brand-teal hover:bg-brand-tealDark text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-1.5">
-                    <span>Únete Ahora</span>
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link bg-custom-teal hover:bg-custom-teal-dark text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-1.5">
+                    <span class="cta-btn-text editable-text" data-key="ctaBtnText">Únete Ahora</span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
@@ -119,41 +144,35 @@
 
     <!-- MAIN HERO SECTION -->
     <header class="relative hero-bg pt-12 pb-20 md:pt-20 md:pb-32 overflow-hidden border-b border-slate-800">
-        <!-- Ambient Light Glowing Accents -->
-        <div class="absolute top-10 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-brand-gold/15 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
-        <div class="absolute top-1/3 right-10 w-80 h-80 bg-brand-teal/30 rounded-full blur-[100px] pointer-events-none"></div>
-
         <div class="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
                 <!-- Left Column: Copy -->
                 <div class="lg:col-span-7 text-center lg:text-left">
                     <!-- Floating Badge -->
-                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full card-blur border border-brand-gold/40 text-brand-gold text-xs sm:text-sm font-bold mb-6 shadow-xl animate-float">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full card-blur border border-custom-gold text-custom-gold text-xs sm:text-sm font-bold mb-6 shadow-xl animate-float">
                         <span class="flex h-2 w-2 relative">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-gold opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-gold"></span>
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
                         </span>
-                        Sin Inventario • Sin Jefes • Oportunidad 100% Digital
+                        <span id="hero-badge-text" class="editable-text" data-key="heroBadgeText">Sin Inventario • Sin Jefes • Oportunidad 100% Digital</span>
                     </div>
 
                     <!-- Main Headline -->
                     <h1 class="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight mb-6">
-                        Zas NO tiene vendedores, <br class="hidden sm:inline">
-                        <span class="gradient-text">
-                            tiene EMPRENDEDORES.
-                        </span>
+                        <span id="hero-title-1" class="editable-text" data-key="heroTitle1">Zas NO tiene vendedores,</span> <br class="hidden sm:inline">
+                        <span id="hero-title-2" class="gradient-text editable-text" data-key="heroTitle2">tiene EMPRENDEDORES.</span>
                     </h1>
 
                     <!-- Subtitle -->
-                    <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 mb-8 leading-relaxed font-normal">
+                    <p id="hero-subtitle" class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 mb-8 leading-relaxed font-normal editable-text" data-key="heroSubtitle">
                         Descubre cómo nuestra plataforma te brinda la tecnología, logística y capacitación financiera que necesitas para construir un negocio altamente rentable generando ventas diarias sin comprar stock inicial.
                     </p>
 
                     <!-- Primary CTA Button -->
                     <div class="mb-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                        <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="w-full sm:w-auto inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-lg sm:text-xl px-9 py-4.5 rounded-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl">
-                            <span>Únete a Zas Ahora</span>
+                        <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link w-full sm:w-auto inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-lg sm:text-xl px-9 py-4.5 rounded-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl">
+                            <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
@@ -163,34 +182,31 @@
                     <!-- Quick Highlights -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-800">
                         <div class="card-blur p-3 rounded-xl text-center">
-                            <div class="text-brand-gold font-black text-xl">0%</div>
+                            <div class="text-custom-gold font-black text-xl">0%</div>
                             <div class="text-[11px] text-slate-300 font-semibold">Stock Inicial</div>
                         </div>
                         <div class="card-blur p-3 rounded-xl text-center">
-                            <div class="text-brand-dotGreen font-black text-xl">100%</div>
+                            <div class="text-emerald-400 font-black text-xl">100%</div>
                             <div class="text-[11px] text-slate-300 font-semibold">Logística Lista</div>
                         </div>
                         <div class="card-blur p-3 rounded-xl text-center">
-                            <div class="text-brand-gold font-black text-xl">24/7</div>
+                            <div class="text-custom-gold font-black text-xl">24/7</div>
                             <div class="text-[11px] text-slate-300 font-semibold">Plataforma Activa</div>
                         </div>
                         <div class="card-blur p-3 rounded-xl text-center">
-                            <div class="text-brand-dotRed font-black text-xl">$$$</div>
+                            <div class="text-rose-500 font-black text-xl">$$$</div>
                             <div class="text-[11px] text-slate-300 font-semibold">Ingresos Diarios</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right Column: Animated Visual (Financial Growth & Education) -->
+                <!-- Right Column: Animated Visual -->
                 <div class="lg:col-span-5 relative">
-                    <!-- Main Feature Graphic Card -->
                     <div class="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl gold-border-card p-2 animate-floatSlow">
                         <div class="relative rounded-2xl overflow-hidden bg-slate-900">
-                            <!-- Visual Graphic: Financial Learning & Growth -->
-                            <img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80" alt="Emprendedores Aprendiendo Finanzas" class="w-full h-80 object-cover opacity-90 hover:scale-105 transition-transform duration-700">
-                            <div class="absolute inset-0 bg-gradient-to-t from-brand-darkBg via-transparent to-transparent"></div>
+                            <img id="hero-img-visual" src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80" alt="Emprendedores Aprendiendo Finanzas" class="w-full h-80 object-cover opacity-90 hover:scale-105 transition-transform duration-700">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
 
-                            <!-- Overlaid Profit Floating Badge -->
                             <div class="absolute top-4 right-4 bg-white/95 backdrop-blur-md text-slate-900 p-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-200">
                                 <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 font-extrabold flex items-center justify-center text-xl">
                                     📈
@@ -201,10 +217,9 @@
                                 </div>
                             </div>
 
-                            <!-- Overlaid Education Badge -->
-                            <div class="absolute bottom-4 left-4 right-4 bg-brand-darkBg/90 backdrop-blur-md p-4 rounded-xl border border-slate-700/80">
+                            <div class="absolute bottom-4 left-4 right-4 bg-slate-950/90 backdrop-blur-md p-4 rounded-xl border border-slate-700/80">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-brand-gold text-slate-950 font-black flex items-center justify-center text-xs">
+                                    <div class="w-8 h-8 rounded-full bg-custom-gold text-slate-950 font-black flex items-center justify-center text-xs">
                                         🎓
                                     </div>
                                     <div class="text-xs text-slate-200 font-semibold">
@@ -220,19 +235,17 @@
         </div>
     </header>
 
-    <!-- SECTION: FINANCES & PROFIT TOUCH (EDUCACIÓN FINANCIERA Y GANANCIAS) -->
-    <section class="py-16 md:py-24 bg-brand-darkBg relative border-b border-slate-800">
+    <!-- SECTION: FINANCES & PROFIT TOUCH -->
+    <section class="py-16 md:py-24 relative border-b border-slate-800">
         <div class="max-w-6xl mx-auto px-4 sm:px-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
-                <!-- Financial Learning Graphic -->
                 <div class="relative order-2 md:order-1">
                     <div class="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 group">
-                        <img src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80" alt="Finanzas y Crecimiento de Negocios" class="w-full h-96 object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img id="finance-img-visual" src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80" alt="Finanzas y Crecimiento" class="w-full h-96 object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
-                    <!-- Stat Floating Pill -->
-                    <div class="absolute -bottom-6 -right-2 sm:right-6 bg-slate-900 border border-brand-gold/50 p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-float">
-                        <div class="w-12 h-12 rounded-xl bg-brand-gold/20 text-brand-gold font-extrabold flex items-center justify-center text-2xl">
+                    <div class="absolute -bottom-6 -right-2 sm:right-6 bg-slate-900 border border-custom-gold p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-float">
+                        <div class="w-12 h-12 rounded-xl bg-amber-500/20 text-custom-gold font-extrabold flex items-center justify-center text-2xl">
                             💡
                         </div>
                         <div>
@@ -242,9 +255,8 @@
                     </div>
                 </div>
 
-                <!-- Content -->
                 <div class="order-1 md:order-2">
-                    <span class="text-brand-gold font-extrabold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/20 mb-4 inline-block">
+                    <span class="text-custom-gold font-extrabold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4 inline-block">
                         ENFOQUE EN RENTABILIDAD
                     </span>
                     <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-6 leading-tight">
@@ -256,21 +268,21 @@
 
                     <div class="space-y-4">
                         <div class="card-blur p-4 rounded-xl flex items-start gap-4">
-                            <span class="text-brand-dotGreen text-xl font-bold">✔</span>
+                            <span class="text-emerald-400 text-xl font-bold">✔</span>
                             <div>
                                 <h4 class="text-white font-bold text-sm">Control de Flujo de Caja</h4>
                                 <p class="text-slate-400 text-xs mt-0.5">Aprende a gestionar cada quetzal generado para hacer crecer tu capital de trabajo sin riesgo.</p>
                             </div>
                         </div>
                         <div class="card-blur p-4 rounded-xl flex items-start gap-4">
-                            <span class="text-brand-dotGreen text-xl font-bold">✔</span>
+                            <span class="text-emerald-400 text-xl font-bold">✔</span>
                             <div>
                                 <h4 class="text-white font-bold text-sm">Altos Márgenes por Operación</h4>
                                 <p class="text-slate-400 text-xs mt-0.5">Diseñado para maximizar el retorno de tu tiempo y esfuerzo publicitario.</p>
                             </div>
                         </div>
                         <div class="card-blur p-4 rounded-xl flex items-start gap-4">
-                            <span class="text-brand-dotGreen text-xl font-bold">✔</span>
+                            <span class="text-emerald-400 text-xl font-bold">✔</span>
                             <div>
                                 <h4 class="text-white font-bold text-sm">Ingresos Diarios y Pagos Rápidos</h4>
                                 <p class="text-slate-400 text-xs mt-0.5">Recibe tus utilidades de forma ágil y transparente a través del sistema integrado.</p>
@@ -295,9 +307,7 @@
                 </p>
             </div>
 
-            <!-- Business Comparisons Grid -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <!-- Airbnb -->
                 <div class="card-blur p-6 rounded-2xl border border-slate-800 transition-all duration-300">
                     <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-xl mb-4">
                         🏠
@@ -308,7 +318,6 @@
                     </p>
                 </div>
 
-                <!-- Uber -->
                 <div class="card-blur p-6 rounded-2xl border border-slate-800 transition-all duration-300">
                     <div class="w-12 h-12 rounded-xl bg-slate-100/10 text-white flex items-center justify-center font-bold text-xl mb-4">
                         🚗
@@ -319,31 +328,29 @@
                     </p>
                 </div>
 
-                <!-- Zashome -->
                 <div class="gold-border-card p-6 rounded-2xl shadow-xl relative overflow-hidden transform hover:-translate-y-2 transition-all">
-                    <div class="absolute -top-3 -right-3 bg-brand-gold text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                    <div class="absolute -top-3 -right-3 bg-custom-gold text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider">
                         Tu Oportunidad
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-brand-gold/20 text-brand-gold flex items-center justify-center font-bold text-xl mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/20 text-custom-gold flex items-center justify-center font-bold text-xl mb-4">
                         ⚡
                     </div>
-                    <h3 class="text-xl font-black text-brand-gold mb-2">Zashome</h3>
+                    <h3 class="text-xl font-black text-custom-gold mb-2">Zashome</h3>
                     <p class="text-sm text-slate-200 leading-relaxed font-medium">
                         Te permite construir un negocio digital sostenible comercializando productos de alta demanda sin arriesgar tu dinero comprando mercancía.
                     </p>
                 </div>
             </div>
 
-            <!-- Highlight Banner -->
-            <div class="bg-gradient-to-r from-brand-teal/40 via-brand-cardBg to-brand-teal/40 p-8 rounded-3xl border border-brand-teal/50 text-center max-w-4xl mx-auto shadow-2xl">
+            <div class="bg-gradient-to-r from-teal-900/40 via-slate-900 to-teal-900/40 p-8 rounded-3xl border border-custom-teal text-center max-w-4xl mx-auto shadow-2xl">
                 <h3 class="text-xl sm:text-2xl font-bold text-white mb-3">
                     "Tú no vendes para alguien más. Tú construyes tu propia empresa utilizando nuestra infraestructura."
                 </h3>
                 <p class="text-slate-300 text-sm sm:text-base mb-6">
                     Manejamos el almacenamiento, la logística de entrega y los cobros por ti. Tu único enfoque es conectar clientes e incrementar tus ingresos día a día.
                 </p>
-                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-brand-gold hover:bg-brand-goldDark text-slate-950 font-black px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm sm:text-base active:scale-95">
-                    <span>Únete a Zas Ahora</span>
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link inline-flex items-center gap-2 bg-custom-gold text-slate-950 font-black px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm sm:text-base active:scale-95">
+                    <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
@@ -353,10 +360,10 @@
     </section>
 
     <!-- SECTION: ESCUELA DE EMPRESARIOS & CÁTEDRA ZASHOME -->
-    <section class="py-16 md:py-24 bg-brand-darkBg border-t border-slate-800">
+    <section class="py-16 md:py-24 border-t border-slate-800">
         <div class="max-w-6xl mx-auto px-4 sm:px-6">
             <div class="text-center mb-16">
-                <span class="text-brand-gold font-extrabold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/20 mb-3 inline-block">
+                <span class="text-custom-gold font-extrabold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3 inline-block">
                     SISTEMA DE FORMACIÓN INTEGRAL
                 </span>
                 <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2 mb-4">
@@ -367,47 +374,41 @@
                 </p>
             </div>
 
-            <!-- 5 Pillars Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-                <!-- Pillar 1 -->
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
-                    <div class="text-brand-gold font-black text-3xl mb-2">01</div>
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                    <div class="text-custom-gold font-black text-3xl mb-2">01</div>
                     <h3 class="text-lg font-bold text-white mb-2">Contenido Práctico</h3>
                     <p class="text-sm text-slate-300">
                         Estrategias directas al grano, probadas en el mercado real para generar clientes interesados desde tus primeros días.
                     </p>
                 </div>
 
-                <!-- Pillar 2 -->
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
-                    <div class="text-brand-gold font-black text-3xl mb-2">02</div>
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                    <div class="text-custom-gold font-black text-3xl mb-2">02</div>
                     <h3 class="text-lg font-bold text-white mb-2">Aprendizaje Paso a Paso</h3>
                     <p class="text-sm text-slate-300">
                         Módulos guiados en orden lógico para que ejecutes sin sobrecargarte de información ni perder tiempo.
                     </p>
                 </div>
 
-                <!-- Pillar 3 -->
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
-                    <div class="text-brand-gold font-black text-3xl mb-2">03</div>
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                    <div class="text-custom-gold font-black text-3xl mb-2">03</div>
                     <h3 class="text-lg font-bold text-white mb-2">Herramientas Digitales</h3>
                     <p class="text-sm text-slate-300">
                         Acceso a recursos gráficos, plantillas de ventas y material promocional listo para publicar en tus redes.
                     </p>
                 </div>
 
-                <!-- Pillar 4 -->
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
-                    <div class="text-brand-gold font-black text-3xl mb-2">04</div>
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                    <div class="text-custom-gold font-black text-3xl mb-2">04</div>
                     <h3 class="text-lg font-bold text-white mb-2">Acompañamiento Continuo</h3>
                     <p class="text-sm text-slate-300">
                         Comunidad activa y soporte constante para resolver tus dudas y potenciar tus habilidades de cierre.
                     </p>
                 </div>
 
-                <!-- Pillar 5 -->
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold sm:col-span-2 lg:col-span-2">
-                    <div class="text-brand-gold font-black text-3xl mb-2">05</div>
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500 sm:col-span-2 lg:col-span-2">
+                    <div class="text-custom-gold font-black text-3xl mb-2">05</div>
                     <h3 class="text-lg font-bold text-white mb-2">Crecimiento e Ingresos Escalables</h3>
                     <p class="text-sm text-slate-300">
                         Diseñado para que aumentes tus metas de ganancias mes con mes. Tú pones los límites de hasta dónde quieres llegar.
@@ -415,28 +416,27 @@
                 </div>
             </div>
 
-            <!-- Program Features Feature Box -->
             <div class="gold-border-card p-8 rounded-3xl max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
                 <div class="space-y-3 text-left">
                     <h3 class="text-2xl font-black text-white">¿Qué aprenderás en Cátedra Zashome?</h3>
                     <ul class="space-y-2.5 text-sm text-slate-200 font-medium">
                         <li class="flex items-center gap-2.5">
-                            <span class="text-brand-dotGreen font-bold">✔</span> Estrategias de Atracción de Clientes
+                            <span class="text-emerald-400 font-bold">✔</span> Estrategias de Atracción de Clientes
                         </li>
                         <li class="flex items-center gap-2.5">
-                            <span class="text-brand-dotGreen font-bold">✔</span> Técnicas Efectivas de Conversión y Cierre
+                            <span class="text-emerald-400 font-bold">✔</span> Técnicas Efectivas de Conversión y Cierre
                         </li>
                         <li class="flex items-center gap-2.5">
-                            <span class="text-brand-dotGreen font-bold">✔</span> Mentalidad Empresarial e Inteligencia Financiera
+                            <span class="text-emerald-400 font-bold">✔</span> Mentalidad Empresarial e Inteligencia Financiera
                         </li>
                         <li class="flex items-center gap-2.5">
-                            <span class="text-brand-dotGreen font-bold">✔</span> Dominio Total de la Plataforma Zashome
+                            <span class="text-emerald-400 font-bold">✔</span> Dominio Total de la Plataforma Zashome
                         </li>
                     </ul>
                 </div>
                 <div class="shrink-0 w-full md:w-auto text-center">
-                    <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="w-full md:w-auto inline-flex items-center justify-center gap-2 shimmer-btn text-slate-950 font-black px-8 py-4 rounded-xl shadow-xl text-base transition-all hover:scale-105 active:scale-95">
-                        <span>Únete a Zas Ahora</span>
+                    <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link w-full md:w-auto inline-flex items-center justify-center gap-2 shimmer-btn text-slate-950 font-black px-8 py-4 rounded-xl shadow-xl text-base transition-all hover:scale-105 active:scale-95">
+                        <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
@@ -459,9 +459,8 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Benefit 1 -->
-                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-brand-gold/40 transition-all">
-                    <div class="shrink-0 w-12 h-12 rounded-xl bg-brand-teal/30 text-brand-gold flex items-center justify-center text-2xl font-bold">
+                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div class="shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold">
                         📦
                     </div>
                     <div>
@@ -472,9 +471,8 @@
                     </div>
                 </div>
 
-                <!-- Benefit 2 -->
-                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-brand-gold/40 transition-all">
-                    <div class="shrink-0 w-12 h-12 rounded-xl bg-brand-teal/30 text-brand-gold flex items-center justify-center text-2xl font-bold">
+                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div class="shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold">
                         💳
                     </div>
                     <div>
@@ -485,9 +483,8 @@
                     </div>
                 </div>
 
-                <!-- Benefit 3 -->
-                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-brand-gold/40 transition-all">
-                    <div class="shrink-0 w-12 h-12 rounded-xl bg-brand-teal/30 text-brand-gold flex items-center justify-center text-2xl font-bold">
+                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div class="shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold">
                         📈
                     </div>
                     <div>
@@ -498,9 +495,8 @@
                     </div>
                 </div>
 
-                <!-- Benefit 4 -->
-                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-brand-gold/40 transition-all">
-                    <div class="shrink-0 w-12 h-12 rounded-xl bg-brand-teal/30 text-brand-gold flex items-center justify-center text-2xl font-bold">
+                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div class="shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold">
                         📲
                     </div>
                     <div>
@@ -515,12 +511,9 @@
     </section>
 
     <!-- SECTION: FINAL CTA BANNER -->
-    <section class="py-20 md:py-28 relative overflow-hidden bg-gradient-to-t from-brand-teal/30 via-brand-darkBg to-brand-darkBg border-t border-slate-800 text-center">
-        <!-- Background Light Glow -->
-        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-brand-gold/15 rounded-full blur-3xl pointer-events-none"></div>
-
+    <section class="py-20 md:py-28 relative overflow-hidden bg-gradient-to-t from-teal-900/30 via-slate-900 to-slate-900 border-t border-slate-800 text-center">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
-            <span class="text-brand-gold font-black text-xs sm:text-sm uppercase tracking-widest mb-4 inline-block">
+            <span class="text-custom-gold font-black text-xs sm:text-sm uppercase tracking-widest mb-4 inline-block">
                 ¿LISTO PARA DAR EL SIGUIENTE PASO?
             </span>
             <h2 class="text-3xl sm:text-5xl font-black text-white tracking-tight mb-6 leading-tight">
@@ -530,8 +523,8 @@
                 No dejes pasar la oportunidad de unirte a la plataforma que está transformando el emprendimiento digital en Guatemala. Haz clic abajo e ingresa de inmediato.
             </p>
 
-            <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-xl sm:text-2xl px-12 py-6 rounded-2xl shadow-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95">
-                <span>Únete a Zas Ahora</span>
+            <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-xl sm:text-2xl px-12 py-6 rounded-2xl shadow-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95">
+                <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
@@ -544,12 +537,471 @@
     <footer class="py-8 bg-white text-center border-t border-slate-200 text-xs text-slate-600">
         <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <img src="images/zashome_logo.jpg" alt="Zashome Logo" class="h-8 w-auto">
+                <img id="footer-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="h-8 w-auto">
                 <span class="font-bold text-slate-700">Tu hogar en un Zas.</span>
             </div>
             <p>© 2025 Zashome. Plataforma de Emprendimiento Digital. Todos los derechos reservados.</p>
         </div>
     </footer>
+
+
+    <!-- ================================================================= -->
+    <!-- FLOATING GRAPHICAL CONFIGURATION BUTTON & LIVE CUSTOMIZER DRAWER -->
+    <!-- ================================================================= -->
+
+    <!-- Floating Trigger Gear Button -->
+    <button id="config-toggle-btn" class="fixed bottom-6 right-6 z-50 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-full shadow-2xl transition-transform hover:scale-110 active:scale-95 flex items-center justify-center group" title="Personalizar Página">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 animate-spin-slow group-hover:rotate-90 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span class="sr-only">Personalizar</span>
+    </button>
+
+    <!-- Customizer Drawer Overlay & Sidebar -->
+    <div id="config-drawer-overlay" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+    <aside id="config-drawer" class="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-slate-900 border-l border-slate-800 text-slate-100 z-50 translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+        <!-- Drawer Header -->
+        <div class="p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="p-2 rounded-xl bg-amber-500/20 text-amber-400 font-bold text-xl">⚙️</span>
+                <div>
+                    <h3 class="font-extrabold text-lg text-white">Editor Visual Zashome</h3>
+                    <p class="text-xs text-slate-400">Personaliza colores, textos, tipografía e imágenes</p>
+                </div>
+            </div>
+            <button id="close-drawer-btn" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                ✕
+            </button>
+        </div>
+
+        <!-- Drawer Body Tabs & Forms -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-6 text-sm">
+
+            <!-- TAB 1: COLORES -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-4">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs flex items-center gap-2">
+                    🎨 Paleta de Colores
+                </h4>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Color Principal (Teal)</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-teal" value="#136371" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span id="picker-teal-hex" class="text-xs font-mono font-bold text-slate-300">#136371</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Color Acento (Gold)</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-gold" value="#FFAB00" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span id="picker-gold-hex" class="text-xs font-mono font-bold text-slate-300">#FFAB00</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Fondo Oscuro</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-bg" value="#091E24" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span id="picker-bg-hex" class="text-xs font-mono font-bold text-slate-300">#091E24</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Texto Principal</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-text" value="#F1F5F9" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span id="picker-text-hex" class="text-xs font-mono font-bold text-slate-300">#F1F5F9</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: TIPOGRAFÍA -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs flex items-center gap-2">
+                    🔤 Tipografía y Fuente
+                </h4>
+                <label class="block text-xs text-slate-400 font-semibold">Seleccionar Tipo de Letra</label>
+                <select id="font-selector" class="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-amber-400 outline-none font-medium">
+                    <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans (Original)</option>
+                    <option value="'Montserrat', sans-serif">Montserrat (Moderna / Fuerte)</option>
+                    <option value="'Poppins', sans-serif">Poppins (Limpia / Geométrica)</option>
+                    <option value="'Inter', sans-serif">Inter (Elegante / Tech)</option>
+                    <option value="'Roboto', sans-serif">Roboto (Clásica / Versátil)</option>
+                    <option value="'Playfair Display', serif">Playfair Display (Premium / Serif)</option>
+                </select>
+            </div>
+
+            <!-- TAB 3: TEXTOS PRINCIPALES Y ENLACES -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs">
+                        ✏️ Textos y Registro
+                    </h4>
+                    <button id="toggle-inline-edit" class="text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 px-2.5 py-1 rounded-lg border border-amber-500/30 font-bold transition-colors">
+                        Clic para Editar Textos: OFF
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Título Principal (Línea 1)</label>
+                    <input type="text" id="input-title-1" class="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-amber-400 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Título Destacado (Línea 2)</label>
+                    <input type="text" id="input-title-2" class="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-amber-400 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Subtítulo Hero</label>
+                    <textarea id="input-subtitle" rows="3" class="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-amber-400 outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Texto Botón Únete (CTA)</label>
+                    <input type="text" id="input-cta-text" class="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-amber-400 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Enlace Destino Botones (URL)</label>
+                    <input type="url" id="input-cta-url" class="w-full bg-slate-800 text-amber-400 p-2.5 rounded-xl border border-slate-700 focus:border-amber-400 outline-none font-mono text-xs">
+                </div>
+            </div>
+
+            <!-- TAB 4: IMÁGENES -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-4">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs">
+                    🖼️ Imágenes Personalizadas
+                </h4>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Logo Principal (URL o Subir)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-logo-url" placeholder="https://..." class="flex-1 bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs">
+                        <label class="bg-slate-800 hover:bg-slate-700 p-2 rounded-xl border border-slate-700 cursor-pointer text-xs flex items-center justify-center font-bold">
+                            📁 <input type="file" id="file-logo" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Imagen Principal Hero (URL o Subir)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-hero-img" placeholder="https://..." class="flex-1 bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs">
+                        <label class="bg-slate-800 hover:bg-slate-700 p-2 rounded-xl border border-slate-700 cursor-pointer text-xs flex items-center justify-center font-bold">
+                            📁 <input type="file" id="file-hero-img" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Imagen Sección Finanzas (URL o Subir)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-finance-img" placeholder="https://..." class="flex-1 bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs">
+                        <label class="bg-slate-800 hover:bg-slate-700 p-2 rounded-xl border border-slate-700 cursor-pointer text-xs flex items-center justify-center font-bold">
+                            📁 <input type="file" id="file-finance-img" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Drawer Footer: Save Actions -->
+        <div class="p-5 bg-slate-950 border-t border-slate-800 space-y-2.5">
+            <button id="download-html-btn" class="w-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-xl flex items-center justify-center gap-2 text-sm transition-all active:scale-95">
+                <span>💾 Guardar Cambios en el Código (.html)</span>
+            </button>
+
+            <button id="reset-theme-btn" class="w-full bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors border border-slate-700">
+                ↺ Restablecer Todo
+            </button>
+        </div>
+    </aside>
+
+    <!-- CUSTOMIZER JAVASCRIPT PERSISTENCE AND COMPILER SCRIPT -->
+    <script id="customizer-logic">
+        (function() {
+            const STORAGE_KEY = 'zashome_customizer_config_v1';
+
+            // State Object
+            const state = {
+                colorTeal: '#136371',
+                colorGold: '#FFAB00',
+                colorBg: '#091E24',
+                colorText: '#F1F5F9',
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                announcementText: "🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTETE EN EMPRESARIO ZASHOME",
+                badgeNavText: "Plazas Disponibles",
+                ctaBtnText: "Únete Ahora",
+                heroBadgeText: "Sin Inventario • Sin Jefes • Oportunidad 100% Digital",
+                heroTitle1: "Zas NO tiene vendedores,",
+                heroTitle2: "tiene EMPRENDEDORES.",
+                heroSubtitle: "Descubre cómo nuestra plataforma te brinda la tecnología, logística y capacitación financiera que necesitas para construir un negocio altamente rentable generando ventas diarias sin comprar stock inicial.",
+                ctaMainText: "Únete a Zas Ahora",
+                ctaUrl: "https://registro.zashome.com.gt",
+                logoUrl: "images/zashome_logo.jpg",
+                heroImgUrl: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80",
+                financeImgUrl: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80"
+            };
+
+            // DOM Elements
+            const configBtn = document.getElementById('config-toggle-btn');
+            const drawerOverlay = document.getElementById('config-drawer-overlay');
+            const drawer = document.getElementById('config-drawer');
+            const closeDrawerBtn = document.getElementById('close-drawer-btn');
+
+            const pickerTeal = document.getElementById('picker-teal');
+            const pickerGold = document.getElementById('picker-gold');
+            const pickerBg = document.getElementById('picker-bg');
+            const pickerText = document.getElementById('picker-text');
+
+            const fontSelect = document.getElementById('font-selector');
+            const inputTitle1 = document.getElementById('input-title-1');
+            const inputTitle2 = document.getElementById('input-title-2');
+            const inputSubtitle = document.getElementById('input-subtitle');
+            const inputCtaText = document.getElementById('input-cta-text');
+            const inputCtaUrl = document.getElementById('input-cta-url');
+
+            const inputLogoUrl = document.getElementById('input-logo-url');
+            const inputHeroImg = document.getElementById('input-hero-img');
+            const inputFinanceImg = document.getElementById('input-finance-img');
+
+            const fileLogo = document.getElementById('file-logo');
+            const fileHeroImg = document.getElementById('file-hero-img');
+            const fileFinanceImg = document.getElementById('file-finance-img');
+
+            const downloadBtn = document.getElementById('download-html-btn');
+            const resetBtn = document.getElementById('reset-theme-btn');
+            const toggleInlineBtn = document.getElementById('toggle-inline-edit');
+
+            let isInlineEditing = false;
+
+            // Load Saved Config from LocalStorage or Data Embedded in Document
+            function loadSavedConfig() {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                        Object.assign(state, JSON.parse(saved));
+                    }
+                } catch(e) { console.error('LocalStorage error:', e); }
+                applyStateToDOM();
+            }
+
+            function applyStateToDOM() {
+                // Apply CSS Root Variables
+                document.documentElement.style.setProperty('--color-teal', state.colorTeal);
+                document.documentElement.style.setProperty('--color-teal-dark', adjustHex(state.colorTeal, -20));
+                document.documentElement.style.setProperty('--color-gold', state.colorGold);
+                document.documentElement.style.setProperty('--color-bg-dark', state.colorBg);
+                document.documentElement.style.setProperty('--color-text-main', state.colorText);
+                document.documentElement.style.setProperty('--font-main', state.fontFamily);
+
+                // Update Color Pickers & Hex labels
+                if (pickerTeal) pickerTeal.value = state.colorTeal;
+                if (pickerGold) pickerGold.value = state.colorGold;
+                if (pickerBg) pickerBg.value = state.colorBg;
+                if (pickerText) pickerText.value = state.colorText;
+
+                document.getElementById('picker-teal-hex').innerText = state.colorTeal;
+                document.getElementById('picker-gold-hex').innerText = state.colorGold;
+                document.getElementById('picker-bg-hex').innerText = state.colorBg;
+                document.getElementById('picker-text-hex').innerText = state.colorText;
+
+                // Update Font Selector
+                if (fontSelect) fontSelect.value = state.fontFamily;
+
+                // Update Text Content
+                document.querySelectorAll('[data-key]').forEach(el => {
+                    const key = el.getAttribute('data-key');
+                    if (state[key]) {
+                        el.innerText = state[key];
+                    }
+                });
+
+                // Update Inputs
+                if (inputTitle1) inputTitle1.value = state.heroTitle1;
+                if (inputTitle2) inputTitle2.value = state.heroTitle2;
+                if (inputSubtitle) inputSubtitle.value = state.heroSubtitle;
+                if (inputCtaText) inputCtaText.value = state.ctaMainText;
+                if (inputCtaUrl) inputCtaUrl.value = state.ctaUrl;
+
+                if (inputLogoUrl) inputLogoUrl.value = state.logoUrl;
+                if (inputHeroImg) inputHeroImg.value = state.heroImgUrl;
+                if (inputFinanceImg) inputFinanceImg.value = state.financeImgUrl;
+
+                // Update CTA Links
+                document.querySelectorAll('.cta-link').forEach(a => a.href = state.ctaUrl);
+
+                // Update Images
+                const logoImgs = [document.getElementById('nav-logo-img'), document.getElementById('footer-logo-img')];
+                logoImgs.forEach(img => { if (img) img.src = state.logoUrl; });
+
+                const heroImg = document.getElementById('hero-img-visual');
+                if (heroImg) heroImg.src = state.heroImgUrl;
+
+                const financeImg = document.getElementById('finance-img-visual');
+                if (financeImg) financeImg.src = state.financeImgUrl;
+
+                // Save to LocalStorage
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                } catch(e) {}
+            }
+
+            // Adjust Hex Color Lightness/Darkness
+            function adjustHex(hex, percent) {
+                let num = parseInt(hex.replace('#', ''), 16),
+                    amt = Math.round(2.55 * percent),
+                    R = (num >> 16) + amt,
+                    G = (num >> 8 & 0x00FF) + amt,
+                    B = (num & 0x0000FF) + amt;
+                return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+            }
+
+            // Toggle Config Drawer
+            function openDrawer() {
+                drawerOverlay.classList.remove('hidden');
+                setTimeout(() => {
+                    drawerOverlay.classList.remove('opacity-0');
+                    drawer.classList.remove('translate-x-full');
+                }, 10);
+            }
+
+            function closeDrawer() {
+                drawerOverlay.classList.add('opacity-0');
+                drawer.classList.add('translate-x-full');
+                setTimeout(() => {
+                    drawerOverlay.classList.add('hidden');
+                }, 300);
+            }
+
+            // Event Listeners for Pickers
+            pickerTeal.addEventListener('input', (e) => { state.colorTeal = e.target.value; applyStateToDOM(); });
+            pickerGold.addEventListener('input', (e) => { state.colorGold = e.target.value; applyStateToDOM(); });
+            pickerBg.addEventListener('input', (e) => { state.colorBg = e.target.value; applyStateToDOM(); });
+            pickerText.addEventListener('input', (e) => { state.colorText = e.target.value; applyStateToDOM(); });
+
+            fontSelect.addEventListener('change', (e) => { state.fontFamily = e.target.value; applyStateToDOM(); });
+
+            inputTitle1.addEventListener('input', (e) => { state.heroTitle1 = e.target.value; applyStateToDOM(); });
+            inputTitle2.addEventListener('input', (e) => { state.heroTitle2 = e.target.value; applyStateToDOM(); });
+            inputSubtitle.addEventListener('input', (e) => { state.heroSubtitle = e.target.value; applyStateToDOM(); });
+            inputCtaText.addEventListener('input', (e) => { state.ctaMainText = e.target.value; applyStateToDOM(); });
+            inputCtaUrl.addEventListener('input', (e) => { state.ctaUrl = e.target.value; applyStateToDOM(); });
+
+            inputLogoUrl.addEventListener('change', (e) => { state.logoUrl = e.target.value; applyStateToDOM(); });
+            inputHeroImg.addEventListener('change', (e) => { state.heroImgUrl = e.target.value; applyStateToDOM(); });
+            inputFinanceImg.addEventListener('change', (e) => { state.financeImgUrl = e.target.value; applyStateToDOM(); });
+
+            // File Upload Readers (Base64 conversion)
+            function handleFileUpload(fileInput, key) {
+                fileInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            state[key] = e.target.result;
+                            applyStateToDOM();
+                        };
+                        reader.readAsDataURL(this.files[0]);
+                    }
+                });
+            }
+            handleFileUpload(fileLogo, 'logoUrl');
+            handleFileUpload(fileHeroImg, 'heroImgUrl');
+            handleFileUpload(fileFinanceImg, 'financeImgUrl');
+
+            // Inline Editable Text
+            toggleInlineBtn.addEventListener('click', () => {
+                isInlineEditing = !isInlineEditing;
+                toggleInlineBtn.innerText = `Clic para Editar Textos: ${isInlineEditing ? 'ON' : 'OFF'}`;
+                toggleInlineBtn.className = isInlineEditing
+                    ? "text-xs bg-emerald-500 text-slate-950 font-black px-2.5 py-1 rounded-lg shadow transition-colors"
+                    : "text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 px-2.5 py-1 rounded-lg border border-amber-500/30 font-bold transition-colors";
+
+                document.querySelectorAll('.editable-text').forEach(el => {
+                    el.contentEditable = isInlineEditing;
+                    if (isInlineEditing) {
+                        el.classList.add('editable-highlight');
+                        el.onblur = function() {
+                            const key = el.getAttribute('data-key');
+                            if (key) {
+                                state[key] = el.innerText.trim();
+                                applyStateToDOM();
+                            }
+                        };
+                    } else {
+                        el.classList.remove('editable-highlight');
+                    }
+                });
+            });
+
+            // Reset Configuration
+            resetBtn.addEventListener('click', () => {
+                if (confirm('¿Restablecer todos los colores, textos e imágenes a los valores originales?')) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    location.reload();
+                }
+            });
+
+            // Export / Download Compiled HTML File
+            downloadBtn.addEventListener('click', () => {
+                // Ensure inline editing highlights are disabled before export
+                if (isInlineEditing) toggleInlineBtn.click();
+
+                // Build custom CSS tag with compiled variables
+                const compiledCss = `
+        :root {
+            --color-teal: ${state.colorTeal};
+            --color-teal-dark: ${adjustHex(state.colorTeal, -20)};
+            --color-gold: ${state.colorGold};
+            --color-gold-dark: ${adjustHex(state.colorGold, -20)};
+            --color-bg-dark: ${state.colorBg};
+            --color-card-bg: rgba(15, 44, 53, 0.65);
+            --color-text-main: ${state.colorText};
+            --font-main: ${state.fontFamily};
+        }`;
+
+                // Clone DOM to preserve clean code
+                const cloneDoc = document.documentElement.cloneNode(true);
+
+                // Embed updated state directly into script
+                const customVarsTag = cloneDoc.querySelector('#custom-theme-vars');
+                if (customVarsTag) {
+                    customVarsTag.innerHTML = customVarsTag.innerHTML.replace(/:root\s*\{[^}]*\}/s, compiledCss);
+                }
+
+                // Prepare HTML string
+                const htmlContent = "<!DOCTYPE html>\n" + cloneDoc.outerHTML;
+
+                // Trigger file download
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'VentaZAshome.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('¡Código fuente guardado exitosamente! El archivo VentaZAshome.html se ha descargado con todos tus cambios aplicados.');
+            });
+
+            // Trigger Listeners
+            configBtn.addEventListener('click', openDrawer);
+            closeDrawerBtn.addEventListener('click', closeDrawer);
+            drawerOverlay.addEventListener('click', closeDrawer);
+
+            // Init Load
+            loadSavedConfig();
+        })();
+    </script>
 
 </body>
 </html>
