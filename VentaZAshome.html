@@ -43,6 +43,8 @@
             background: var(--color-card-bg) !important;
             backdrop-filter: blur(16px);
             border: 1px solid var(--color-card-border) !important;
+            background-size: cover;
+            background-position: center;
         }
         .card-blur:hover {
             border-color: var(--color-gold) !important;
@@ -52,6 +54,8 @@
         .gold-border-card {
             background: linear-gradient(135deg, rgba(255, 171, 0, 0.12) 0%, rgba(19, 99, 113, 0.25) 100%) !important;
             border: 1.5px solid var(--color-gold) !important;
+            background-size: cover;
+            background-position: center;
         }
 
         .gradient-text {
@@ -64,27 +68,31 @@
             background: linear-gradient(90deg, var(--color-gold) 0%, #FFD573 50%, var(--color-gold) 100%) !important;
             background-size: 200% 100% !important;
             color: var(--color-btn-text) !important;
+            background-position: center;
         }
 
         .editable-highlight {
             outline: 2px dashed var(--color-gold) !important;
             outline-offset: 4px;
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: 6px;
+            position: relative;
         }
 
-        /* Floating Contextual Formatting Toolbar for Text Selection */
+        /* Floating Contextual Formatting Toolbar for Element Customization & Deletion */
         #formatting-toolbar {
             position: absolute;
-            z-index: 100;
+            z-index: 1000;
             background: #0F172A;
             border: 1px solid #334155;
             border-radius: 12px;
-            padding: 6px 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            flex-wrap: wrap;
+            max-width: 90vw;
         }
     </style>
 
@@ -132,22 +140,55 @@
 </head>
 <body class="antialiased selection:bg-amber-400 selection:text-slate-900">
 
-    <!-- FLOATING CONTEXTUAL FORMATTING BAR FOR TEXT BLOCKS -->
+    <!-- FLOATING CONTEXTUAL TOOLBAR FOR ELEMENT RESIZING, BACKGROUNDS, AND DELETION -->
     <div id="formatting-toolbar" class="hidden">
-        <span class="text-[11px] font-bold text-amber-400">Texto:</span>
+        <span class="text-[11px] font-black text-amber-400 uppercase tracking-wide">Editar Elemento:</span>
+
+        <!-- Text Size -->
         <div class="flex items-center gap-1">
-            <span class="text-[10px] text-slate-400">Tamaño:</span>
-            <input type="number" id="tb-font-size" min="10" max="100" class="w-12 bg-slate-800 text-white text-xs px-1.5 py-1 rounded border border-slate-700">
-            <span class="text-[10px] text-slate-400">px</span>
+            <span class="text-[10px] text-slate-400 font-semibold">Texto:</span>
+            <input type="number" id="tb-font-size" min="8" max="120" placeholder="px" class="w-12 bg-slate-800 text-white text-xs px-1.5 py-1 rounded border border-slate-700">
         </div>
+
+        <!-- Text Color -->
         <div class="flex items-center gap-1">
-            <span class="text-[10px] text-slate-400">Color:</span>
+            <span class="text-[10px] text-slate-400 font-semibold">Color:</span>
             <input type="color" id="tb-font-color" class="w-6 h-6 rounded cursor-pointer bg-transparent border-0">
         </div>
+
+        <!-- Element Width & Height -->
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Ancho:</span>
+            <input type="number" id="tb-width" min="10" max="1200" placeholder="px" class="w-14 bg-slate-800 text-white text-xs px-1.5 py-1 rounded border border-slate-700">
+        </div>
+
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Alto:</span>
+            <input type="number" id="tb-height" min="10" max="1200" placeholder="px" class="w-14 bg-slate-800 text-white text-xs px-1.5 py-1 rounded border border-slate-700">
+        </div>
+
+        <!-- Background Color -->
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Fondo:</span>
+            <input type="color" id="tb-bg-color" class="w-6 h-6 rounded cursor-pointer bg-transparent border-0">
+        </div>
+
+        <!-- Background Image Upload -->
+        <div class="flex items-center gap-1">
+            <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded border border-slate-700 cursor-pointer flex items-center gap-1">
+                🖼️ Fondo
+                <input type="file" id="tb-bg-image-file" accept="image/*" class="hidden">
+            </label>
+        </div>
+
+        <!-- Delete Element Button -->
+        <button id="tb-delete-btn" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 shadow">
+            🗑️ Eliminar
+        </button>
     </div>
 
     <!-- TOP ANNOUNCEMENT BAR -->
-    <div id="announcement-bar" class="bg-gradient-to-r from-teal-700 via-amber-500 to-teal-700 text-slate-900 text-xs sm:text-sm font-black py-2.5 px-4 text-center tracking-wide shadow-md flex items-center justify-center gap-2">
+    <div id="announcement-bar" class="custom-card-container bg-gradient-to-r from-teal-700 via-amber-500 to-teal-700 text-slate-900 text-xs sm:text-sm font-black py-2.5 px-4 text-center tracking-wide shadow-md flex items-center justify-center gap-2">
         <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
         <span id="announcement-text" class="editable-text" data-key="announcementText">🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTETE EN EMPRESARIO ZASHOME</span>
     </div>
@@ -156,14 +197,14 @@
     <nav class="bg-white py-3.5 px-4 sm:px-8 shadow-lg border-b border-slate-200 sticky top-0 z-40 transition-all duration-300">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
             <a href="#" class="flex items-center gap-2 group">
-                <img id="nav-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105">
+                <img id="nav-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="custom-media-box h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105">
             </a>
             <div class="flex items-center gap-4">
                 <div class="hidden md:flex items-center gap-2 text-xs font-bold text-custom-teal uppercase tracking-wider bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                     <span id="badge-nav-text" class="editable-text" data-key="badgeNavText">Plazas Disponibles</span>
                 </div>
-                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link bg-custom-teal hover:bg-custom-teal-dark text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-1.5">
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box bg-custom-teal hover:bg-custom-teal-dark text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-1.5">
                     <span class="cta-btn-text editable-text" data-key="ctaBtnText">Únete Ahora</span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -202,7 +243,7 @@
 
                     <!-- Primary CTA Button -->
                     <div class="mb-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                        <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link w-full sm:w-auto inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-lg sm:text-xl px-9 py-4.5 rounded-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl">
+                        <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box w-full sm:w-auto inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-lg sm:text-xl px-9 py-4.5 rounded-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl">
                             <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -212,19 +253,19 @@
 
                     <!-- Quick Highlights Cards -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-800">
-                        <div class="card-blur p-3 rounded-xl text-center">
+                        <div class="card-blur custom-card-container p-3 rounded-xl text-center">
                             <div class="text-custom-gold font-black text-xl editable-text" data-key="stat1Num">0%</div>
                             <div class="text-[11px] text-slate-300 font-semibold editable-text" data-key="stat1Text">Stock Inicial</div>
                         </div>
-                        <div class="card-blur p-3 rounded-xl text-center">
+                        <div class="card-blur custom-card-container p-3 rounded-xl text-center">
                             <div class="text-emerald-400 font-black text-xl editable-text" data-key="stat2Num">100%</div>
                             <div class="text-[11px] text-slate-300 font-semibold editable-text" data-key="stat2Text">Logística Lista</div>
                         </div>
-                        <div class="card-blur p-3 rounded-xl text-center">
+                        <div class="card-blur custom-card-container p-3 rounded-xl text-center">
                             <div class="text-custom-gold font-black text-xl editable-text" data-key="stat3Num">24/7</div>
                             <div class="text-[11px] text-slate-300 font-semibold editable-text" data-key="stat3Text">Plataforma Activa</div>
                         </div>
-                        <div class="card-blur p-3 rounded-xl text-center">
+                        <div class="card-blur custom-card-container p-3 rounded-xl text-center">
                             <div class="text-rose-500 font-black text-xl editable-text" data-key="stat4Num">$$$</div>
                             <div class="text-[11px] text-slate-300 font-semibold editable-text" data-key="stat4Text">Ingresos Diarios</div>
                         </div>
@@ -233,11 +274,11 @@
 
                 <!-- Right Column: Animated Visual (Supports Image, Video MP4, or YouTube Embed) -->
                 <div class="lg:col-span-5 relative">
-                    <div class="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl gold-border-card p-2 animate-floatSlow">
+                    <div class="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl gold-border-card p-2 animate-floatSlow custom-card-container">
                         <div id="hero-media-container" class="relative rounded-2xl overflow-hidden bg-slate-900 min-h-[320px] flex items-center justify-center">
-                            <img id="hero-img-visual" src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80" alt="Emprendedores Aprendiendo Finanzas" class="w-full h-80 object-cover opacity-90 hover:scale-105 transition-transform duration-700">
-                            <video id="hero-video-visual" src="" autoplay loop muted playsinline class="hidden w-full h-80 object-cover"></video>
-                            <iframe id="hero-iframe-visual" src="" class="hidden w-full h-80" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                            <img id="hero-img-visual" src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80" alt="Emprendedores Aprendiendo Finanzas" class="custom-media-box w-full h-80 object-cover opacity-90 hover:scale-105 transition-transform duration-700">
+                            <video id="hero-video-visual" src="" autoplay loop muted playsinline class="custom-media-box hidden w-full h-80 object-cover"></video>
+                            <iframe id="hero-iframe-visual" src="" class="custom-media-box hidden w-full h-80" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent pointer-events-none"></div>
 
@@ -275,10 +316,10 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
                 <div class="relative order-2 md:order-1">
-                    <div id="finance-media-container" class="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 group min-h-[384px] flex items-center justify-center bg-slate-900">
-                        <img id="finance-img-visual" src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80" alt="Finanzas y Crecimiento" class="w-full h-96 object-cover group-hover:scale-105 transition-transform duration-500">
-                        <video id="finance-video-visual" src="" autoplay loop muted playsinline class="hidden w-full h-96 object-cover"></video>
-                        <iframe id="finance-iframe-visual" src="" class="hidden w-full h-96" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                    <div id="finance-media-container" class="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 group min-h-[384px] flex items-center justify-center bg-slate-900 custom-card-container">
+                        <img id="finance-img-visual" src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80" alt="Finanzas y Crecimiento" class="custom-media-box w-full h-96 object-cover group-hover:scale-105 transition-transform duration-500">
+                        <video id="finance-video-visual" src="" autoplay loop muted playsinline class="custom-media-box hidden w-full h-96 object-cover"></video>
+                        <iframe id="finance-iframe-visual" src="" class="custom-media-box hidden w-full h-96" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                     </div>
                     <div class="absolute -bottom-6 -right-2 sm:right-6 bg-slate-900 border border-custom-gold p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-float">
                         <div class="w-12 h-12 rounded-xl bg-amber-500/20 text-custom-gold font-extrabold flex items-center justify-center text-2xl">
@@ -303,21 +344,21 @@
                     </p>
 
                     <div class="space-y-4">
-                        <div class="card-blur p-4 rounded-xl flex items-start gap-4">
+                        <div class="card-blur custom-card-container p-4 rounded-xl flex items-start gap-4">
                             <span class="text-emerald-400 text-xl font-bold">✔</span>
                             <div>
                                 <h4 class="text-white font-bold text-sm editable-text" data-key="finBullet1Title">Control de Flujo de Caja</h4>
                                 <p class="text-slate-400 text-xs mt-0.5 editable-text" data-key="finBullet1Desc">Aprende a gestionar cada quetzal generado para hacer crecer tu capital de trabajo sin riesgo.</p>
                             </div>
                         </div>
-                        <div class="card-blur p-4 rounded-xl flex items-start gap-4">
+                        <div class="card-blur custom-card-container p-4 rounded-xl flex items-start gap-4">
                             <span class="text-emerald-400 text-xl font-bold">✔</span>
                             <div>
                                 <h4 class="text-white font-bold text-sm editable-text" data-key="finBullet2Title">Altos Márgenes por Operación</h4>
                                 <p class="text-slate-400 text-xs mt-0.5 editable-text" data-key="finBullet2Desc">Diseñado para maximizar el retorno de tu tiempo y esfuerzo publicitario.</p>
                             </div>
                         </div>
-                        <div class="card-blur p-4 rounded-xl flex items-start gap-4">
+                        <div class="card-blur custom-card-container p-4 rounded-xl flex items-start gap-4">
                             <span class="text-emerald-400 text-xl font-bold">✔</span>
                             <div>
                                 <h4 class="text-white font-bold text-sm editable-text" data-key="finBullet3Title">Ingresos Diarios y Pagos Rápidos</h4>
@@ -344,8 +385,8 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <div class="card-blur p-6 rounded-2xl border border-slate-800 transition-all duration-300">
-                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-xl mb-4">
+                <div class="card-blur custom-card-container p-6 rounded-2xl border border-slate-800 transition-all duration-300">
+                    <div class="custom-media-box w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-xl mb-4">
                         🏠
                     </div>
                     <h3 class="text-xl font-bold text-white mb-2 editable-text" data-key="card1Title">Airbnb</h3>
@@ -354,8 +395,8 @@
                     </p>
                 </div>
 
-                <div class="card-blur p-6 rounded-2xl border border-slate-800 transition-all duration-300">
-                    <div class="w-12 h-12 rounded-xl bg-slate-100/10 text-white flex items-center justify-center font-bold text-xl mb-4">
+                <div class="card-blur custom-card-container p-6 rounded-2xl border border-slate-800 transition-all duration-300">
+                    <div class="custom-media-box w-12 h-12 rounded-xl bg-slate-100/10 text-white flex items-center justify-center font-bold text-xl mb-4">
                         🚗
                     </div>
                     <h3 class="text-xl font-bold text-white mb-2 editable-text" data-key="card2Title">Uber</h3>
@@ -364,11 +405,11 @@
                     </p>
                 </div>
 
-                <div class="gold-border-card p-6 rounded-2xl shadow-xl relative overflow-hidden transform hover:-translate-y-2 transition-all">
+                <div class="gold-border-card custom-card-container p-6 rounded-2xl shadow-xl relative overflow-hidden transform hover:-translate-y-2 transition-all">
                     <div class="absolute -top-3 -right-3 bg-custom-gold text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider editable-text" data-key="card3Badge">
                         Tu Oportunidad
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-amber-500/20 text-custom-gold flex items-center justify-center font-bold text-xl mb-4">
+                    <div class="custom-media-box w-12 h-12 rounded-xl bg-amber-500/20 text-custom-gold flex items-center justify-center font-bold text-xl mb-4">
                         ⚡
                     </div>
                     <h3 class="text-xl font-black text-custom-gold mb-2 editable-text" data-key="card3Title">Zashome</h3>
@@ -378,14 +419,14 @@
                 </div>
             </div>
 
-            <div class="bg-gradient-to-r from-teal-900/40 via-slate-900 to-teal-900/40 p-8 rounded-3xl border border-custom-teal text-center max-w-4xl mx-auto shadow-2xl">
+            <div class="custom-card-container bg-gradient-to-r from-teal-900/40 via-slate-900 to-teal-900/40 p-8 rounded-3xl border border-custom-teal text-center max-w-4xl mx-auto shadow-2xl">
                 <h3 class="text-xl sm:text-2xl font-bold text-white mb-3 editable-text" data-key="quoteBannerText">
                     "Tú no vendes para alguien más. Tú construyes tu propia empresa utilizando nuestra infraestructura."
                 </h3>
                 <p class="text-slate-300 text-sm sm:text-base mb-6 editable-text" data-key="quoteBannerSub">
                     Manejamos el almacenamiento, la logística de entrega y los cobros por ti. Tu único enfoque es conectar clientes e incrementar tus ingresos día a día.
                 </p>
-                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link inline-flex items-center gap-2 bg-custom-gold text-slate-950 font-black px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm sm:text-base active:scale-95">
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box inline-flex items-center gap-2 bg-custom-gold text-slate-950 font-black px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm sm:text-base active:scale-95">
                     <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -411,7 +452,7 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500">
                     <div class="text-custom-gold font-black text-3xl mb-2">01</div>
                     <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar1Title">Contenido Práctico</h3>
                     <p class="text-sm text-slate-300 editable-text" data-key="pillar1Desc">
@@ -419,7 +460,7 @@
                     </p>
                 </div>
 
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500">
                     <div class="text-custom-gold font-black text-3xl mb-2">02</div>
                     <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar2Title">Aprendizaje Paso a Paso</h3>
                     <p class="text-sm text-slate-300 editable-text" data-key="pillar2Desc">
@@ -427,7 +468,7 @@
                     </p>
                 </div>
 
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500">
                     <div class="text-custom-gold font-black text-3xl mb-2">03</div>
                     <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar3Title">Herramientas Digitales</h3>
                     <p class="text-sm text-slate-300 editable-text" data-key="pillar3Desc">
@@ -435,7 +476,7 @@
                     </p>
                 </div>
 
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500">
                     <div class="text-custom-gold font-black text-3xl mb-2">04</div>
                     <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar4Title">Acompañamiento Continuo</h3>
                     <p class="text-sm text-slate-300 editable-text" data-key="pillar4Desc">
@@ -443,7 +484,7 @@
                     </p>
                 </div>
 
-                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-amber-500 sm:col-span-2 lg:col-span-2">
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500 sm:col-span-2 lg:col-span-2">
                     <div class="text-custom-gold font-black text-3xl mb-2">05</div>
                     <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar5Title">Crecimiento e Ingresos Escalables</h3>
                     <p class="text-sm text-slate-300 editable-text" data-key="pillar5Desc">
@@ -452,7 +493,7 @@
                 </div>
             </div>
 
-            <div class="gold-border-card p-8 rounded-3xl max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+            <div class="gold-border-card custom-card-container p-8 rounded-3xl max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
                 <div class="space-y-3 text-left">
                     <h3 class="text-2xl font-black text-white editable-text" data-key="catedraTitle">¿Qué aprenderás en Cátedra Zashome?</h3>
                     <ul class="space-y-2.5 text-sm text-slate-200 font-medium">
@@ -471,7 +512,7 @@
                     </ul>
                 </div>
                 <div class="shrink-0 w-full md:w-auto text-center">
-                    <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link w-full md:w-auto inline-flex items-center justify-center gap-2 shimmer-btn text-slate-950 font-black px-8 py-4 rounded-xl shadow-xl text-base transition-all hover:scale-105 active:scale-95">
+                    <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box w-full md:w-auto inline-flex items-center justify-center gap-2 shimmer-btn text-slate-950 font-black px-8 py-4 rounded-xl shadow-xl text-base transition-all hover:scale-105 active:scale-95">
                         <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -496,8 +537,8 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Benefit 1 -->
-                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
-                    <div id="ben1-icon-container" class="shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
+                <div class="card-blur custom-card-container p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div id="ben1-icon-container" class="custom-media-box shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
                         <span id="ben1-icon-text" class="editable-text" data-key="ben1Icon">📦</span>
                         <img id="ben1-icon-img" src="" class="hidden w-full h-full object-cover">
                     </div>
@@ -510,8 +551,8 @@
                 </div>
 
                 <!-- Benefit 2 -->
-                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
-                    <div id="ben2-icon-container" class="shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
+                <div class="card-blur custom-card-container p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div id="ben2-icon-container" class="custom-media-box shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
                         <span id="ben2-icon-text" class="editable-text" data-key="ben2Icon">💳</span>
                         <img id="ben2-icon-img" src="" class="hidden w-full h-full object-cover">
                     </div>
@@ -524,8 +565,8 @@
                 </div>
 
                 <!-- Benefit 3 -->
-                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
-                    <div id="ben3-icon-container" class="shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
+                <div class="card-blur custom-card-container p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div id="ben3-icon-container" class="custom-media-box shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
                         <span id="ben3-icon-text" class="editable-text" data-key="ben3Icon">📈</span>
                         <img id="ben3-icon-img" src="" class="hidden w-full h-full object-cover">
                     </div>
@@ -538,8 +579,8 @@
                 </div>
 
                 <!-- Benefit 4 -->
-                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
-                    <div id="ben4-icon-container" class="shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
+                <div class="card-blur custom-card-container p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div id="ben4-icon-container" class="custom-media-box shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
                         <span id="ben4-icon-text" class="editable-text" data-key="ben4Icon">📲</span>
                         <img id="ben4-icon-img" src="" class="hidden w-full h-full object-cover">
                     </div>
@@ -567,7 +608,7 @@
                 No dejes pasar la oportunidad de unirte a la plataforma que está transformando el emprendimiento digital en Guatemala. Haz clic abajo e ingresa de inmediato.
             </p>
 
-            <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-xl sm:text-2xl px-12 py-6 rounded-2xl shadow-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95">
+            <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-xl sm:text-2xl px-12 py-6 rounded-2xl shadow-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95">
                 <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -581,7 +622,7 @@
     <footer class="py-8 bg-white text-center border-t border-slate-200 text-xs text-slate-600">
         <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <img id="footer-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="h-8 w-auto">
+                <img id="footer-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="custom-media-box h-8 w-auto">
                 <span class="font-bold text-slate-700 editable-text" data-key="footerTagline">Tu hogar en un Zas.</span>
             </div>
             <p class="editable-text" data-key="footerCopyright">© 2025 Zashome. Plataforma de Emprendimiento Digital. Todos los derechos reservados.</p>
@@ -611,8 +652,8 @@
             <div class="flex items-center gap-3">
                 <span class="p-2 rounded-xl bg-amber-500/20 text-amber-400 font-bold text-xl">⚙️</span>
                 <div>
-                    <h3 class="font-extrabold text-lg text-white">Personalizador Total + Multimedia</h3>
-                    <p class="text-xs text-slate-400">Edita imágenes, videos, tamaños de texto y colores por bloque</p>
+                    <h3 class="font-extrabold text-lg text-white">Personalizador Total + Edición</h3>
+                    <p class="text-xs text-slate-400">Edita tamaños, fondos, elimina elementos e imágenes</p>
                 </div>
             </div>
             <button id="close-drawer-btn" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
@@ -623,7 +664,7 @@
         <!-- Quick Action Bar -->
         <div class="px-5 py-3 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
             <button id="toggle-inline-edit" class="w-full text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 py-2 rounded-xl border border-amber-500/30 font-bold transition-all text-center">
-                ✏️ Modo "Clic para Editar Cualquier Texto": OFF
+                ✏️ Modo "Clic para Editar / Eliminar Elementos": OFF
             </button>
         </div>
 
@@ -808,7 +849,7 @@
     <!-- CUSTOMIZER JAVASCRIPT PERSISTENCE AND COMPILER SCRIPT -->
     <script id="customizer-logic">
         (function() {
-            const STORAGE_KEY = 'zashome_customizer_config_v3';
+            const STORAGE_KEY = 'zashome_customizer_config_v4';
 
             // State Object for 100% of Customizable Elements
             const state = {
@@ -858,7 +899,7 @@
                 finBullet1Title: "Control de Flujo de Caja",
                 finBullet1Desc: "Aprende a gestionar cada quetzal generado para hacer crecer tu capital de trabajo sin riesgo.",
                 finBullet2Title: "Altos Márgenes por Operación",
-                finBullet2Desc: "Diseñado para maximizar el retorno de tu tiempo y esfuerzo publicitario.",
+                finBullet2Desc: "Diseñado para maximizar el retorno de tu tiempo e inversión publicitaria.",
                 finBullet3Title: "Ingresos Diarios y Pagos Rápidos",
                 finBullet3Desc: "Recibe tus utilidades de forma ágil y transparente a través del sistema integrado.",
 
@@ -887,7 +928,6 @@
                 benefitsTitle: "Todo lo que necesitas para triunfar en un solo lugar",
                 benefitsSubtitle: "Simplificamos el comercio digital para que tú solo te enfoques en lo que genera ingresos.",
 
-                // Benefit Icons / Media
                 ben1Icon: "📦", ben1Title: "Logística Integral Resuelta", ben1Desc: "Olvídate del embalaje, etiquetado e ir a las empresas de mensajería. Nosotros despachamos y entregamos directo al cliente final.",
                 ben2Icon: "💳", ben2Title: "Pago Contra Entrega Garantizado", ben2Desc: "Tus clientes pagan al recibir su paquete, brindando total seguridad y aumentando exponencialmente tus posibilidades de venta.",
                 ben3Icon: "📈", ben3Title: "Altos Márgenes de Ganancia", ben3Desc: "Accede a estructuras de comisiones competitivas que te garantizan ingresos significativos por cada operación realizada.",
@@ -900,8 +940,11 @@
                 footerTagline: "Tu hogar en un Zas.",
                 footerCopyright: "© 2025 Zashome. Plataforma de Emprendimiento Digital. Todos los derechos reservados.",
 
-                // Custom Per-Element Styles Object
-                elementStyles: {}
+                // Custom Per-Element Styles Object (Font size, Color, Width, Height, Background Color, Background Image)
+                elementStyles: {},
+
+                // Removed Elements IDs or Selectors
+                deletedElements: []
             };
 
             // DOM Controls
@@ -947,8 +990,13 @@
             const formatToolbar = document.getElementById('formatting-toolbar');
             const tbFontSize = document.getElementById('tb-font-size');
             const tbFontColor = document.getElementById('tb-font-color');
-            let activeSelectedElement = null;
+            const tbWidth = document.getElementById('tb-width');
+            const tbHeight = document.getElementById('tb-height');
+            const tbBgColor = document.getElementById('tb-bg-color');
+            const tbBgImageFile = document.getElementById('tb-bg-image-file');
+            const tbDeleteBtn = document.getElementById('tb-delete-btn');
 
+            let activeSelectedElement = null;
             let isInlineEditing = false;
 
             // Load Saved Config from LocalStorage
@@ -983,6 +1031,16 @@
 
                 if (fontSelect) fontSelect.value = state.fontFamily;
 
+                // Remove deleted elements
+                if (state.deletedElements && Array.isArray(state.deletedElements)) {
+                    state.deletedElements.forEach(selector => {
+                        try {
+                            const el = document.querySelector(selector);
+                            if (el) el.remove();
+                        } catch(e) {}
+                    });
+                }
+
                 // Update Text Content across all elements
                 document.querySelectorAll('[data-key]').forEach(el => {
                     const key = el.getAttribute('data-key');
@@ -991,14 +1049,22 @@
                     }
                 });
 
-                // Apply Custom Per-Element Styles (Font Size, Color)
+                // Apply Custom Per-Element Styles (Size, Width, Height, Colors, Background Images)
                 if (state.elementStyles) {
-                    Object.keys(state.elementStyles).forEach(key => {
-                        const el = document.querySelector(`[data-key="${key}"]`);
+                    Object.keys(state.elementStyles).forEach(selector => {
+                        const el = document.querySelector(selector);
                         if (el) {
-                            const style = state.elementStyles[key];
+                            const style = state.elementStyles[selector];
                             if (style.fontSize) el.style.fontSize = style.fontSize;
                             if (style.color) el.style.color = style.color;
+                            if (style.width) el.style.width = style.width;
+                            if (style.height) el.style.height = style.height;
+                            if (style.backgroundColor) el.style.backgroundColor = style.backgroundColor;
+                            if (style.backgroundImage) {
+                                el.style.backgroundImage = `url(${style.backgroundImage})`;
+                                el.style.backgroundSize = 'cover';
+                                el.style.backgroundPosition = 'center';
+                            }
                         }
                     });
                 }
@@ -1087,6 +1153,30 @@
                 return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
             }
 
+            function getElementSelector(el) {
+                if (el.id) return `#${el.id}`;
+                if (el.getAttribute('data-key')) return `[data-key="${el.getAttribute('data-key')}"]`;
+
+                // Generate relative path
+                let path = [];
+                while (el && el.nodeType === Node.ELEMENT_NODE) {
+                    let selector = el.nodeName.toLowerCase();
+                    if (el.id) {
+                        path.unshift(`#${el.id}`);
+                        break;
+                    } else {
+                        let sibling = el, nth = 1;
+                        while (sibling = sibling.previousElementSibling) {
+                            if (sibling.nodeName.toLowerCase() === selector) nth++;
+                        }
+                        if (nth !== 1) selector += `:nth-of-type(${nth})`;
+                    }
+                    path.unshift(selector);
+                    el = el.parentNode;
+                }
+                return path.join(' > ');
+            }
+
             function openDrawer() {
                 drawerOverlay.classList.remove('hidden');
                 setTimeout(() => {
@@ -1145,20 +1235,29 @@
             handleFileUpload(fileBen2Img, (res) => { state.ben2Icon = res; applyStateToDOM(); });
             handleFileUpload(fileLogo, (res) => { state.logoUrl = res; applyStateToDOM(); });
 
-            // Contextual Floating Toolbar for Text Size & Color per Element
+            // Contextual Floating Toolbar for Element Customization & Deletion
             function showFormattingToolbarForElement(el) {
                 activeSelectedElement = el;
                 const rect = el.getBoundingClientRect();
 
-                formatToolbar.style.top = `${window.scrollY + rect.top - 48}px`;
-                formatToolbar.style.left = `${window.scrollX + rect.left}px`;
+                formatToolbar.style.top = `${window.scrollY + rect.top - 54}px`;
+                formatToolbar.style.left = `${Math.max(10, window.scrollX + rect.left)}px`;
                 formatToolbar.classList.remove('hidden');
 
                 const currentFontSize = parseInt(window.getComputedStyle(el).fontSize) || 16;
                 tbFontSize.value = currentFontSize;
 
+                const currentWidth = parseInt(window.getComputedStyle(el).width) || el.offsetWidth;
+                tbWidth.value = currentWidth;
+
+                const currentHeight = parseInt(window.getComputedStyle(el).height) || el.offsetHeight;
+                tbHeight.value = currentHeight;
+
                 const currentStyleColor = el.style.color || window.getComputedStyle(el).color;
                 tbFontColor.value = rgbToHex(currentStyleColor) || '#FFFFFF';
+
+                const currentBgColor = el.style.backgroundColor || window.getComputedStyle(el).backgroundColor;
+                tbBgColor.value = rgbToHex(currentBgColor) || '#0F2C35';
             }
 
             function rgbToHex(rgb) {
@@ -1168,59 +1267,96 @@
                 return '#' + parts.slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
             }
 
+            function saveElementStyle(selector, key, value) {
+                if (!state.elementStyles) state.elementStyles = {};
+                if (!state.elementStyles[selector]) state.elementStyles[selector] = {};
+                state.elementStyles[selector][key] = value;
+                applyStateToDOM();
+            }
+
             tbFontSize.addEventListener('input', (e) => {
                 if (!activeSelectedElement) return;
-                const newSize = `${e.target.value}px`;
-                activeSelectedElement.style.fontSize = newSize;
-
-                const key = activeSelectedElement.getAttribute('data-key');
-                if (key) {
-                    if (!state.elementStyles) state.elementStyles = {};
-                    if (!state.elementStyles[key]) state.elementStyles[key] = {};
-                    state.elementStyles[key].fontSize = newSize;
-                    applyStateToDOM();
-                }
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'fontSize', `${e.target.value}px`);
             });
 
             tbFontColor.addEventListener('input', (e) => {
                 if (!activeSelectedElement) return;
-                const newColor = e.target.value;
-                activeSelectedElement.style.color = newColor;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'color', e.target.value);
+            });
 
-                const key = activeSelectedElement.getAttribute('data-key');
-                if (key) {
-                    if (!state.elementStyles) state.elementStyles = {};
-                    if (!state.elementStyles[key]) state.elementStyles[key] = {};
-                    state.elementStyles[key].color = newColor;
+            tbWidth.addEventListener('input', (e) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'width', `${e.target.value}px`);
+            });
+
+            tbHeight.addEventListener('input', (e) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'height', `${e.target.value}px`);
+            });
+
+            tbBgColor.addEventListener('input', (e) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'backgroundColor', e.target.value);
+            });
+
+            handleFileUpload(tbBgImageFile, (dataUrl) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'backgroundImage', dataUrl);
+            });
+
+            // Delete Element Functionality
+            tbDeleteBtn.addEventListener('click', () => {
+                if (!activeSelectedElement) return;
+                if (confirm('¿Estás seguro de que deseas eliminar este elemento?')) {
+                    const selector = getElementSelector(activeSelectedElement);
+                    if (!state.deletedElements) state.deletedElements = [];
+                    state.deletedElements.push(selector);
+                    activeSelectedElement.remove();
+                    activeSelectedElement = null;
+                    formatToolbar.classList.add('hidden');
                     applyStateToDOM();
                 }
             });
 
-            // Interactive Click-to-Edit Mode for 100% of text elements
+            // Interactive Click-to-Edit Mode for 100% of elements (Text, Cards, Media, Buttons)
             toggleInlineBtn.addEventListener('click', () => {
                 isInlineEditing = !isInlineEditing;
-                toggleInlineBtn.innerText = `✏️ Modo "Clic para Editar Cualquier Texto": ${isInlineEditing ? 'ON' : 'OFF'}`;
+                toggleInlineBtn.innerText = `✏️ Modo "Clic para Editar / Eliminar Elementos": ${isInlineEditing ? 'ON' : 'OFF'}`;
                 toggleInlineBtn.className = isInlineEditing
                     ? "w-full text-xs bg-emerald-500 text-slate-950 font-black py-2 rounded-xl shadow transition-all text-center"
                     : "w-full text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 py-2 rounded-xl border border-amber-500/30 font-bold transition-all text-center";
 
-                document.querySelectorAll('.editable-text').forEach(el => {
-                    el.contentEditable = isInlineEditing;
+                const allInteractable = document.querySelectorAll('.editable-text, .custom-card-container, .custom-media-box, .custom-button-box');
+
+                allInteractable.forEach(el => {
+                    if (el.classList.contains('editable-text')) {
+                        el.contentEditable = isInlineEditing;
+                    }
+
                     if (isInlineEditing) {
                         el.classList.add('editable-highlight');
                         el.onclick = function(evt) {
                             evt.stopPropagation();
                             showFormattingToolbarForElement(el);
                         };
-                        el.onblur = function() {
-                            const key = el.getAttribute('data-key');
-                            if (key) {
-                                state[key] = el.innerText.trim();
-                                applyStateToDOM();
-                            }
-                        };
+                        if (el.classList.contains('editable-text')) {
+                            el.onblur = function() {
+                                const key = el.getAttribute('data-key');
+                                if (key) {
+                                    state[key] = el.innerText.trim();
+                                    applyStateToDOM();
+                                }
+                            };
+                        }
                     } else {
                         el.classList.remove('editable-highlight');
+                        el.contentEditable = false;
                         el.onclick = null;
                         formatToolbar.classList.add('hidden');
                     }
@@ -1229,7 +1365,7 @@
 
             // Reset Configuration
             resetBtn.addEventListener('click', () => {
-                if (confirm('¿Restablecer absolutamente todos los colores, multimedia, fuentes y textos a los valores por defecto?')) {
+                if (confirm('¿Restablecer absolutamente todos los colores, multimedia, fuentes, tamaños y eliminar cambios?')) {
                     localStorage.removeItem(STORAGE_KEY);
                     location.reload();
                 }
@@ -1283,7 +1419,7 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                alert('¡Código fuente guardado exitosamente! El archivo VentaZAshome.html se ha descargado totalmente personalizado y listo para publicar.');
+                alert('¡Código fuente guardado exitosamente! El archivo VentaZAshome.html se ha descargado totalmente personalizado con tamaños, fondos y eliminaciones integradas.');
             });
 
             configBtn.addEventListener('click', openDrawer);
