@@ -12,17 +12,40 @@
                 extend: {
                     colors: {
                         brand: {
-                            dark: '#081C1B',
-                            teal: '#005C53',
-                            lightTeal: '#042E2B',
-                            gold: '#F1A80A',
-                            goldHover: '#D99304',
-                            goldLight: '#FFF4D9',
-                            accent: '#22C55E'
+                            teal: '#136371',
+                            tealDark: '#0D4853',
+                            tealLight: '#1B8294',
+                            gold: '#FFAB00',
+                            goldDark: '#E09600',
+                            goldLight: '#FFC857',
+                            dotRed: '#EE3E38',
+                            dotGreen: '#3CB052',
+                            darkBg: '#091E24',
+                            cardBg: '#0F2C35'
                         }
                     },
                     fontFamily: {
                         sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-12px)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { boxShadow: '0 0 25px rgba(255, 171, 0, 0.4)' },
+                            '50%': { boxShadow: '0 0 45px rgba(255, 171, 0, 0.8)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' }
+                        }
+                    },
+                    animation: {
+                        float: 'float 4s ease-in-out infinite',
+                        floatSlow: 'float 6s ease-in-out infinite',
+                        pulseGlow: 'pulseGlow 3s ease-in-out infinite',
+                        shimmer: 'shimmer 3s linear infinite'
                     }
                 }
             }
@@ -31,100 +54,238 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
-        .gradient-bg {
-            background: radial-gradient(circle at 50% 0%, #042E2B 0%, #081C1B 100%);
-        }
-        .gold-glow {
-            box-shadow: 0 0 25px rgba(241, 168, 10, 0.4);
-        }
-        .gold-glow:hover {
-            box-shadow: 0 0 35px rgba(241, 168, 10, 0.65);
+        .hero-bg {
+            background: radial-gradient(circle at 50% 0%, #0F3740 0%, #08171B 100%);
         }
         .card-blur {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(15, 44, 53, 0.65);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .card-blur:hover {
+            border-color: rgba(255, 171, 0, 0.4);
+            transform: translateY(-4px);
         }
         .gold-border-card {
-            background: linear-gradient(135deg, rgba(241, 168, 10, 0.08) 0%, rgba(0, 92, 83, 0.15) 100%);
-            border: 1px solid rgba(241, 168, 10, 0.3);
+            background: linear-gradient(135deg, rgba(255, 171, 0, 0.12) 0%, rgba(19, 99, 113, 0.25) 100%);
+            border: 1.5px solid rgba(255, 171, 0, 0.4);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #FFAB00 0%, #FFD074 50%, #FFAB00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .shimmer-btn {
+            background: linear-gradient(90deg, #FFAB00 0%, #FFD573 50%, #FFAB00 100%);
+            background-size: 200% 100%;
+        }
+        .shimmer-btn:hover {
+            animation: shimmer 2s linear infinite;
         }
     </style>
 </head>
-<body class="bg-brand-dark text-slate-100 antialiased selection:bg-brand-gold selection:text-brand-dark">
+<body class="bg-brand-darkBg text-slate-100 antialiased selection:bg-brand-gold selection:text-brand-darkBg">
 
     <!-- TOP ANNOUNCEMENT BAR -->
-    <div class="bg-gradient-to-r from-brand-teal via-brand-gold to-brand-teal text-brand-dark text-xs sm:text-sm font-bold py-2.5 px-4 text-center tracking-wide shadow-md">
-        🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTE EN EMPRESARIO ZASHOME
+    <div class="bg-gradient-to-r from-brand-teal via-brand-gold to-brand-teal text-slate-900 text-xs sm:text-sm font-black py-2.5 px-4 text-center tracking-wide shadow-md flex items-center justify-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-brand-dotGreen animate-ping"></span>
+        <span>🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTETE EN EMPRESARIO ZASHOME</span>
     </div>
 
-    <!-- MAIN HERO SECTION -->
-    <header class="relative gradient-bg pt-12 pb-20 md:pt-20 md:pb-32 overflow-hidden border-b border-slate-800">
-        <!-- Ambient Light Accents -->
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand-gold/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute top-1/3 right-10 w-72 h-72 bg-brand-teal/20 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center relative z-10">
-            <!-- Badge -->
-            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full card-blur border border-brand-gold/30 text-brand-gold text-xs sm:text-sm font-semibold mb-8 shadow-inner">
-                <span class="w-2 h-2 rounded-full bg-brand-gold animate-ping"></span>
-                Sin Inventario • Sin Jefes • Oportunidad 100% Digital
-            </div>
-
-            <!-- Main Headline -->
-            <h1 class="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight mb-6">
-                Zas NO tiene vendedores, <br class="hidden sm:inline">
-                <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-gold via-amber-300 to-brand-gold">
-                    tiene EMPRENDEDORES.
-                </span>
-            </h1>
-
-            <!-- Subtitle -->
-            <p class="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
-                Descubre cómo nuestra plataforma te brinda la tecnología, logística y capacitación que necesitas para construir un negocio altamente rentable generando ventas diarias sin comprar stock inicial.
-            </p>
-
-            <!-- Primary CTA Button -->
-            <div class="mb-12">
-                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-brand-gold to-amber-400 text-brand-dark font-extrabold text-lg sm:text-xl px-10 py-5 rounded-2xl gold-glow transform transition-all duration-300 hover:-translate-y-1 hover:scale-105 active:translate-y-0">
-                    <span>Únete a Zas Ahora</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+    <!-- WHITE BRANDING NAVBAR WITH LOGO -->
+    <nav class="bg-white py-3.5 px-4 sm:px-8 shadow-lg border-b border-slate-200 sticky top-0 z-50 transition-all duration-300">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <a href="#" class="flex items-center gap-2 group">
+                <img src="images/zashome_logo.jpg" alt="Zashome Logo" class="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105">
+            </a>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 text-xs font-bold text-brand-teal uppercase tracking-wider bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
+                    <span class="w-2 h-2 rounded-full bg-brand-dotGreen"></span> Plazas Disponibles
+                </div>
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="bg-brand-teal hover:bg-brand-tealDark text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-1.5">
+                    <span>Únete Ahora</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
                 </a>
-                <p class="text-xs text-slate-400 mt-3 font-medium">Acceso inmediato a la plataforma • Registro rápido</p>
             </div>
+        </div>
+    </nav>
 
-            <!-- Key Feature Badges Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-6 border-t border-slate-800/80">
-                <div class="card-blur p-4 rounded-xl text-center">
-                    <div class="text-brand-gold font-bold text-2xl mb-1">0%</div>
-                    <div class="text-xs text-slate-300 font-medium">Inversión en Stock</div>
+    <!-- MAIN HERO SECTION -->
+    <header class="relative hero-bg pt-12 pb-20 md:pt-20 md:pb-32 overflow-hidden border-b border-slate-800">
+        <!-- Ambient Light Glowing Accents -->
+        <div class="absolute top-10 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-brand-gold/15 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
+        <div class="absolute top-1/3 right-10 w-80 h-80 bg-brand-teal/30 rounded-full blur-[100px] pointer-events-none"></div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+
+                <!-- Left Column: Copy -->
+                <div class="lg:col-span-7 text-center lg:text-left">
+                    <!-- Floating Badge -->
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full card-blur border border-brand-gold/40 text-brand-gold text-xs sm:text-sm font-bold mb-6 shadow-xl animate-float">
+                        <span class="flex h-2 w-2 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-gold opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-gold"></span>
+                        </span>
+                        Sin Inventario • Sin Jefes • Oportunidad 100% Digital
+                    </div>
+
+                    <!-- Main Headline -->
+                    <h1 class="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight mb-6">
+                        Zas NO tiene vendedores, <br class="hidden sm:inline">
+                        <span class="gradient-text">
+                            tiene EMPRENDEDORES.
+                        </span>
+                    </h1>
+
+                    <!-- Subtitle -->
+                    <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 mb-8 leading-relaxed font-normal">
+                        Descubre cómo nuestra plataforma te brinda la tecnología, logística y capacitación financiera que necesitas para construir un negocio altamente rentable generando ventas diarias sin comprar stock inicial.
+                    </p>
+
+                    <!-- Primary CTA Button -->
+                    <div class="mb-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                        <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="w-full sm:w-auto inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-lg sm:text-xl px-9 py-4.5 rounded-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl">
+                            <span>Únete a Zas Ahora</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                        </a>
+                    </div>
+
+                    <!-- Quick Highlights -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-800">
+                        <div class="card-blur p-3 rounded-xl text-center">
+                            <div class="text-brand-gold font-black text-xl">0%</div>
+                            <div class="text-[11px] text-slate-300 font-semibold">Stock Inicial</div>
+                        </div>
+                        <div class="card-blur p-3 rounded-xl text-center">
+                            <div class="text-brand-dotGreen font-black text-xl">100%</div>
+                            <div class="text-[11px] text-slate-300 font-semibold">Logística Lista</div>
+                        </div>
+                        <div class="card-blur p-3 rounded-xl text-center">
+                            <div class="text-brand-gold font-black text-xl">24/7</div>
+                            <div class="text-[11px] text-slate-300 font-semibold">Plataforma Activa</div>
+                        </div>
+                        <div class="card-blur p-3 rounded-xl text-center">
+                            <div class="text-brand-dotRed font-black text-xl">$$$</div>
+                            <div class="text-[11px] text-slate-300 font-semibold">Ingresos Diarios</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-blur p-4 rounded-xl text-center">
-                    <div class="text-brand-gold font-bold text-2xl mb-1">100%</div>
-                    <div class="text-xs text-slate-300 font-medium">Logística Resuelta</div>
+
+                <!-- Right Column: Animated Visual (Financial Growth & Education) -->
+                <div class="lg:col-span-5 relative">
+                    <!-- Main Feature Graphic Card -->
+                    <div class="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl gold-border-card p-2 animate-floatSlow">
+                        <div class="relative rounded-2xl overflow-hidden bg-slate-900">
+                            <!-- Visual Graphic: Financial Learning & Growth -->
+                            <img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80" alt="Emprendedores Aprendiendo Finanzas" class="w-full h-80 object-cover opacity-90 hover:scale-105 transition-transform duration-700">
+                            <div class="absolute inset-0 bg-gradient-to-t from-brand-darkBg via-transparent to-transparent"></div>
+
+                            <!-- Overlaid Profit Floating Badge -->
+                            <div class="absolute top-4 right-4 bg-white/95 backdrop-blur-md text-slate-900 p-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-200">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 font-extrabold flex items-center justify-center text-xl">
+                                    📈
+                                </div>
+                                <div>
+                                    <div class="text-[10px] uppercase font-bold text-slate-500">Crecimiento Mensual</div>
+                                    <div class="text-sm font-black text-emerald-600">+100% Ganancias Directas</div>
+                                </div>
+                            </div>
+
+                            <!-- Overlaid Education Badge -->
+                            <div class="absolute bottom-4 left-4 right-4 bg-brand-darkBg/90 backdrop-blur-md p-4 rounded-xl border border-slate-700/80">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-brand-gold text-slate-950 font-black flex items-center justify-center text-xs">
+                                        🎓
+                                    </div>
+                                    <div class="text-xs text-slate-200 font-semibold">
+                                        Educación Financiera y Ventas Automatizadas
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-blur p-4 rounded-xl text-center">
-                    <div class="text-brand-gold font-bold text-2xl mb-1">24/7</div>
-                    <div class="text-xs text-slate-300 font-medium">Plataforma Activa</div>
-                </div>
-                <div class="card-blur p-4 rounded-xl text-center">
-                    <div class="text-brand-gold font-bold text-2xl mb-1">$$$</div>
-                    <div class="text-xs text-slate-300 font-medium">Comisiones Directas</div>
-                </div>
+
             </div>
         </div>
     </header>
 
+    <!-- SECTION: FINANCES & PROFIT TOUCH (EDUCACIÓN FINANCIERA Y GANANCIAS) -->
+    <section class="py-16 md:py-24 bg-brand-darkBg relative border-b border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+
+                <!-- Financial Learning Graphic -->
+                <div class="relative order-2 md:order-1">
+                    <div class="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 group">
+                        <img src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80" alt="Finanzas y Crecimiento de Negocios" class="w-full h-96 object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <!-- Stat Floating Pill -->
+                    <div class="absolute -bottom-6 -right-2 sm:right-6 bg-slate-900 border border-brand-gold/50 p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-float">
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold/20 text-brand-gold font-extrabold flex items-center justify-center text-2xl">
+                            💡
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-slate-400">Modelo Comprobado</div>
+                            <div class="text-base font-black text-white">Inteligencia Financiera</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="order-1 md:order-2">
+                    <span class="text-brand-gold font-extrabold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/20 mb-4 inline-block">
+                        ENFOQUE EN RENTABILIDAD
+                    </span>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-6 leading-tight">
+                        Transforma tu Conocimiento en <span class="gradient-text">Libertad Financiera</span>
+                    </h2>
+                    <p class="text-slate-300 text-base leading-relaxed mb-6">
+                        En Zashome no solo te damos acceso a una plataforma tecnológica de vanguardia; te capacitamos para entender los números de tu negocio, optimizar tus márgenes y escalar tus ingresos de manera constante.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="card-blur p-4 rounded-xl flex items-start gap-4">
+                            <span class="text-brand-dotGreen text-xl font-bold">✔</span>
+                            <div>
+                                <h4 class="text-white font-bold text-sm">Control de Flujo de Caja</h4>
+                                <p class="text-slate-400 text-xs mt-0.5">Aprende a gestionar cada quetzal generado para hacer crecer tu capital de trabajo sin riesgo.</p>
+                            </div>
+                        </div>
+                        <div class="card-blur p-4 rounded-xl flex items-start gap-4">
+                            <span class="text-brand-dotGreen text-xl font-bold">✔</span>
+                            <div>
+                                <h4 class="text-white font-bold text-sm">Altos Márgenes por Operación</h4>
+                                <p class="text-slate-400 text-xs mt-0.5">Diseñado para maximizar el retorno de tu tiempo y esfuerzo publicitario.</p>
+                            </div>
+                        </div>
+                        <div class="card-blur p-4 rounded-xl flex items-start gap-4">
+                            <span class="text-brand-dotGreen text-xl font-bold">✔</span>
+                            <div>
+                                <h4 class="text-white font-bold text-sm">Ingresos Diarios y Pagos Rápidos</h4>
+                                <p class="text-slate-400 text-xs mt-0.5">Recibe tus utilidades de forma ágil y transparente a través del sistema integrado.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     <!-- SECTION: EL MODELO DE LOS GRANDES -->
-    <section class="py-16 md:py-24 bg-brand-dark relative overflow-hidden">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6">
+    <section class="py-16 md:py-24 bg-slate-950 relative overflow-hidden">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
             <div class="text-center mb-16">
                 <h2 class="text-2xl sm:text-4xl font-extrabold text-white mb-4">
                     El Negocio Inteligente del Siglo XXI
@@ -137,7 +298,7 @@
             <!-- Business Comparisons Grid -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                 <!-- Airbnb -->
-                <div class="card-blur p-6 rounded-2xl border border-slate-800 hover:border-brand-teal transition-all duration-300">
+                <div class="card-blur p-6 rounded-2xl border border-slate-800 transition-all duration-300">
                     <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-xl mb-4">
                         🏠
                     </div>
@@ -148,7 +309,7 @@
                 </div>
 
                 <!-- Uber -->
-                <div class="card-blur p-6 rounded-2xl border border-slate-800 hover:border-brand-teal transition-all duration-300">
+                <div class="card-blur p-6 rounded-2xl border border-slate-800 transition-all duration-300">
                     <div class="w-12 h-12 rounded-xl bg-slate-100/10 text-white flex items-center justify-center font-bold text-xl mb-4">
                         🚗
                     </div>
@@ -159,14 +320,14 @@
                 </div>
 
                 <!-- Zashome -->
-                <div class="gold-border-card p-6 rounded-2xl shadow-xl relative overflow-hidden">
-                    <div class="absolute -top-3 -right-3 bg-brand-gold text-brand-dark text-xs font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                <div class="gold-border-card p-6 rounded-2xl shadow-xl relative overflow-hidden transform hover:-translate-y-2 transition-all">
+                    <div class="absolute -top-3 -right-3 bg-brand-gold text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider">
                         Tu Oportunidad
                     </div>
                     <div class="w-12 h-12 rounded-xl bg-brand-gold/20 text-brand-gold flex items-center justify-center font-bold text-xl mb-4">
                         ⚡
                     </div>
-                    <h3 class="text-xl font-extrabold text-brand-gold mb-2">Zashome</h3>
+                    <h3 class="text-xl font-black text-brand-gold mb-2">Zashome</h3>
                     <p class="text-sm text-slate-200 leading-relaxed font-medium">
                         Te permite construir un negocio digital sostenible comercializando productos de alta demanda sin arriesgar tu dinero comprando mercancía.
                     </p>
@@ -174,17 +335,17 @@
             </div>
 
             <!-- Highlight Banner -->
-            <div class="bg-gradient-to-r from-brand-teal/40 to-emerald-900/30 p-8 rounded-3xl border border-brand-teal/50 text-center max-w-4xl mx-auto">
+            <div class="bg-gradient-to-r from-brand-teal/40 via-brand-cardBg to-brand-teal/40 p-8 rounded-3xl border border-brand-teal/50 text-center max-w-4xl mx-auto shadow-2xl">
                 <h3 class="text-xl sm:text-2xl font-bold text-white mb-3">
                     "Tú no vendes para alguien más. Tú construyes tu propia empresa utilizando nuestra infraestructura."
                 </h3>
                 <p class="text-slate-300 text-sm sm:text-base mb-6">
                     Manejamos el almacenamiento, la logística de entrega y los cobros por ti. Tu único enfoque es conectar clientes e incrementar tus ingresos día a día.
                 </p>
-                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-brand-gold hover:bg-brand-goldHover text-brand-dark font-extrabold px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm sm:text-base">
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-brand-gold hover:bg-brand-goldDark text-slate-950 font-black px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm sm:text-base active:scale-95">
                     <span>Únete a Zas Ahora</span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
                 </a>
             </div>
@@ -192,10 +353,10 @@
     </section>
 
     <!-- SECTION: ESCUELA DE EMPRESARIOS & CÁTEDRA ZASHOME -->
-    <section class="py-16 md:py-24 bg-gradient-to-b from-brand-dark via-brand-lightTeal to-brand-dark border-t border-slate-800">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6">
+    <section class="py-16 md:py-24 bg-brand-darkBg border-t border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
             <div class="text-center mb-16">
-                <span class="text-brand-gold font-bold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/20 mb-3 inline-block">
+                <span class="text-brand-gold font-extrabold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/20 mb-3 inline-block">
                     SISTEMA DE FORMACIÓN INTEGRAL
                 </span>
                 <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2 mb-4">
@@ -210,7 +371,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
                 <!-- Pillar 1 -->
                 <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
-                    <div class="text-brand-gold font-extrabold text-3xl mb-2">01</div>
+                    <div class="text-brand-gold font-black text-3xl mb-2">01</div>
                     <h3 class="text-lg font-bold text-white mb-2">Contenido Práctico</h3>
                     <p class="text-sm text-slate-300">
                         Estrategias directas al grano, probadas en el mercado real para generar clientes interesados desde tus primeros días.
@@ -219,7 +380,7 @@
 
                 <!-- Pillar 2 -->
                 <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
-                    <div class="text-brand-gold font-extrabold text-3xl mb-2">02</div>
+                    <div class="text-brand-gold font-black text-3xl mb-2">02</div>
                     <h3 class="text-lg font-bold text-white mb-2">Aprendizaje Paso a Paso</h3>
                     <p class="text-sm text-slate-300">
                         Módulos guiados en orden lógico para que ejecutes sin sobrecargarte de información ni perder tiempo.
@@ -228,7 +389,7 @@
 
                 <!-- Pillar 3 -->
                 <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
-                    <div class="text-brand-gold font-extrabold text-3xl mb-2">03</div>
+                    <div class="text-brand-gold font-black text-3xl mb-2">03</div>
                     <h3 class="text-lg font-bold text-white mb-2">Herramientas Digitales</h3>
                     <p class="text-sm text-slate-300">
                         Acceso a recursos gráficos, plantillas de ventas y material promocional listo para publicar en tus redes.
@@ -237,7 +398,7 @@
 
                 <!-- Pillar 4 -->
                 <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
-                    <div class="text-brand-gold font-extrabold text-3xl mb-2">04</div>
+                    <div class="text-brand-gold font-black text-3xl mb-2">04</div>
                     <h3 class="text-lg font-bold text-white mb-2">Acompañamiento Continuo</h3>
                     <p class="text-sm text-slate-300">
                         Comunidad activa y soporte constante para resolver tus dudas y potenciar tus habilidades de cierre.
@@ -246,7 +407,7 @@
 
                 <!-- Pillar 5 -->
                 <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold sm:col-span-2 lg:col-span-2">
-                    <div class="text-brand-gold font-extrabold text-3xl mb-2">05</div>
+                    <div class="text-brand-gold font-black text-3xl mb-2">05</div>
                     <h3 class="text-lg font-bold text-white mb-2">Crecimiento e Ingresos Escalables</h3>
                     <p class="text-sm text-slate-300">
                         Diseñado para que aumentes tus metas de ganancias mes con mes. Tú pones los límites de hasta dónde quieres llegar.
@@ -255,26 +416,26 @@
             </div>
 
             <!-- Program Features Feature Box -->
-            <div class="gold-border-card p-8 rounded-3xl max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="gold-border-card p-8 rounded-3xl max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
                 <div class="space-y-3 text-left">
-                    <h3 class="text-2xl font-extrabold text-white">¿Qué aprenderás en Cátedra Zashome?</h3>
-                    <ul class="space-y-2 text-sm text-slate-200">
-                        <li class="flex items-center gap-2">
-                            <span class="text-brand-gold">✔</span> Estrategias de Atracción de Clientes
+                    <h3 class="text-2xl font-black text-white">¿Qué aprenderás en Cátedra Zashome?</h3>
+                    <ul class="space-y-2.5 text-sm text-slate-200 font-medium">
+                        <li class="flex items-center gap-2.5">
+                            <span class="text-brand-dotGreen font-bold">✔</span> Estrategias de Atracción de Clientes
                         </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-brand-gold">✔</span> Técnicas Efectivas de Conversión y Cierre
+                        <li class="flex items-center gap-2.5">
+                            <span class="text-brand-dotGreen font-bold">✔</span> Técnicas Efectivas de Conversión y Cierre
                         </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-brand-gold">✔</span> Mentalidad Empresarial y Gestión del Tiempo
+                        <li class="flex items-center gap-2.5">
+                            <span class="text-brand-dotGreen font-bold">✔</span> Mentalidad Empresarial e Inteligencia Financiera
                         </li>
-                        <li class="flex items-center gap-2">
-                            <span class="text-brand-gold">✔</span> Dominio de la Plataforma Zashome
+                        <li class="flex items-center gap-2.5">
+                            <span class="text-brand-dotGreen font-bold">✔</span> Dominio Total de la Plataforma Zashome
                         </li>
                     </ul>
                 </div>
                 <div class="shrink-0 w-full md:w-auto text-center">
-                    <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-brand-gold to-amber-400 text-brand-dark font-extrabold px-8 py-4 rounded-xl gold-glow text-base">
+                    <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="w-full md:w-auto inline-flex items-center justify-center gap-2 shimmer-btn text-slate-950 font-black px-8 py-4 rounded-xl shadow-xl text-base transition-all hover:scale-105 active:scale-95">
                         <span>Únete a Zas Ahora</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -286,8 +447,8 @@
     </section>
 
     <!-- SECTION: BENEFICIOS PRINCIPALES DE LA PLATAFORMA -->
-    <section class="py-16 md:py-24 bg-brand-dark">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6">
+    <section class="py-16 md:py-24 bg-slate-950">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
             <div class="text-center mb-16">
                 <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">
                     Todo lo que necesitas para triunfar en un solo lugar
@@ -354,34 +515,38 @@
     </section>
 
     <!-- SECTION: FINAL CTA BANNER -->
-    <section class="py-20 md:py-28 relative overflow-hidden bg-gradient-to-t from-brand-teal/40 via-brand-dark to-brand-dark border-t border-slate-800 text-center">
+    <section class="py-20 md:py-28 relative overflow-hidden bg-gradient-to-t from-brand-teal/30 via-brand-darkBg to-brand-darkBg border-t border-slate-800 text-center">
         <!-- Background Light Glow -->
         <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-brand-gold/15 rounded-full blur-3xl pointer-events-none"></div>
 
         <div class="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
-            <span class="text-brand-gold font-extrabold text-sm uppercase tracking-widest mb-4 inline-block">
+            <span class="text-brand-gold font-black text-xs sm:text-sm uppercase tracking-widest mb-4 inline-block">
                 ¿LISTO PARA DAR EL SIGUIENTE PASO?
             </span>
-            <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+            <h2 class="text-3xl sm:text-5xl font-black text-white tracking-tight mb-6 leading-tight">
                 El Futuro de tu Negocio Comienza Hoy
             </h2>
             <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
                 No dejes pasar la oportunidad de unirte a la plataforma que está transformando el emprendimiento digital en Guatemala. Haz clic abajo e ingresa de inmediato.
             </p>
 
-            <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-brand-gold to-amber-400 text-brand-dark font-extrabold text-xl sm:text-2xl px-12 py-6 rounded-2xl gold-glow transform transition-all duration-300 hover:-translate-y-1 hover:scale-105">
+            <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-xl sm:text-2xl px-12 py-6 rounded-2xl shadow-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95">
                 <span>Únete a Zas Ahora</span>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
             </a>
-            <p class="text-xs text-slate-400 mt-4">Acceso directo a la plataforma de registro</p>
+            <p class="text-xs text-slate-400 mt-4 font-medium">Acceso directo a la plataforma de registro</p>
         </div>
     </section>
 
-    <!-- MINIMAL FOOTER -->
-    <footer class="py-8 bg-slate-950 text-center border-t border-slate-900 text-xs text-slate-500">
-        <div class="max-w-5xl mx-auto px-4">
+    <!-- WHITE BRANDING FOOTER -->
+    <footer class="py-8 bg-white text-center border-t border-slate-200 text-xs text-slate-600">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <img src="images/zashome_logo.jpg" alt="Zashome Logo" class="h-8 w-auto">
+                <span class="font-bold text-slate-700">Tu hogar en un Zas.</span>
+            </div>
             <p>© 2025 Zashome. Plataforma de Emprendimiento Digital. Todos los derechos reservados.</p>
         </div>
     </footer>
