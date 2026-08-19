@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zashome | Emprende tu Negocio Digital</title>
+
+    <!-- CSS Variables for Complete Page Customization -->
+    <style id="custom-theme-vars">
+        :root {
+            --color-teal: #136371;
+            --color-teal-dark: #0D4853;
+            --color-gold: #FFAB00;
+            --color-gold-dark: #E09600;
+            --color-bg-dark: #091E24;
+            --color-card-bg: rgba(15, 44, 53, 0.65);
+            --color-card-border: rgba(255, 255, 255, 0.1);
+            --color-text-main: #F1F5F9;
+            --color-btn-text: #0F172A;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--color-bg-dark) !important;
+            color: var(--color-text-main) !important;
+            font-family: var(--font-main) !important;
+        }
+
+        .bg-custom-teal { background-color: var(--color-teal) !important; }
+        .bg-custom-teal-dark { background-color: var(--color-teal-dark) !important; }
+        .text-custom-teal { color: var(--color-teal) !important; }
+        .border-custom-teal { border-color: var(--color-teal) !important; }
+
+        .bg-custom-gold { background-color: var(--color-gold) !important; }
+        .text-custom-gold { color: var(--color-gold) !important; }
+        .border-custom-gold { border-color: var(--color-gold) !important; }
+
+        .hero-bg {
+            background: radial-gradient(circle at 50% 0%, var(--color-teal-dark) 0%, var(--color-bg-dark) 100%) !important;
+        }
+
+        .card-blur {
+            background: var(--color-card-bg) !important;
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--color-card-border) !important;
+            background-size: cover;
+            background-position: center;
+        }
+        .card-blur:hover {
+            border-color: var(--color-gold) !important;
+            transform: translateY(-4px);
+        }
+
+        .gold-border-card {
+            background: linear-gradient(135deg, rgba(255, 171, 0, 0.12) 0%, rgba(19, 99, 113, 0.25) 100%) !important;
+            border: 1.5px solid var(--color-gold) !important;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--color-gold) 0%, #FFD074 50%, var(--color-gold) 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+        }
+
+        .shimmer-btn {
+            background: linear-gradient(90deg, var(--color-gold) 0%, #FFD573 50%, var(--color-gold) 100%) !important;
+            background-size: 200% 100% !important;
+            color: var(--color-btn-text) !important;
+            background-position: center;
+        }
+
+        .editable-highlight {
+            outline: 2px dashed var(--color-gold) !important;
+            outline-offset: 4px;
+            cursor: pointer;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        /* Floating Contextual Formatting Toolbar for Element Customization & Deletion */
+        #formatting-toolbar {
+            position: absolute;
+            z-index: 1000;
+            background: #0F172A;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 8px 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            max-width: 90vw;
+        }
+    </style>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dotRed: '#EE3E38',
+                            dotGreen: '#3CB052'
+                        }
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-12px)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { boxShadow: '0 0 25px rgba(255, 171, 0, 0.4)' },
+                            '50%': { boxShadow: '0 0 45px rgba(255, 171, 0, 0.8)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' }
+                        }
+                    },
+                    animation: {
+                        float: 'float 4s ease-in-out infinite',
+                        floatSlow: 'float 6s ease-in-out infinite',
+                        pulseGlow: 'pulseGlow 3s ease-in-out infinite',
+                        shimmer: 'shimmer 3s linear infinite'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Dynamic Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link id="dynamic-fonts-link" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@400;700;900&family=Playfair+Display:wght@600;800&family=Plus+Jakarta+Sans:wght@400;600;800;900&family=Poppins:wght@400;600;800&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="antialiased selection:bg-amber-400 selection:text-slate-900">
+
+    <!-- FLOATING CONTEXTUAL TOOLBAR FOR ELEMENT RESIZING, BACKGROUNDS, AND DELETION -->
+    <div id="formatting-toolbar" class="hidden">
+        <span class="text-[11px] font-black text-amber-400 uppercase tracking-wide">Editar Elemento:</span>
+
+        <!-- Text Size -->
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Texto:</span>
+            <input type="number" id="tb-font-size" min="8" max="120" placeholder="px" class="w-12 bg-slate-800 text-white text-xs px-1.5 py-1 rounded border border-slate-700">
+        </div>
+
+        <!-- Text Color -->
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Color:</span>
+            <input type="color" id="tb-font-color" class="w-6 h-6 rounded cursor-pointer bg-transparent border-0">
+        </div>
+
+        <!-- Element Width & Height -->
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Ancho:</span>
+            <input type="number" id="tb-width" min="10" max="1200" placeholder="px" class="w-14 bg-slate-800 text-white text-xs px-1.5 py-1 rounded border border-slate-700">
+        </div>
+
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Alto:</span>
+            <input type="number" id="tb-height" min="10" max="1200" placeholder="px" class="w-14 bg-slate-800 text-white text-xs px-1.5 py-1 rounded border border-slate-700">
+        </div>
+
+        <!-- Background Color -->
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Fondo:</span>
+            <input type="color" id="tb-bg-color" class="w-6 h-6 rounded cursor-pointer bg-transparent border-0">
+        </div>
+
+        <!-- Background Image Upload -->
+        <div class="flex items-center gap-1">
+            <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded border border-slate-700 cursor-pointer flex items-center gap-1">
+                🖼️ Fondo
+                <input type="file" id="tb-bg-image-file" accept="image/*" class="hidden">
+            </label>
+        </div>
+
+        <!-- Delete Element Button -->
+        <button id="tb-delete-btn" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 shadow">
+            🗑️ Eliminar
+        </button>
+    </div>
+
+    <!-- TOP ANNOUNCEMENT BAR -->
+    <div id="announcement-bar" class="custom-card-container bg-gradient-to-r from-teal-700 via-amber-500 to-teal-700 text-slate-900 text-xs sm:text-sm font-black py-2.5 px-4 text-center tracking-wide shadow-md flex items-center justify-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+        <span id="announcement-text" class="editable-text" data-key="announcementText">🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTETE EN EMPRESARIO ZASHOME</span>
+    </div>
+
+    <!-- WHITE BRANDING NAVBAR WITH LOGO -->
+    <nav class="bg-white py-3.5 px-4 sm:px-8 shadow-lg border-b border-slate-200 sticky top-0 z-40 transition-all duration-300">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <a href="#" class="flex items-center gap-2 group">
+                <img id="nav-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="custom-media-box h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105">
+            </a>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 text-xs font-bold text-custom-teal uppercase tracking-wider bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span id="badge-nav-text" class="editable-text" data-key="badgeNavText">Plazas Disponibles</span>
+                </div>
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box bg-custom-teal hover:bg-custom-teal-dark text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center gap-1.5">
+                    <span class="cta-btn-text editable-text" data-key="ctaBtnText">Únete Ahora</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN HERO SECTION -->
+    <header class="relative hero-bg pt-12 pb-20 md:pt-20 md:pb-32 overflow-hidden border-b border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+
+                <!-- Left Column: Copy -->
+                <div class="lg:col-span-7 text-center lg:text-left">
+                    <!-- Floating Badge -->
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full card-blur border border-custom-gold text-custom-gold text-xs sm:text-sm font-bold mb-6 shadow-xl animate-float">
+                        <span class="flex h-2 w-2 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+                        </span>
+                        <span id="hero-badge-text" class="editable-text" data-key="heroBadgeText">Sin Inventario • Sin Jefes • Oportunidad 100% Digital</span>
+                    </div>
+
+                    <!-- Main Headline -->
+                    <h1 class="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-tight mb-6">
+                        <span id="hero-title-1" class="editable-text" data-key="heroTitle1">Zas NO tiene vendedores,</span> <br class="hidden sm:inline">
+                        <span id="hero-title-2" class="gradient-text editable-text" data-key="heroTitle2">tiene EMPRENDEDORES.</span>
+                    </h1>
+
+                    <!-- Subtitle -->
+                    <p id="hero-subtitle" class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 mb-8 leading-relaxed font-normal editable-text" data-key="heroSubtitle">
+                        Descubre cómo nuestra plataforma te brinda la tecnología, logística y capacitación financiera que necesitas para construir un negocio altamente rentable generando ventas diarias sin comprar stock inicial.
+                    </p>
+
+                    <!-- Primary CTA Button -->
+                    <div class="mb-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                        <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box w-full sm:w-auto inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-lg sm:text-xl px-9 py-4.5 rounded-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl">
+                            <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                        </a>
+                    </div>
+
+                    <!-- Quick Highlights Cards -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-800">
+                        <div class="card-blur custom-card-container p-3 rounded-xl text-center">
+                            <div class="text-custom-gold font-black text-xl editable-text" data-key="stat1Num">0%</div>
+                            <div class="text-[11px] text-slate-300 font-semibold editable-text" data-key="stat1Text">Stock Inicial</div>
+                        </div>
+                        <div class="card-blur custom-card-container p-3 rounded-xl text-center">
+                            <div class="text-emerald-400 font-black text-xl editable-text" data-key="stat2Num">100%</div>
+                            <div class="text-[11px] text-slate-300 font-semibold editable-text" data-key="stat2Text">Logística Lista</div>
+                        </div>
+                        <div class="card-blur custom-card-container p-3 rounded-xl text-center">
+                            <div class="text-custom-gold font-black text-xl editable-text" data-key="stat3Num">24/7</div>
+                            <div class="text-[11px] text-slate-300 font-semibold editable-text" data-key="stat3Text">Plataforma Activa</div>
+                        </div>
+                        <div class="card-blur custom-card-container p-3 rounded-xl text-center">
+                            <div class="text-rose-500 font-black text-xl editable-text" data-key="stat4Num">$$$</div>
+                            <div class="text-[11px] text-slate-300 font-semibold editable-text" data-key="stat4Text">Ingresos Diarios</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Animated Visual (Supports Image, Video MP4, or YouTube Embed) -->
+                <div class="lg:col-span-5 relative">
+                    <div class="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl gold-border-card p-2 animate-floatSlow custom-card-container">
+                        <div id="hero-media-container" class="relative rounded-2xl overflow-hidden bg-slate-900 min-h-[320px] flex items-center justify-center">
+                            <img id="hero-img-visual" src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80" alt="Emprendedores Aprendiendo Finanzas" class="custom-media-box w-full h-80 object-cover opacity-90 hover:scale-105 transition-transform duration-700">
+                            <video id="hero-video-visual" src="" autoplay loop muted playsinline class="custom-media-box hidden w-full h-80 object-cover"></video>
+                            <iframe id="hero-iframe-visual" src="" class="custom-media-box hidden w-full h-80" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent pointer-events-none"></div>
+
+                            <div class="absolute top-4 right-4 bg-white/95 backdrop-blur-md text-slate-900 p-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-200 pointer-events-auto">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 font-extrabold flex items-center justify-center text-xl">
+                                    📈
+                                </div>
+                                <div>
+                                    <div class="text-[10px] uppercase font-bold text-slate-500 editable-text" data-key="floatingPillSub">Crecimiento Mensual</div>
+                                    <div class="text-sm font-black text-emerald-600 editable-text" data-key="floatingPillTitle">+100% Ganancias Directas</div>
+                                </div>
+                            </div>
+
+                            <div class="absolute bottom-4 left-4 right-4 bg-slate-950/90 backdrop-blur-md p-4 rounded-xl border border-slate-700/80 pointer-events-auto">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-custom-gold text-slate-950 font-black flex items-center justify-center text-xs">
+                                        🎓
+                                    </div>
+                                    <div class="text-xs text-slate-200 font-semibold editable-text" data-key="heroImageBadge">
+                                        Educación Financiera y Ventas Automatizadas
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- SECTION: FINANCES & PROFIT TOUCH -->
+    <section class="py-16 md:py-24 relative border-b border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+
+                <div class="relative order-2 md:order-1">
+                    <div id="finance-media-container" class="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 group min-h-[384px] flex items-center justify-center bg-slate-900 custom-card-container">
+                        <img id="finance-img-visual" src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80" alt="Finanzas y Crecimiento" class="custom-media-box w-full h-96 object-cover group-hover:scale-105 transition-transform duration-500">
+                        <video id="finance-video-visual" src="" autoplay loop muted playsinline class="custom-media-box hidden w-full h-96 object-cover"></video>
+                        <iframe id="finance-iframe-visual" src="" class="custom-media-box hidden w-full h-96" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                    </div>
+                    <div class="absolute -bottom-6 -right-2 sm:right-6 bg-slate-900 border border-custom-gold p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-float">
+                        <div class="w-12 h-12 rounded-xl bg-amber-500/20 text-custom-gold font-extrabold flex items-center justify-center text-2xl">
+                            💡
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-slate-400 editable-text" data-key="financeBadgeSub">Modelo Comprobado</div>
+                            <div class="text-base font-black text-white editable-text" data-key="financeBadgeTitle">Inteligencia Financiera</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="order-1 md:order-2">
+                    <span class="text-custom-gold font-extrabold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4 inline-block editable-text" data-key="financeTag">
+                        ENFOQUE EN RENTABILIDAD
+                    </span>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-6 leading-tight">
+                        <span class="editable-text" data-key="financeTitle1">Transforma tu Conocimiento en</span> <span class="gradient-text editable-text" data-key="financeTitle2">Libertad Financiera</span>
+                    </h2>
+                    <p class="text-slate-300 text-base leading-relaxed mb-6 editable-text" data-key="financeDesc">
+                        En Zashome no solo te damos acceso a una plataforma tecnológica de vanguardia; te capacitamos para entender los números de tu negocio, optimizar tus márgenes y escalar tus ingresos de manera constante.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="card-blur custom-card-container p-4 rounded-xl flex items-start gap-4">
+                            <span class="text-emerald-400 text-xl font-bold">✔</span>
+                            <div>
+                                <h4 class="text-white font-bold text-sm editable-text" data-key="finBullet1Title">Control de Flujo de Caja</h4>
+                                <p class="text-slate-400 text-xs mt-0.5 editable-text" data-key="finBullet1Desc">Aprende a gestionar cada quetzal generado para hacer crecer tu capital de trabajo sin riesgo.</p>
+                            </div>
+                        </div>
+                        <div class="card-blur custom-card-container p-4 rounded-xl flex items-start gap-4">
+                            <span class="text-emerald-400 text-xl font-bold">✔</span>
+                            <div>
+                                <h4 class="text-white font-bold text-sm editable-text" data-key="finBullet2Title">Altos Márgenes por Operación</h4>
+                                <p class="text-slate-400 text-xs mt-0.5 editable-text" data-key="finBullet2Desc">Diseñado para maximizar el retorno de tu tiempo y esfuerzo publicitario.</p>
+                            </div>
+                        </div>
+                        <div class="card-blur custom-card-container p-4 rounded-xl flex items-start gap-4">
+                            <span class="text-emerald-400 text-xl font-bold">✔</span>
+                            <div>
+                                <h4 class="text-white font-bold text-sm editable-text" data-key="finBullet3Title">Ingresos Diarios y Pagos Rápidos</h4>
+                                <p class="text-slate-400 text-xs mt-0.5 editable-text" data-key="finBullet3Desc">Recibe tus utilidades de forma ágil y transparente a través del sistema integrado.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: EL MODELO DE LOS GRANDES -->
+    <section class="py-16 md:py-24 bg-slate-950 relative overflow-hidden">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mb-4 editable-text" data-key="modelSecTitle">
+                    El Negocio Inteligente del Siglo XXI
+                </h2>
+                <p class="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base editable-text" data-key="modelSecSubtitle">
+                    Las empresas más exitosas del mundo no fabrican ni compran inventario masivo; conectan la oferta con la demanda usando tecnología.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="card-blur custom-card-container p-6 rounded-2xl border border-slate-800 transition-all duration-300">
+                    <div class="custom-media-box w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-xl mb-4">
+                        🏠
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 editable-text" data-key="card1Title">Airbnb</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed editable-text" data-key="card1Desc">
+                        Es la red de alojamientos más grande del planeta sin ser dueña de un solo hotel.
+                    </p>
+                </div>
+
+                <div class="card-blur custom-card-container p-6 rounded-2xl border border-slate-800 transition-all duration-300">
+                    <div class="custom-media-box w-12 h-12 rounded-xl bg-slate-100/10 text-white flex items-center justify-center font-bold text-xl mb-4">
+                        🚗
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 editable-text" data-key="card2Title">Uber</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed editable-text" data-key="card2Desc">
+                        Es la plataforma de transporte más valorada del mundo sin ser dueña de flotillas de vehículos.
+                    </p>
+                </div>
+
+                <div class="gold-border-card custom-card-container p-6 rounded-2xl shadow-xl relative overflow-hidden transform hover:-translate-y-2 transition-all">
+                    <div class="absolute -top-3 -right-3 bg-custom-gold text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider editable-text" data-key="card3Badge">
+                        Tu Oportunidad
+                    </div>
+                    <div class="custom-media-box w-12 h-12 rounded-xl bg-amber-500/20 text-custom-gold flex items-center justify-center font-bold text-xl mb-4">
+                        ⚡
+                    </div>
+                    <h3 class="text-xl font-black text-custom-gold mb-2 editable-text" data-key="card3Title">Zashome</h3>
+                    <p class="text-sm text-slate-200 leading-relaxed font-medium editable-text" data-key="card3Desc">
+                        Te permite construir un negocio digital sostenible comercializando productos de alta demanda sin arriesgar tu dinero comprando mercancía.
+                    </p>
+                </div>
+            </div>
+
+            <div class="custom-card-container bg-gradient-to-r from-teal-900/40 via-slate-900 to-teal-900/40 p-8 rounded-3xl border border-custom-teal text-center max-w-4xl mx-auto shadow-2xl">
+                <h3 class="text-xl sm:text-2xl font-bold text-white mb-3 editable-text" data-key="quoteBannerText">
+                    "Tú no vendes para alguien más. Tú construyes tu propia empresa utilizando nuestra infraestructura."
+                </h3>
+                <p class="text-slate-300 text-sm sm:text-base mb-6 editable-text" data-key="quoteBannerSub">
+                    Manejamos el almacenamiento, la logística de entrega y los cobros por ti. Tu único enfoque es conectar clientes e incrementar tus ingresos día a día.
+                </p>
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box inline-flex items-center gap-2 bg-custom-gold text-slate-950 font-black px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm sm:text-base active:scale-95">
+                    <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: ESCUELA DE EMPRESARIOS & CÁTEDRA ZASHOME -->
+    <section class="py-16 md:py-24 border-t border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="text-center mb-16">
+                <span class="text-custom-gold font-extrabold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3 inline-block editable-text" data-key="schoolTag">
+                    SISTEMA DE FORMACIÓN INTEGRAL
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2 mb-4 editable-text" data-key="schoolTitle">
+                    Escuela de Empresarios & Cátedra Zashome
+                </h2>
+                <p class="text-slate-300 max-w-2xl mx-auto text-sm sm:text-base editable-text" data-key="schoolSubtitle">
+                    No importa si no tienes experiencia previa en negocios digitales. Te preparamos y acompañamos paso a paso con las mejores herramientas del mercado.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                    <div class="text-custom-gold font-black text-3xl mb-2">01</div>
+                    <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar1Title">Contenido Práctico</h3>
+                    <p class="text-sm text-slate-300 editable-text" data-key="pillar1Desc">
+                        Estrategias directas al grano, probadas en el mercado real para generar clientes interesados desde tus primeros días.
+                    </p>
+                </div>
+
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                    <div class="text-custom-gold font-black text-3xl mb-2">02</div>
+                    <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar2Title">Aprendizaje Paso a Paso</h3>
+                    <p class="text-sm text-slate-300 editable-text" data-key="pillar2Desc">
+                        Módulos guiados en orden lógico para que ejecutes sin sobrecargarte de información ni perder tiempo.
+                    </p>
+                </div>
+
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                    <div class="text-custom-gold font-black text-3xl mb-2">03</div>
+                    <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar3Title">Herramientas Digitales</h3>
+                    <p class="text-sm text-slate-300 editable-text" data-key="pillar3Desc">
+                        Acceso a recursos gráficos, plantillas de ventas y material promocional listo para publicar en tus redes.
+                    </p>
+                </div>
+
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500">
+                    <div class="text-custom-gold font-black text-3xl mb-2">04</div>
+                    <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar4Title">Acompañamiento Continuo</h3>
+                    <p class="text-sm text-slate-300 editable-text" data-key="pillar4Desc">
+                        Comunidad activa y soporte constante para resolver tus dudas y potenciar tus habilidades de cierre.
+                    </p>
+                </div>
+
+                <div class="card-blur custom-card-container p-6 rounded-2xl relative border-l-4 border-l-amber-500 sm:col-span-2 lg:col-span-2">
+                    <div class="text-custom-gold font-black text-3xl mb-2">05</div>
+                    <h3 class="text-lg font-bold text-white mb-2 editable-text" data-key="pillar5Title">Crecimiento e Ingresos Escalables</h3>
+                    <p class="text-sm text-slate-300 editable-text" data-key="pillar5Desc">
+                        Diseñado para que aumentes tus metas de ganancias mes con mes. Tú pones los límites de hasta dónde quieres llegar.
+                    </p>
+                </div>
+            </div>
+
+            <div class="gold-border-card custom-card-container p-8 rounded-3xl max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+                <div class="space-y-3 text-left">
+                    <h3 class="text-2xl font-black text-white editable-text" data-key="catedraTitle">¿Qué aprenderás en Cátedra Zashome?</h3>
+                    <ul class="space-y-2.5 text-sm text-slate-200 font-medium">
+                        <li class="flex items-center gap-2.5">
+                            <span class="text-emerald-400 font-bold">✔</span> <span class="editable-text" data-key="catBullet1">Estrategias de Atracción de Clientes</span>
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="text-emerald-400 font-bold">✔</span> <span class="editable-text" data-key="catBullet2">Técnicas Efectivas de Conversión y Cierre</span>
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="text-emerald-400 font-bold">✔</span> <span class="editable-text" data-key="catBullet3">Mentalidad Empresarial e Inteligencia Financiera</span>
+                        </li>
+                        <li class="flex items-center gap-2.5">
+                            <span class="text-emerald-400 font-bold">✔</span> <span class="editable-text" data-key="catBullet4">Dominio Total de la Plataforma Zashome</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="shrink-0 w-full md:w-auto text-center">
+                    <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box w-full md:w-auto inline-flex items-center justify-center gap-2 shimmer-btn text-slate-950 font-black px-8 py-4 rounded-xl shadow-xl text-base transition-all hover:scale-105 active:scale-95">
+                        <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: BENEFICIOS PRINCIPALES DE LA PLATAFORMA (Supports Emojis, Images, or Custom Media) -->
+    <section class="py-16 md:py-24 bg-slate-950">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4 editable-text" data-key="benefitsTitle">
+                    Todo lo que necesitas para triunfar en un solo lugar
+                </h2>
+                <p class="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base editable-text" data-key="benefitsSubtitle">
+                    Simplificamos el comercio digital para que tú solo te enfoques en lo que genera ingresos.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Benefit 1 -->
+                <div class="card-blur custom-card-container p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div id="ben1-icon-container" class="custom-media-box shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
+                        <span id="ben1-icon-text" class="editable-text" data-key="ben1Icon">📦</span>
+                        <img id="ben1-icon-img" src="" class="hidden w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2 editable-text" data-key="ben1Title">Logística Integral Resuelta</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed editable-text" data-key="ben1Desc">
+                            Olvídate del embalaje, etiquetado e ir a las empresas de mensajería. Nosotros despachamos y entregamos directo al cliente final.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Benefit 2 -->
+                <div class="card-blur custom-card-container p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div id="ben2-icon-container" class="custom-media-box shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
+                        <span id="ben2-icon-text" class="editable-text" data-key="ben2Icon">💳</span>
+                        <img id="ben2-icon-img" src="" class="hidden w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2 editable-text" data-key="ben2Title">Pago Contra Entrega Garantizado</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed editable-text" data-key="ben2Desc">
+                            Tus clientes pagan al recibir su paquete, brindando total seguridad y aumentando exponencialmente tus posibilidades de venta.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Benefit 3 -->
+                <div class="card-blur custom-card-container p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div id="ben3-icon-container" class="custom-media-box shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
+                        <span id="ben3-icon-text" class="editable-text" data-key="ben3Icon">📈</span>
+                        <img id="ben3-icon-img" src="" class="hidden w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2 editable-text" data-key="ben3Title">Altos Márgenes de Ganancia</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed editable-text" data-key="ben3Desc">
+                            Accede a estructuras de comisiones competitivas que te garantizan ingresos significativos por cada operación realizada.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Benefit 4 -->
+                <div class="card-blur custom-card-container p-8 rounded-2xl flex items-start gap-5 hover:border-custom-gold transition-all">
+                    <div id="ben4-icon-container" class="custom-media-box shrink-0 w-12 h-12 rounded-xl bg-teal-900/40 text-custom-gold flex items-center justify-center text-2xl font-bold overflow-hidden">
+                        <span id="ben4-icon-text" class="editable-text" data-key="ben4Icon">📲</span>
+                        <img id="ben4-icon-img" src="" class="hidden w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2 editable-text" data-key="ben4Title">Libertad y Flexibilidad de Horarios</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed editable-text" data-key="ben4Desc">
+                            Tú eres el dueño de tu tiempo. Opera tu negocio desde cualquier lugar con acceso a internet a la hora que prefieras.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: FINAL CTA BANNER -->
+    <section class="py-20 md:py-28 relative overflow-hidden bg-gradient-to-t from-teal-900/30 via-slate-900 to-slate-900 border-t border-slate-800 text-center">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
+            <span class="text-custom-gold font-black text-xs sm:text-sm uppercase tracking-widest mb-4 inline-block editable-text" data-key="finalCtaTag">
+                ¿LISTO PARA DAR EL SIGUIENTE PASO?
+            </span>
+            <h2 class="text-3xl sm:text-5xl font-black text-white tracking-tight mb-6 leading-tight editable-text" data-key="finalCtaTitle">
+                El Futuro de tu Negocio Comienza Hoy
+            </h2>
+            <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed editable-text" data-key="finalCtaSubtitle">
+                No dejes pasar la oportunidad de unirte a la plataforma que está transformando el emprendimiento digital en Guatemala. Haz clic abajo e ingresa de inmediato.
+            </p>
+
+            <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="cta-link custom-button-box inline-flex items-center justify-center gap-3 shimmer-btn text-slate-950 font-black text-xl sm:text-2xl px-12 py-6 rounded-2xl shadow-2xl animate-pulseGlow transition-all duration-300 hover:scale-105 active:scale-95">
+                <span class="cta-main-text editable-text" data-key="ctaMainText">Únete a Zas Ahora</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+            </a>
+            <p class="text-xs text-slate-400 mt-4 font-medium editable-text" data-key="finalCtaSubtext">Acceso directo a la plataforma de registro</p>
+        </div>
+    </section>
+
+    <!-- WHITE BRANDING FOOTER -->
+    <footer class="py-8 bg-white text-center border-t border-slate-200 text-xs text-slate-600">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <img id="footer-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="custom-media-box h-8 w-auto">
+                <span class="font-bold text-slate-700 editable-text" data-key="footerTagline">Tu hogar en un Zas.</span>
+            </div>
+            <p class="editable-text" data-key="footerCopyright">© 2025 Zashome. Plataforma de Emprendimiento Digital. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+
+    <!-- ================================================================= -->
+    <!-- FLOATING GRAPHICAL CONFIGURATION BUTTON & EXPANDED CUSTOMIZER DRAWER -->
+    <!-- ================================================================= -->
+
+    <!-- Floating Trigger Gear Button -->
+    <button id="config-toggle-btn" class="fixed bottom-6 right-6 z-50 bg-amber-500 hover:bg-amber-400 text-slate-950 p-4 rounded-full shadow-2xl transition-transform hover:scale-110 active:scale-95 flex items-center justify-center group" title="Personalizar Toda la Página">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 group-hover:rotate-90 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span class="sr-only">Personalizar</span>
+    </button>
+
+    <!-- Customizer Drawer Overlay & Sidebar -->
+    <div id="config-drawer-overlay" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+    <aside id="config-drawer" class="fixed top-0 right-0 h-full w-full sm:w-[480px] bg-slate-900 border-l border-slate-800 text-slate-100 z-50 translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+        <!-- Drawer Header -->
+        <div class="p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="p-2 rounded-xl bg-amber-500/20 text-amber-400 font-bold text-xl">⚙️</span>
+                <div>
+                    <h3 class="font-extrabold text-lg text-white">Personalizador Total + Edición</h3>
+                    <p class="text-xs text-slate-400">Edita tamaños, fondos, elimina elementos e imágenes</p>
+                </div>
+            </div>
+            <button id="close-drawer-btn" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                ✕
+            </button>
+        </div>
+
+        <!-- Quick Action Bar -->
+        <div class="px-5 py-3 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+            <button id="toggle-inline-edit" class="w-full text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 py-2 rounded-xl border border-amber-500/30 font-bold transition-all text-center">
+                ✏️ Modo "Clic para Editar / Eliminar Elementos": OFF
+            </button>
+        </div>
+
+        <!-- Drawer Body Tabs & Forms -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-6 text-sm">
+
+            <!-- SECTION 1: ESTILOS Y COLORES GLOBALES -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-4">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs flex items-center gap-2">
+                    🎨 Estilos y Colores Globales
+                </h4>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Color Marca (Teal)</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-teal" value="#136371" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span id="picker-teal-hex" class="text-xs font-mono font-bold text-slate-300">#136371</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Color Acento (Gold)</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-gold" value="#FFAB00" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span id="picker-gold-hex" class="text-xs font-mono font-bold text-slate-300">#FFAB00</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Fondo General</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-bg" value="#091E24" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span id="picker-bg-hex" class="text-xs font-mono font-bold text-slate-300">#091E24</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Texto General</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-text" value="#F1F5F9" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span id="picker-text-hex" class="text-xs font-mono font-bold text-slate-300">#F1F5F9</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Tipo de Letra (Tipografía)</label>
+                    <select id="font-selector" class="w-full bg-slate-800 text-white p-2.5 rounded-xl border border-slate-700 focus:border-amber-400 outline-none font-medium text-xs">
+                        <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans (Original)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat (Moderna / Fuerte)</option>
+                        <option value="'Poppins', sans-serif">Poppins (Limpia / Geométrica)</option>
+                        <option value="'Inter', sans-serif">Inter (Elegante / Tech)</option>
+                        <option value="'Roboto', sans-serif">Roboto (Clásica / Versátil)</option>
+                        <option value="'Playfair Display', serif">Playfair Display (Premium / Serif)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- SECTION 2: MULTIMEDIA HERO (IMAGEN O VIDEO MP4 / YOUTUBE) -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs flex items-center gap-2">
+                    🎬 Multimedia Hero (Imagen o Video)
+                </h4>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Tipo de Medio Hero</label>
+                    <select id="hero-media-type" class="w-full bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs font-bold">
+                        <option value="image">Imagen</option>
+                        <option value="video">Video MP4 (URL o Archivo)</option>
+                        <option value="iframe">Video Youtube / Embed (URL)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">URL de Imagen / Video</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-hero-media-url" placeholder="https://..." class="flex-1 bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs">
+                        <label class="bg-slate-800 hover:bg-slate-700 p-2 rounded-xl border border-slate-700 cursor-pointer text-xs font-bold">
+                            📁 <input type="file" id="file-hero-media" accept="image/*,video/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: MULTIMEDIA SECCIÓN FINANZAS (IMAGEN O VIDEO) -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs flex items-center gap-2">
+                    🎥 Multimedia Sección Finanzas (Imagen o Video)
+                </h4>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Tipo de Medio Finanzas</label>
+                    <select id="finance-media-type" class="w-full bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs font-bold">
+                        <option value="image">Imagen</option>
+                        <option value="video">Video MP4 (URL o Archivo)</option>
+                        <option value="iframe">Video Youtube / Embed (URL)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">URL de Imagen / Video</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-finance-media-url" placeholder="https://..." class="flex-1 bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs">
+                        <label class="bg-slate-800 hover:bg-slate-700 p-2 rounded-xl border border-slate-700 cursor-pointer text-xs font-bold">
+                            📁 <input type="file" id="file-finance-media" accept="image/*,video/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: ÍCONOS E IMÁGENES DE BENEFICIOS -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs flex items-center gap-2">
+                    🖼️ Íconos de Beneficios (Emoji o Imagen)
+                </h4>
+                <div class="space-y-2">
+                    <label class="block text-[11px] text-slate-400 font-semibold">Beneficio 1 (Logística)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-ben1-val" placeholder="📦 o URL Imagen" class="flex-1 bg-slate-800 text-white p-1.5 rounded-lg border border-slate-700 text-xs">
+                        <label class="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded-lg border border-slate-700 cursor-pointer text-xs font-bold">
+                            📁 <input type="file" id="file-ben1-img" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[11px] text-slate-400 font-semibold">Beneficio 2 (Pago Contra Entrega)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-ben2-val" placeholder="💳 o URL Imagen" class="flex-1 bg-slate-800 text-white p-1.5 rounded-lg border border-slate-700 text-xs">
+                        <label class="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded-lg border border-slate-700 cursor-pointer text-xs font-bold">
+                            📁 <input type="file" id="file-ben2-img" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 5: REGISTRO Y ENLACE CTA -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs">
+                    🔗 Enlace de Registro y Botones
+                </h4>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Texto Principal de los Botones CTA</label>
+                    <input type="text" id="input-cta-text" class="w-full bg-slate-800 text-white p-2 rounded-xl border border-slate-700 focus:border-amber-400 outline-none text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Enlace Destino Registro (URL)</label>
+                    <input type="url" id="input-cta-url" class="w-full bg-slate-800 text-amber-400 p-2 rounded-xl border border-slate-700 focus:border-amber-400 outline-none font-mono text-xs">
+                </div>
+            </div>
+
+            <!-- SECTION 6: LOGO Y FOOTER -->
+            <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <h4 class="font-bold text-amber-400 uppercase tracking-wider text-xs">
+                    🖼️ Logo y Footer
+                </h4>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Logo Zashome (URL o Subir)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-logo-url" placeholder="https://..." class="flex-1 bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs">
+                        <label class="bg-slate-800 hover:bg-slate-700 p-2 rounded-xl border border-slate-700 cursor-pointer text-xs font-bold">
+                            📁 <input type="file" id="file-logo" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold">Slogan Footer</label>
+                    <input type="text" id="input-footer-tagline" class="w-full bg-slate-800 text-white p-2 rounded-xl border border-slate-700 text-xs">
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Drawer Footer: Save Actions -->
+        <div class="p-5 bg-slate-950 border-t border-slate-800 space-y-2.5">
+            <button id="download-html-btn" class="w-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-xl flex items-center justify-center gap-2 text-sm transition-all active:scale-95">
+                <span>💾 Guardar Cambios en el Código (.html)</span>
+            </button>
+
+            <button id="reset-theme-btn" class="w-full bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors border border-slate-700">
+                ↺ Restablecer Todo
+            </button>
+        </div>
+    </aside>
+
+    <!-- CUSTOMIZER JAVASCRIPT PERSISTENCE AND COMPILER SCRIPT -->
+    <script id="customizer-logic">
+        (function() {
+            const STORAGE_KEY = 'zashome_customizer_config_v4';
+
+            // State Object for 100% of Customizable Elements
+            const state = {
+                colorTeal: '#136371',
+                colorGold: '#FFAB00',
+                colorBg: '#091E24',
+                colorText: '#F1F5F9',
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+
+                announcementText: "🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTETE EN EMPRESARIO ZASHOME",
+                badgeNavText: "Plazas Disponibles",
+                ctaBtnText: "Únete Ahora",
+                ctaMainText: "Únete a Zas Ahora",
+                ctaUrl: "https://registro.zashome.com.gt",
+                logoUrl: "images/zashome_logo.jpg",
+
+                heroBadgeText: "Sin Inventario • Sin Jefes • Oportunidad 100% Digital",
+                heroTitle1: "Zas NO tiene vendedores,",
+                heroTitle2: "tiene EMPRENDEDORES.",
+                heroSubtitle: "Descubre cómo nuestra plataforma te brinda la tecnología, logística y capacitación financiera que necesitas para construir un negocio altamente rentable generando ventas diarias sin comprar stock inicial.",
+
+                // Hero Media (Image or Video)
+                heroMediaType: "image",
+                heroMediaUrl: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80",
+
+                floatingPillSub: "Crecimiento Mensual",
+                floatingPillTitle: "+100% Ganancias Directas",
+                heroImageBadge: "Educación Financiera y Ventas Automatizadas",
+
+                stat1Num: "0%", stat1Text: "Stock Inicial",
+                stat2Num: "100%", stat2Text: "Logística Lista",
+                stat3Num: "24/7", stat3Text: "Plataforma Activa",
+                stat4Num: "$$$", stat4Text: "Ingresos Diarios",
+
+                financeTag: "ENFOQUE EN RENTABILIDAD",
+                financeTitle1: "Transforma tu Conocimiento en",
+                financeTitle2: "Libertad Financiera",
+                financeDesc: "En Zashome no solo te damos acceso a una plataforma tecnológica de vanguardia; te capacitamos para entender los números de tu negocio, optimizar tus márgenes y escalar tus ingresos de manera constante.",
+
+                // Finance Media (Image or Video)
+                financeMediaType: "image",
+                financeMediaUrl: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80",
+
+                financeBadgeSub: "Modelo Comprobado",
+                financeBadgeTitle: "Inteligencia Financiera",
+
+                finBullet1Title: "Control de Flujo de Caja",
+                finBullet1Desc: "Aprende a gestionar cada quetzal generado para hacer crecer tu capital de trabajo sin riesgo.",
+                finBullet2Title: "Altos Márgenes por Operación",
+                finBullet2Desc: "Diseñado para maximizar el retorno de tu tiempo e inversión publicitaria.",
+                finBullet3Title: "Ingresos Diarios y Pagos Rápidos",
+                finBullet3Desc: "Recibe tus utilidades de forma ágil y transparente a través del sistema integrado.",
+
+                modelSecTitle: "El Negocio Inteligente del Siglo XXI",
+                modelSecSubtitle: "Las empresas más exitosas del mundo no fabrican ni compran inventario masivo; conectan la oferta con la demanda usando tecnología.",
+                card1Title: "Airbnb", card1Desc: "Es la red de alojamientos más grande del planeta sin ser dueña de un solo hotel.",
+                card2Title: "Uber", card2Desc: "Es la plataforma de transporte más valorada del mundo sin ser dueña de flotillas de vehículos.",
+                card3Badge: "Tu Oportunidad", card3Title: "Zashome", card3Desc: "Te permite construir un negocio digital sostenible comercializando productos de alta demanda sin arriesgar tu dinero comprando mercancía.",
+                quoteBannerText: '"Tú no vendes para alguien más. Tú construyes tu propia empresa utilizando nuestra infraestructura."',
+                quoteBannerSub: "Manejamos el almacenamiento, la logística de entrega y los cobros por ti. Tu único enfoque es conectar clientes e incrementar tus ingresos día a día.",
+
+                schoolTag: "SISTEMA DE FORMACIÓN INTEGRAL",
+                schoolTitle: "Escuela de Empresarios & Cátedra Zashome",
+                schoolSubtitle: "No importa si no tienes experiencia previa en negocios digitales. Te preparamos y acompañamos paso a paso con las mejores herramientas del mercado.",
+                pillar1Title: "Contenido Práctico", pillar1Desc: "Estrategias directas al grano, probadas en el mercado real para generar clientes interesados desde tus primeros días.",
+                pillar2Title: "Aprendizaje Paso a Paso", pillar2Desc: "Módulos guiados en orden lógico para que ejecutes sin sobrecargarte de información ni perder tiempo.",
+                pillar3Title: "Herramientas Digitales", pillar3Desc: "Acceso a recursos gráficos, plantillas de ventas y material promocional listo para publicar en tus redes.",
+                pillar4Title: "Acompañamiento Continuo", pillar4Desc: "Comunidad activa y soporte constante para resolver tus dudas y potenciar tus habilidades de cierre.",
+                pillar5Title: "Crecimiento e Ingresos Escalables", pillar5Desc: "Diseñado para que aumentes tus metas de ganancias mes con mes. Tú pones los límites de hasta dónde quieres llegar.",
+                catedraTitle: "¿Qué aprenderás en Cátedra Zashome?",
+                catBullet1: "Estrategias de Atracción de Clientes",
+                catBullet2: "Técnicas Efectivas de Conversión y Cierre",
+                catBullet3: "Mentalidad Empresarial e Inteligencia Financiera",
+                catBullet4: "Dominio Total de la Plataforma Zashome",
+
+                benefitsTitle: "Todo lo que necesitas para triunfar en un solo lugar",
+                benefitsSubtitle: "Simplificamos el comercio digital para que tú solo te enfoques en lo que genera ingresos.",
+
+                ben1Icon: "📦", ben1Title: "Logística Integral Resuelta", ben1Desc: "Olvídate del embalaje, etiquetado e ir a las empresas de mensajería. Nosotros despachamos y entregamos directo al cliente final.",
+                ben2Icon: "💳", ben2Title: "Pago Contra Entrega Garantizado", ben2Desc: "Tus clientes pagan al recibir su paquete, brindando total seguridad y aumentando exponencialmente tus posibilidades de venta.",
+                ben3Icon: "📈", ben3Title: "Altos Márgenes de Ganancia", ben3Desc: "Accede a estructuras de comisiones competitivas que te garantizan ingresos significativos por cada operación realizada.",
+                ben4Icon: "📲", ben4Title: "Libertad y Flexibilidad de Horarios", ben4Desc: "Tú eres el dueño de tu tiempo. Opera tu negocio desde cualquier lugar con acceso a internet a la hora que prefieras.",
+
+                finalCtaTag: "¿LISTO PARA DAR EL SIGUIENTE PASO?",
+                finalCtaTitle: "El Futuro de tu Negocio Comienza Hoy",
+                finalCtaSubtitle: "No dejes pasar la oportunidad de unirte a la plataforma que está transformando el emprendimiento digital en Guatemala. Haz clic abajo e ingresa de inmediato.",
+                finalCtaSubtext: "Acceso directo a la plataforma de registro",
+                footerTagline: "Tu hogar en un Zas.",
+                footerCopyright: "© 2025 Zashome. Plataforma de Emprendimiento Digital. Todos los derechos reservados.",
+
+                // Custom Per-Element Styles Object (Font size, Color, Width, Height, Background Color, Background Image)
+                elementStyles: {},
+
+                // Removed Elements IDs or Selectors
+                deletedElements: []
+            };
+
+            // DOM Controls
+            const configBtn = document.getElementById('config-toggle-btn');
+            const drawerOverlay = document.getElementById('config-drawer-overlay');
+            const drawer = document.getElementById('config-drawer');
+            const closeDrawerBtn = document.getElementById('close-drawer-btn');
+
+            const pickerTeal = document.getElementById('picker-teal');
+            const pickerGold = document.getElementById('picker-gold');
+            const pickerBg = document.getElementById('picker-bg');
+            const pickerText = document.getElementById('picker-text');
+
+            const fontSelect = document.getElementById('font-selector');
+            const inputCtaText = document.getElementById('input-cta-text');
+            const inputCtaUrl = document.getElementById('input-cta-url');
+
+            // Hero Media Inputs
+            const heroMediaType = document.getElementById('hero-media-type');
+            const inputHeroMediaUrl = document.getElementById('input-hero-media-url');
+            const fileHeroMedia = document.getElementById('file-hero-media');
+
+            // Finance Media Inputs
+            const financeMediaType = document.getElementById('finance-media-type');
+            const inputFinanceMediaUrl = document.getElementById('input-finance-media-url');
+            const fileFinanceMedia = document.getElementById('file-finance-media');
+
+            // Benefit Icons Inputs
+            const inputBen1Val = document.getElementById('input-ben1-val');
+            const fileBen1Img = document.getElementById('file-ben1-img');
+            const inputBen2Val = document.getElementById('input-ben2-val');
+            const fileBen2Img = document.getElementById('file-ben2-img');
+
+            const inputLogoUrl = document.getElementById('input-logo-url');
+            const inputFooterTagline = document.getElementById('input-footer-tagline');
+
+            const fileLogo = document.getElementById('file-logo');
+            const downloadBtn = document.getElementById('download-html-btn');
+            const resetBtn = document.getElementById('reset-theme-btn');
+            const toggleInlineBtn = document.getElementById('toggle-inline-edit');
+
+            // Formatting Toolbar Inputs
+            const formatToolbar = document.getElementById('formatting-toolbar');
+            const tbFontSize = document.getElementById('tb-font-size');
+            const tbFontColor = document.getElementById('tb-font-color');
+            const tbWidth = document.getElementById('tb-width');
+            const tbHeight = document.getElementById('tb-height');
+            const tbBgColor = document.getElementById('tb-bg-color');
+            const tbBgImageFile = document.getElementById('tb-bg-image-file');
+            const tbDeleteBtn = document.getElementById('tb-delete-btn');
+
+            let activeSelectedElement = null;
+            let isInlineEditing = false;
+
+            // Load Saved Config from LocalStorage
+            function loadSavedConfig() {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                        Object.assign(state, JSON.parse(saved));
+                    }
+                } catch(e) { console.error('LocalStorage error:', e); }
+                applyStateToDOM();
+            }
+
+            function applyStateToDOM() {
+                // Apply CSS Variables
+                document.documentElement.style.setProperty('--color-teal', state.colorTeal);
+                document.documentElement.style.setProperty('--color-teal-dark', adjustHex(state.colorTeal, -20));
+                document.documentElement.style.setProperty('--color-gold', state.colorGold);
+                document.documentElement.style.setProperty('--color-bg-dark', state.colorBg);
+                document.documentElement.style.setProperty('--color-text-main', state.colorText);
+                document.documentElement.style.setProperty('--font-main', state.fontFamily);
+
+                if (pickerTeal) pickerTeal.value = state.colorTeal;
+                if (pickerGold) pickerGold.value = state.colorGold;
+                if (pickerBg) pickerBg.value = state.colorBg;
+                if (pickerText) pickerText.value = state.colorText;
+
+                document.getElementById('picker-teal-hex').innerText = state.colorTeal;
+                document.getElementById('picker-gold-hex').innerText = state.colorGold;
+                document.getElementById('picker-bg-hex').innerText = state.colorBg;
+                document.getElementById('picker-text-hex').innerText = state.colorText;
+
+                if (fontSelect) fontSelect.value = state.fontFamily;
+
+                // Remove deleted elements
+                if (state.deletedElements && Array.isArray(state.deletedElements)) {
+                    state.deletedElements.forEach(selector => {
+                        try {
+                            const el = document.querySelector(selector);
+                            if (el) el.remove();
+                        } catch(e) {}
+                    });
+                }
+
+                // Update Text Content across all elements
+                document.querySelectorAll('[data-key]').forEach(el => {
+                    const key = el.getAttribute('data-key');
+                    if (state[key] !== undefined) {
+                        el.innerText = state[key];
+                    }
+                });
+
+                // Apply Custom Per-Element Styles (Size, Width, Height, Colors, Background Images)
+                if (state.elementStyles) {
+                    Object.keys(state.elementStyles).forEach(selector => {
+                        const el = document.querySelector(selector);
+                        if (el) {
+                            const style = state.elementStyles[selector];
+                            if (style.fontSize) el.style.fontSize = style.fontSize;
+                            if (style.color) el.style.color = style.color;
+                            if (style.width) el.style.width = style.width;
+                            if (style.height) el.style.height = style.height;
+                            if (style.backgroundColor) el.style.backgroundColor = style.backgroundColor;
+                            if (style.backgroundImage) {
+                                el.style.backgroundImage = `url(${style.backgroundImage})`;
+                                el.style.backgroundSize = 'cover';
+                                el.style.backgroundPosition = 'center';
+                            }
+                        }
+                    });
+                }
+
+                if (inputCtaText) inputCtaText.value = state.ctaMainText;
+                if (inputCtaUrl) inputCtaUrl.value = state.ctaUrl;
+
+                if (inputLogoUrl) inputLogoUrl.value = state.logoUrl;
+                if (inputFooterTagline) inputFooterTagline.value = state.footerTagline;
+
+                // Render Hero Media (Image or Video)
+                renderMediaBlock('hero', state.heroMediaType, state.heroMediaUrl);
+                if (heroMediaType) heroMediaType.value = state.heroMediaType;
+                if (inputHeroMediaUrl) inputHeroMediaUrl.value = state.heroMediaUrl;
+
+                // Render Finance Media (Image or Video)
+                renderMediaBlock('finance', state.financeMediaType, state.financeMediaUrl);
+                if (financeMediaType) financeMediaType.value = state.financeMediaType;
+                if (inputFinanceMediaUrl) inputFinanceMediaUrl.value = state.financeMediaUrl;
+
+                // Render Benefit Icons (Text or Image)
+                renderBenefitIcon('ben1', state.ben1Icon);
+                if (inputBen1Val) inputBen1Val.value = state.ben1Icon;
+
+                renderBenefitIcon('ben2', state.ben2Icon);
+                if (inputBen2Val) inputBen2Val.value = state.ben2Icon;
+
+                // Update CTA Links
+                document.querySelectorAll('.cta-link').forEach(a => a.href = state.ctaUrl);
+
+                // Update Logos
+                const logoImgs = [document.getElementById('nav-logo-img'), document.getElementById('footer-logo-img')];
+                logoImgs.forEach(img => { if (img) img.src = state.logoUrl; });
+
+                // Save to LocalStorage
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                } catch(e) {}
+            }
+
+            function renderMediaBlock(prefix, type, url) {
+                const img = document.getElementById(`${prefix}-img-visual`);
+                const video = document.getElementById(`${prefix}-video-visual`);
+                const iframe = document.getElementById(`${prefix}-iframe-visual`);
+
+                if (!img || !video || !iframe) return;
+
+                img.classList.add('hidden');
+                video.classList.add('hidden');
+                iframe.classList.add('hidden');
+
+                if (type === 'video') {
+                    video.src = url;
+                    video.classList.remove('hidden');
+                } else if (type === 'iframe') {
+                    iframe.src = url;
+                    iframe.classList.remove('hidden');
+                } else {
+                    img.src = url;
+                    img.classList.remove('hidden');
+                }
+            }
+
+            function renderBenefitIcon(prefix, val) {
+                const textSpan = document.getElementById(`${prefix}-icon-text`);
+                const imgTag = document.getElementById(`${prefix}-icon-img`);
+                if (!textSpan || !imgTag) return;
+
+                if (val && (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image/'))) {
+                    textSpan.classList.add('hidden');
+                    imgTag.src = val;
+                    imgTag.classList.remove('hidden');
+                } else {
+                    imgTag.classList.add('hidden');
+                    textSpan.innerText = val || '⭐';
+                    textSpan.classList.remove('hidden');
+                }
+            }
+
+            function adjustHex(hex, percent) {
+                let num = parseInt(hex.replace('#', ''), 16),
+                    amt = Math.round(2.55 * percent),
+                    R = (num >> 16) + amt,
+                    G = (num >> 8 & 0x00FF) + amt,
+                    B = (num & 0x0000FF) + amt;
+                return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+            }
+
+            function getElementSelector(el) {
+                if (el.id) return `#${el.id}`;
+                if (el.getAttribute('data-key')) return `[data-key="${el.getAttribute('data-key')}"]`;
+
+                // Generate relative path
+                let path = [];
+                while (el && el.nodeType === Node.ELEMENT_NODE) {
+                    let selector = el.nodeName.toLowerCase();
+                    if (el.id) {
+                        path.unshift(`#${el.id}`);
+                        break;
+                    } else {
+                        let sibling = el, nth = 1;
+                        while (sibling = sibling.previousElementSibling) {
+                            if (sibling.nodeName.toLowerCase() === selector) nth++;
+                        }
+                        if (nth !== 1) selector += `:nth-of-type(${nth})`;
+                    }
+                    path.unshift(selector);
+                    el = el.parentNode;
+                }
+                return path.join(' > ');
+            }
+
+            function openDrawer() {
+                drawerOverlay.classList.remove('hidden');
+                setTimeout(() => {
+                    drawerOverlay.classList.remove('opacity-0');
+                    drawer.classList.remove('translate-x-full');
+                }, 10);
+            }
+
+            function closeDrawer() {
+                drawerOverlay.classList.add('opacity-0');
+                drawer.classList.add('translate-x-full');
+                setTimeout(() => {
+                    drawerOverlay.classList.add('hidden');
+                }, 300);
+            }
+
+            // Bind Form Inputs
+            pickerTeal.addEventListener('input', (e) => { state.colorTeal = e.target.value; applyStateToDOM(); });
+            pickerGold.addEventListener('input', (e) => { state.colorGold = e.target.value; applyStateToDOM(); });
+            pickerBg.addEventListener('input', (e) => { state.colorBg = e.target.value; applyStateToDOM(); });
+            pickerText.addEventListener('input', (e) => { state.colorText = e.target.value; applyStateToDOM(); });
+
+            fontSelect.addEventListener('change', (e) => { state.fontFamily = e.target.value; applyStateToDOM(); });
+
+            inputCtaText.addEventListener('input', (e) => { state.ctaMainText = e.target.value; applyStateToDOM(); });
+            inputCtaUrl.addEventListener('input', (e) => { state.ctaUrl = e.target.value; applyStateToDOM(); });
+
+            heroMediaType.addEventListener('change', (e) => { state.heroMediaType = e.target.value; applyStateToDOM(); });
+            inputHeroMediaUrl.addEventListener('change', (e) => { state.heroMediaUrl = e.target.value; applyStateToDOM(); });
+
+            financeMediaType.addEventListener('change', (e) => { state.financeMediaType = e.target.value; applyStateToDOM(); });
+            inputFinanceMediaUrl.addEventListener('change', (e) => { state.financeMediaUrl = e.target.value; applyStateToDOM(); });
+
+            inputBen1Val.addEventListener('change', (e) => { state.ben1Icon = e.target.value; applyStateToDOM(); });
+            inputBen2Val.addEventListener('change', (e) => { state.ben2Icon = e.target.value; applyStateToDOM(); });
+
+            inputLogoUrl.addEventListener('change', (e) => { state.logoUrl = e.target.value; applyStateToDOM(); });
+            inputFooterTagline.addEventListener('input', (e) => { state.footerTagline = e.target.value; applyStateToDOM(); });
+
+            // File Upload Base64 Handlers
+            function handleFileUpload(fileInput, callback) {
+                fileInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            callback(e.target.result);
+                        };
+                        reader.readAsDataURL(this.files[0]);
+                    }
+                });
+            }
+
+            handleFileUpload(fileHeroMedia, (res) => { state.heroMediaType = 'video'; state.heroMediaUrl = res; applyStateToDOM(); });
+            handleFileUpload(fileFinanceMedia, (res) => { state.financeMediaType = 'video'; state.financeMediaUrl = res; applyStateToDOM(); });
+            handleFileUpload(fileBen1Img, (res) => { state.ben1Icon = res; applyStateToDOM(); });
+            handleFileUpload(fileBen2Img, (res) => { state.ben2Icon = res; applyStateToDOM(); });
+            handleFileUpload(fileLogo, (res) => { state.logoUrl = res; applyStateToDOM(); });
+
+            // Contextual Floating Toolbar for Element Customization & Deletion
+            function showFormattingToolbarForElement(el) {
+                activeSelectedElement = el;
+                const rect = el.getBoundingClientRect();
+
+                formatToolbar.style.top = `${window.scrollY + rect.top - 54}px`;
+                formatToolbar.style.left = `${Math.max(10, window.scrollX + rect.left)}px`;
+                formatToolbar.classList.remove('hidden');
+
+                const currentFontSize = parseInt(window.getComputedStyle(el).fontSize) || 16;
+                tbFontSize.value = currentFontSize;
+
+                const currentWidth = parseInt(window.getComputedStyle(el).width) || el.offsetWidth;
+                tbWidth.value = currentWidth;
+
+                const currentHeight = parseInt(window.getComputedStyle(el).height) || el.offsetHeight;
+                tbHeight.value = currentHeight;
+
+                const currentStyleColor = el.style.color || window.getComputedStyle(el).color;
+                tbFontColor.value = rgbToHex(currentStyleColor) || '#FFFFFF';
+
+                const currentBgColor = el.style.backgroundColor || window.getComputedStyle(el).backgroundColor;
+                tbBgColor.value = rgbToHex(currentBgColor) || '#0F2C35';
+            }
+
+            function rgbToHex(rgb) {
+                if (!rgb || !rgb.startsWith('rgb')) return '#FFFFFF';
+                const parts = rgb.match(/\d+/g);
+                if (!parts || parts.length < 3) return '#FFFFFF';
+                return '#' + parts.slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+            }
+
+            function saveElementStyle(selector, key, value) {
+                if (!state.elementStyles) state.elementStyles = {};
+                if (!state.elementStyles[selector]) state.elementStyles[selector] = {};
+                state.elementStyles[selector][key] = value;
+                applyStateToDOM();
+            }
+
+            tbFontSize.addEventListener('input', (e) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'fontSize', `${e.target.value}px`);
+            });
+
+            tbFontColor.addEventListener('input', (e) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'color', e.target.value);
+            });
+
+            tbWidth.addEventListener('input', (e) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'width', `${e.target.value}px`);
+            });
+
+            tbHeight.addEventListener('input', (e) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'height', `${e.target.value}px`);
+            });
+
+            tbBgColor.addEventListener('input', (e) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'backgroundColor', e.target.value);
+            });
+
+            handleFileUpload(tbBgImageFile, (dataUrl) => {
+                if (!activeSelectedElement) return;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'backgroundImage', dataUrl);
+            });
+
+            // Delete Element Functionality
+            tbDeleteBtn.addEventListener('click', () => {
+                if (!activeSelectedElement) return;
+                if (confirm('¿Estás seguro de que deseas eliminar este elemento?')) {
+                    const selector = getElementSelector(activeSelectedElement);
+                    if (!state.deletedElements) state.deletedElements = [];
+                    state.deletedElements.push(selector);
+                    activeSelectedElement.remove();
+                    activeSelectedElement = null;
+                    formatToolbar.classList.add('hidden');
+                    applyStateToDOM();
+                }
+            });
+
+            // Interactive Click-to-Edit Mode for 100% of elements (Text, Cards, Media, Buttons)
+            toggleInlineBtn.addEventListener('click', () => {
+                isInlineEditing = !isInlineEditing;
+                toggleInlineBtn.innerText = `✏️ Modo "Clic para Editar / Eliminar Elementos": ${isInlineEditing ? 'ON' : 'OFF'}`;
+                toggleInlineBtn.className = isInlineEditing
+                    ? "w-full text-xs bg-emerald-500 text-slate-950 font-black py-2 rounded-xl shadow transition-all text-center"
+                    : "w-full text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 py-2 rounded-xl border border-amber-500/30 font-bold transition-all text-center";
+
+                const allInteractable = document.querySelectorAll('.editable-text, .custom-card-container, .custom-media-box, .custom-button-box');
+
+                allInteractable.forEach(el => {
+                    if (el.classList.contains('editable-text')) {
+                        el.contentEditable = isInlineEditing;
+                    }
+
+                    if (isInlineEditing) {
+                        el.classList.add('editable-highlight');
+                        el.onclick = function(evt) {
+                            evt.stopPropagation();
+                            showFormattingToolbarForElement(el);
+                        };
+                        if (el.classList.contains('editable-text')) {
+                            el.onblur = function() {
+                                const key = el.getAttribute('data-key');
+                                if (key) {
+                                    state[key] = el.innerText.trim();
+                                    applyStateToDOM();
+                                }
+                            };
+                        }
+                    } else {
+                        el.classList.remove('editable-highlight');
+                        el.contentEditable = false;
+                        el.onclick = null;
+                        formatToolbar.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Reset Configuration
+            resetBtn.addEventListener('click', () => {
+                if (confirm('¿Restablecer absolutamente todos los colores, multimedia, fuentes, tamaños y eliminar cambios?')) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    location.reload();
+                }
+            });
+
+            // Export / Download Compiled Self-Contained HTML File with State Baked In
+            downloadBtn.addEventListener('click', () => {
+                if (isInlineEditing) toggleInlineBtn.click();
+
+                const compiledCss = `
+        :root {
+            --color-teal: ${state.colorTeal};
+            --color-teal-dark: ${adjustHex(state.colorTeal, -20)};
+            --color-gold: ${state.colorGold};
+            --color-gold-dark: ${adjustHex(state.colorGold, -20)};
+            --color-bg-dark: ${state.colorBg};
+            --color-card-bg: rgba(15, 44, 53, 0.65);
+            --color-card-border: rgba(255, 255, 255, 0.1);
+            --color-text-main: ${state.colorText};
+            --color-btn-text: #0F172A;
+            --font-main: ${state.fontFamily};
+        }`;
+
+                const cloneDoc = document.documentElement.cloneNode(true);
+
+                // Embed compiled CSS variables
+                const customVarsTag = cloneDoc.querySelector('#custom-theme-vars');
+                if (customVarsTag) {
+                    customVarsTag.innerHTML = customVarsTag.innerHTML.replace(/:root\s*\{[^}]*\}/s, compiledCss);
+                }
+
+                // Bake state directly into the script tag so it works standalone everywhere
+                const customizerScript = cloneDoc.querySelector('#customizer-logic');
+                if (customizerScript) {
+                    const jsonStateString = JSON.stringify(state, null, 2);
+                    customizerScript.innerHTML = customizerScript.innerHTML.replace(
+                        /const state = \{[\s\S]*?\};/,
+                        `const state = ${jsonStateString};`
+                    );
+                }
+
+                const htmlContent = "<!DOCTYPE html>\n" + cloneDoc.outerHTML;
+
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'VentaZAshome.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert('¡Código fuente guardado exitosamente! El archivo VentaZAshome.html se ha descargado totalmente personalizado con tamaños, fondos y eliminaciones integradas.');
+            });
+
+            configBtn.addEventListener('click', openDrawer);
+            closeDrawerBtn.addEventListener('click', closeDrawer);
+            drawerOverlay.addEventListener('click', closeDrawer);
+
+            loadSavedConfig();
+        })();
+    </script>
+
+</body>
+</html>
