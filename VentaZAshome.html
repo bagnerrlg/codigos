@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zashome | Emprende tu Negocio Digital</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#081C1B',
+                            teal: '#005C53',
+                            lightTeal: '#042E2B',
+                            gold: '#F1A80A',
+                            goldHover: '#D99304',
+                            goldLight: '#FFF4D9',
+                            accent: '#22C55E'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .gradient-bg {
+            background: radial-gradient(circle at 50% 0%, #042E2B 0%, #081C1B 100%);
+        }
+        .gold-glow {
+            box-shadow: 0 0 25px rgba(241, 168, 10, 0.4);
+        }
+        .gold-glow:hover {
+            box-shadow: 0 0 35px rgba(241, 168, 10, 0.65);
+        }
+        .card-blur {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .gold-border-card {
+            background: linear-gradient(135deg, rgba(241, 168, 10, 0.08) 0%, rgba(0, 92, 83, 0.15) 100%);
+            border: 1px solid rgba(241, 168, 10, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-brand-dark text-slate-100 antialiased selection:bg-brand-gold selection:text-brand-dark">
+
+    <!-- TOP ANNOUNCEMENT BAR -->
+    <div class="bg-gradient-to-r from-brand-teal via-brand-gold to-brand-teal text-brand-dark text-xs sm:text-sm font-bold py-2.5 px-4 text-center tracking-wide shadow-md">
+        🚀 PROGRAMA OFICIAL DE EMPRENDIMIENTO DIGITAL | CONVIÉRTE EN EMPRESARIO ZASHOME
+    </div>
+
+    <!-- MAIN HERO SECTION -->
+    <header class="relative gradient-bg pt-12 pb-20 md:pt-20 md:pb-32 overflow-hidden border-b border-slate-800">
+        <!-- Ambient Light Accents -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand-gold/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute top-1/3 right-10 w-72 h-72 bg-brand-teal/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center relative z-10">
+            <!-- Badge -->
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full card-blur border border-brand-gold/30 text-brand-gold text-xs sm:text-sm font-semibold mb-8 shadow-inner">
+                <span class="w-2 h-2 rounded-full bg-brand-gold animate-ping"></span>
+                Sin Inventario • Sin Jefes • Oportunidad 100% Digital
+            </div>
+
+            <!-- Main Headline -->
+            <h1 class="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight mb-6">
+                Zas NO tiene vendedores, <br class="hidden sm:inline">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-gold via-amber-300 to-brand-gold">
+                    tiene EMPRENDEDORES.
+                </span>
+            </h1>
+
+            <!-- Subtitle -->
+            <p class="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
+                Descubre cómo nuestra plataforma te brinda la tecnología, logística y capacitación que necesitas para construir un negocio altamente rentable generando ventas diarias sin comprar stock inicial.
+            </p>
+
+            <!-- Primary CTA Button -->
+            <div class="mb-12">
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-brand-gold to-amber-400 text-brand-dark font-extrabold text-lg sm:text-xl px-10 py-5 rounded-2xl gold-glow transform transition-all duration-300 hover:-translate-y-1 hover:scale-105 active:translate-y-0">
+                    <span>Únete a Zas Ahora</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                </a>
+                <p class="text-xs text-slate-400 mt-3 font-medium">Acceso inmediato a la plataforma • Registro rápido</p>
+            </div>
+
+            <!-- Key Feature Badges Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-6 border-t border-slate-800/80">
+                <div class="card-blur p-4 rounded-xl text-center">
+                    <div class="text-brand-gold font-bold text-2xl mb-1">0%</div>
+                    <div class="text-xs text-slate-300 font-medium">Inversión en Stock</div>
+                </div>
+                <div class="card-blur p-4 rounded-xl text-center">
+                    <div class="text-brand-gold font-bold text-2xl mb-1">100%</div>
+                    <div class="text-xs text-slate-300 font-medium">Logística Resuelta</div>
+                </div>
+                <div class="card-blur p-4 rounded-xl text-center">
+                    <div class="text-brand-gold font-bold text-2xl mb-1">24/7</div>
+                    <div class="text-xs text-slate-300 font-medium">Plataforma Activa</div>
+                </div>
+                <div class="card-blur p-4 rounded-xl text-center">
+                    <div class="text-brand-gold font-bold text-2xl mb-1">$$$</div>
+                    <div class="text-xs text-slate-300 font-medium">Comisiones Directas</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SECTION: EL MODELO DE LOS GRANDES -->
+    <section class="py-16 md:py-24 bg-brand-dark relative overflow-hidden">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mb-4">
+                    El Negocio Inteligente del Siglo XXI
+                </h2>
+                <p class="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
+                    Las empresas más exitosas del mundo no fabrican ni compran inventario masivo; conectan la oferta con la demanda usando tecnología.
+                </p>
+            </div>
+
+            <!-- Business Comparisons Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <!-- Airbnb -->
+                <div class="card-blur p-6 rounded-2xl border border-slate-800 hover:border-brand-teal transition-all duration-300">
+                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-xl mb-4">
+                        🏠
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Airbnb</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Es la red de alojamientos más grande del planeta sin ser dueña de un solo hotel.
+                    </p>
+                </div>
+
+                <!-- Uber -->
+                <div class="card-blur p-6 rounded-2xl border border-slate-800 hover:border-brand-teal transition-all duration-300">
+                    <div class="w-12 h-12 rounded-xl bg-slate-100/10 text-white flex items-center justify-center font-bold text-xl mb-4">
+                        🚗
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Uber</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Es la plataforma de transporte más valorada del mundo sin ser dueña de flotillas de vehículos.
+                    </p>
+                </div>
+
+                <!-- Zashome -->
+                <div class="gold-border-card p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                    <div class="absolute -top-3 -right-3 bg-brand-gold text-brand-dark text-xs font-black px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                        Tu Oportunidad
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-brand-gold/20 text-brand-gold flex items-center justify-center font-bold text-xl mb-4">
+                        ⚡
+                    </div>
+                    <h3 class="text-xl font-extrabold text-brand-gold mb-2">Zashome</h3>
+                    <p class="text-sm text-slate-200 leading-relaxed font-medium">
+                        Te permite construir un negocio digital sostenible comercializando productos de alta demanda sin arriesgar tu dinero comprando mercancía.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Highlight Banner -->
+            <div class="bg-gradient-to-r from-brand-teal/40 to-emerald-900/30 p-8 rounded-3xl border border-brand-teal/50 text-center max-w-4xl mx-auto">
+                <h3 class="text-xl sm:text-2xl font-bold text-white mb-3">
+                    "Tú no vendes para alguien más. Tú construyes tu propia empresa utilizando nuestra infraestructura."
+                </h3>
+                <p class="text-slate-300 text-sm sm:text-base mb-6">
+                    Manejamos el almacenamiento, la logística de entrega y los cobros por ti. Tu único enfoque es conectar clientes e incrementar tus ingresos día a día.
+                </p>
+                <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-brand-gold hover:bg-brand-goldHover text-brand-dark font-extrabold px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm sm:text-base">
+                    <span>Únete a Zas Ahora</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: ESCUELA DE EMPRESARIOS & CÁTEDRA ZASHOME -->
+    <section class="py-16 md:py-24 bg-gradient-to-b from-brand-dark via-brand-lightTeal to-brand-dark border-t border-slate-800">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6">
+            <div class="text-center mb-16">
+                <span class="text-brand-gold font-bold text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/20 mb-3 inline-block">
+                    SISTEMA DE FORMACIÓN INTEGRAL
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2 mb-4">
+                    Escuela de Empresarios & Cátedra Zashome
+                </h2>
+                <p class="text-slate-300 max-w-2xl mx-auto text-sm sm:text-base">
+                    No importa si no tienes experiencia previa en negocios digitales. Te preparamos y acompañamos paso a paso con las mejores herramientas del mercado.
+                </p>
+            </div>
+
+            <!-- 5 Pillars Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+                <!-- Pillar 1 -->
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
+                    <div class="text-brand-gold font-extrabold text-3xl mb-2">01</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Contenido Práctico</h3>
+                    <p class="text-sm text-slate-300">
+                        Estrategias directas al grano, probadas en el mercado real para generar clientes interesados desde tus primeros días.
+                    </p>
+                </div>
+
+                <!-- Pillar 2 -->
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
+                    <div class="text-brand-gold font-extrabold text-3xl mb-2">02</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Aprendizaje Paso a Paso</h3>
+                    <p class="text-sm text-slate-300">
+                        Módulos guiados en orden lógico para que ejecutes sin sobrecargarte de información ni perder tiempo.
+                    </p>
+                </div>
+
+                <!-- Pillar 3 -->
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
+                    <div class="text-brand-gold font-extrabold text-3xl mb-2">03</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Herramientas Digitales</h3>
+                    <p class="text-sm text-slate-300">
+                        Acceso a recursos gráficos, plantillas de ventas y material promocional listo para publicar en tus redes.
+                    </p>
+                </div>
+
+                <!-- Pillar 4 -->
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold">
+                    <div class="text-brand-gold font-extrabold text-3xl mb-2">04</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Acompañamiento Continuo</h3>
+                    <p class="text-sm text-slate-300">
+                        Comunidad activa y soporte constante para resolver tus dudas y potenciar tus habilidades de cierre.
+                    </p>
+                </div>
+
+                <!-- Pillar 5 -->
+                <div class="card-blur p-6 rounded-2xl relative border-l-4 border-l-brand-gold sm:col-span-2 lg:col-span-2">
+                    <div class="text-brand-gold font-extrabold text-3xl mb-2">05</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Crecimiento e Ingresos Escalables</h3>
+                    <p class="text-sm text-slate-300">
+                        Diseñado para que aumentes tus metas de ganancias mes con mes. Tú pones los límites de hasta dónde quieres llegar.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Program Features Feature Box -->
+            <div class="gold-border-card p-8 rounded-3xl max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="space-y-3 text-left">
+                    <h3 class="text-2xl font-extrabold text-white">¿Qué aprenderás en Cátedra Zashome?</h3>
+                    <ul class="space-y-2 text-sm text-slate-200">
+                        <li class="flex items-center gap-2">
+                            <span class="text-brand-gold">✔</span> Estrategias de Atracción de Clientes
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-brand-gold">✔</span> Técnicas Efectivas de Conversión y Cierre
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-brand-gold">✔</span> Mentalidad Empresarial y Gestión del Tiempo
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-brand-gold">✔</span> Dominio de la Plataforma Zashome
+                        </li>
+                    </ul>
+                </div>
+                <div class="shrink-0 w-full md:w-auto text-center">
+                    <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-brand-gold to-amber-400 text-brand-dark font-extrabold px-8 py-4 rounded-xl gold-glow text-base">
+                        <span>Únete a Zas Ahora</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: BENEFICIOS PRINCIPALES DE LA PLATAFORMA -->
+    <section class="py-16 md:py-24 bg-brand-dark">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+                    Todo lo que necesitas para triunfar en un solo lugar
+                </h2>
+                <p class="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
+                    Simplificamos el comercio digital para que tú solo te enfoques en lo que genera ingresos.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Benefit 1 -->
+                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-brand-gold/40 transition-all">
+                    <div class="shrink-0 w-12 h-12 rounded-xl bg-brand-teal/30 text-brand-gold flex items-center justify-center text-2xl font-bold">
+                        📦
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2">Logística Integral Resuelta</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Olvídate del embalaje, etiquetado e ir a las empresas de mensajería. Nosotros despachamos y entregamos directo al cliente final.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Benefit 2 -->
+                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-brand-gold/40 transition-all">
+                    <div class="shrink-0 w-12 h-12 rounded-xl bg-brand-teal/30 text-brand-gold flex items-center justify-center text-2xl font-bold">
+                        💳
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2">Pago Contra Entrega Garantizado</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Tus clientes pagan al recibir su paquete, brindando total seguridad y aumentando exponencialmente tus posibilidades de venta.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Benefit 3 -->
+                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-brand-gold/40 transition-all">
+                    <div class="shrink-0 w-12 h-12 rounded-xl bg-brand-teal/30 text-brand-gold flex items-center justify-center text-2xl font-bold">
+                        📈
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2">Altos Márgenes de Ganancia</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Accede a estructuras de comisiones competitivas que te garantizan ingresos significativos por cada operación realizada.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Benefit 4 -->
+                <div class="card-blur p-8 rounded-2xl flex items-start gap-5 hover:border-brand-gold/40 transition-all">
+                    <div class="shrink-0 w-12 h-12 rounded-xl bg-brand-teal/30 text-brand-gold flex items-center justify-center text-2xl font-bold">
+                        📲
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2">Libertad y Flexibilidad de Horarios</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Tú eres el dueño de tu tiempo. Opera tu negocio desde cualquier lugar con acceso a internet a la hora que prefieras.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: FINAL CTA BANNER -->
+    <section class="py-20 md:py-28 relative overflow-hidden bg-gradient-to-t from-brand-teal/40 via-brand-dark to-brand-dark border-t border-slate-800 text-center">
+        <!-- Background Light Glow -->
+        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-brand-gold/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
+            <span class="text-brand-gold font-extrabold text-sm uppercase tracking-widest mb-4 inline-block">
+                ¿LISTO PARA DAR EL SIGUIENTE PASO?
+            </span>
+            <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+                El Futuro de tu Negocio Comienza Hoy
+            </h2>
+            <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
+                No dejes pasar la oportunidad de unirte a la plataforma que está transformando el emprendimiento digital en Guatemala. Haz clic abajo e ingresa de inmediato.
+            </p>
+
+            <a href="https://registro.zashome.com.gt" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-brand-gold to-amber-400 text-brand-dark font-extrabold text-xl sm:text-2xl px-12 py-6 rounded-2xl gold-glow transform transition-all duration-300 hover:-translate-y-1 hover:scale-105">
+                <span>Únete a Zas Ahora</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+            </a>
+            <p class="text-xs text-slate-400 mt-4">Acceso directo a la plataforma de registro</p>
+        </div>
+    </section>
+
+    <!-- MINIMAL FOOTER -->
+    <footer class="py-8 bg-slate-950 text-center border-t border-slate-900 text-xs text-slate-500">
+        <div class="max-w-5xl mx-auto px-4">
+            <p>© 2025 Zashome. Plataforma de Emprendimiento Digital. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
