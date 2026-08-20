@@ -21,6 +21,7 @@
 
             /* Section Band Backgrounds */
             --bg-announcement: linear-gradient(90deg, #136371 0%, #FFAB00 50%, #136371 100%);
+            --bg-navbar: #FFFFFF;
             --bg-hero: radial-gradient(circle at 50% 0%, #0D4853 0%, #091E24 100%);
             --bg-finances: #091E24;
             --bg-model: #020617;
@@ -47,6 +48,7 @@
 
         /* Section Stripe Band Background Styles */
         #announcement-bar { background: var(--bg-announcement) !important; }
+        #navbar-section { background: var(--bg-navbar) !important; }
         #hero-section { background: var(--bg-hero) !important; }
         #finances-section { background: var(--bg-finances) !important; }
         #model-section { background: var(--bg-model) !important; }
@@ -93,6 +95,20 @@
             cursor: pointer;
             border-radius: 6px;
             position: relative;
+        }
+
+        /* Safe Margin Guidelines during Editing Mode */
+        .layout-guides-active {
+            outline: 1px dashed rgba(255, 171, 0, 0.3) !important;
+            position: relative;
+        }
+        .layout-guides-active::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 1px dashed rgba(59, 130, 246, 0.25);
+            pointer-events: none;
+            z-index: 20;
         }
 
         /* Freely Draggable Contextual Formatting Toolbar */
@@ -161,6 +177,12 @@
 </head>
 <body class="antialiased selection:bg-amber-400 selection:text-slate-900">
 
+    <!-- SAVE TOAST NOTIFICATION -->
+    <div id="save-toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-slate-950 font-black text-sm px-6 py-3 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-5 flex items-center gap-2">
+        <span>✅</span>
+        <span>¡Cambios guardados en esta página correctamente!</span>
+    </div>
+
     <!-- FREELY DRAGGABLE FORMATTING TOOLBAR WITH CLOSE BUTTON -->
     <div id="formatting-toolbar" class="hidden">
         <!-- Drag Handle -->
@@ -192,6 +214,16 @@
         <div class="flex items-center gap-1">
             <span class="text-[10px] text-slate-400 font-semibold">Alto:</span>
             <input type="number" id="tb-height" min="10" max="1200" placeholder="px" class="w-14 bg-slate-800 text-white text-xs px-1.5 py-1 rounded border border-slate-700">
+        </div>
+
+        <!-- Position Offset X / Y -->
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Mover X:</span>
+            <input type="number" id="tb-offset-x" placeholder="px" class="w-12 bg-slate-800 text-white text-xs px-1 py-1 rounded border border-slate-700">
+        </div>
+        <div class="flex items-center gap-1">
+            <span class="text-[10px] text-slate-400 font-semibold">Mover Y:</span>
+            <input type="number" id="tb-offset-y" placeholder="px" class="w-12 bg-slate-800 text-white text-xs px-1 py-1 rounded border border-slate-700">
         </div>
 
         <!-- Background Color -->
@@ -228,7 +260,7 @@
     </div>
 
     <!-- WHITE BRANDING NAVBAR WITH LOGO -->
-    <nav class="bg-white py-3.5 px-4 sm:px-8 shadow-lg border-b border-slate-200 sticky top-0 z-40 transition-all duration-300">
+    <nav id="navbar-section" class="py-3.5 px-4 sm:px-8 shadow-lg border-b border-slate-200 sticky top-0 z-40 transition-all duration-300">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
             <a href="#" class="flex items-center gap-2 group">
                 <img id="nav-logo-img" src="images/zashome_logo.jpg" alt="Zashome Logo" class="custom-media-box h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105">
@@ -677,7 +709,7 @@
         <span class="sr-only">Personalizar</span>
     </button>
 
-    <!-- Customizer Drawer Overlay & Sidebar -->
+    <!-- Customizer Drawer Overlay & Sidebar (CLOSED BY DEFAULT) -->
     <div id="config-drawer-overlay" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
 
     <aside id="config-drawer" class="fixed top-0 right-0 h-full w-full sm:w-[480px] bg-slate-900 border-l border-slate-800 text-slate-100 z-50 translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
@@ -686,8 +718,8 @@
             <div class="flex items-center gap-3">
                 <span class="p-2 rounded-xl bg-amber-500/20 text-amber-400 font-bold text-xl">⚙️</span>
                 <div>
-                    <h3 class="font-extrabold text-lg text-white">Personalizador Total + Franjas</h3>
-                    <p class="text-xs text-slate-400">Edita colores de franjas, fondos, tamaños y elementos</p>
+                    <h3 class="font-extrabold text-lg text-white">Personalizador Total Zashome</h3>
+                    <p class="text-xs text-slate-400">Edita colores, posiciones, tamaños y franjas</p>
                 </div>
             </div>
             <button id="close-drawer-btn" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
@@ -698,7 +730,7 @@
         <!-- Quick Action Bar -->
         <div class="px-5 py-3 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
             <button id="toggle-inline-edit" class="w-full text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 py-2 rounded-xl border border-amber-500/30 font-bold transition-all text-center">
-                ✏️ Modo "Clic para Editar / Eliminar Elementos": OFF
+                ✏️ Modo "Clic para Editar / Mover / Eliminar": OFF
             </button>
         </div>
 
@@ -716,7 +748,15 @@
                         <label class="block text-xs text-slate-400 mb-1 font-semibold">Franja Superior Anuncio</label>
                         <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
                             <input type="color" id="picker-stripe-announcement" value="#136371" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
-                            <span class="text-xs font-mono font-bold text-slate-300">Color de Franja Anuncio</span>
+                            <span class="text-xs font-mono font-bold text-slate-300">Color Anuncio</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Franja Navegación / Logo</label>
+                        <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+                            <input type="color" id="picker-stripe-navbar" value="#FFFFFF" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                            <span class="text-xs font-mono font-bold text-slate-300">Fondo Barra Logo</span>
                         </div>
                     </div>
 
@@ -943,11 +983,17 @@
 
         <!-- Drawer Footer: Save Actions -->
         <div class="p-5 bg-slate-950 border-t border-slate-800 space-y-2.5">
-            <button id="download-html-btn" class="w-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-xl flex items-center justify-center gap-2 text-sm transition-all active:scale-95">
-                <span>💾 Guardar Cambios en el Código (.html)</span>
+            <!-- Save In-Place Button -->
+            <button id="save-local-btn" class="w-full bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-xl flex items-center justify-center gap-2 text-sm transition-all active:scale-95">
+                <span>💾 Guardar Cambios en la Página</span>
             </button>
 
-            <button id="reset-theme-btn" class="w-full bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors border border-slate-700">
+            <!-- Download Compiled HTML File Button -->
+            <button id="download-html-btn" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors border border-slate-700 flex items-center justify-center gap-1.5">
+                <span>📥 Exportar Archivo HTML Modificado</span>
+            </button>
+
+            <button id="reset-theme-btn" class="w-full bg-slate-900 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 font-semibold py-2 px-4 rounded-xl text-xs transition-colors border border-slate-800">
                 ↺ Restablecer Todo
             </button>
         </div>
@@ -956,7 +1002,7 @@
     <!-- CUSTOMIZER JAVASCRIPT PERSISTENCE AND COMPILER SCRIPT -->
     <script id="customizer-logic">
         (function() {
-            const STORAGE_KEY = 'zashome_customizer_config_v5';
+            const STORAGE_KEY = 'zashome_customizer_config_v6';
 
             // State Object for 100% of Customizable Elements
             const state = {
@@ -968,6 +1014,7 @@
 
                 // Section Band Background Colors
                 stripeAnnouncement: '#136371',
+                stripeNavbar: '#FFFFFF',
                 stripeHero: '#091E24',
                 stripeFinances: '#091E24',
                 stripeModel: '#020617',
@@ -988,7 +1035,6 @@
                 heroTitle2: "tiene EMPRENDEDORES.",
                 heroSubtitle: "Descubre cómo nuestra plataforma te brinda la tecnología, logística y capacitación financiera que necesitas para construir un negocio altamente rentable generando ventas diarias sin comprar stock inicial.",
 
-                // Hero Media (Image or Video)
                 heroMediaType: "image",
                 heroMediaUrl: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80",
 
@@ -1006,7 +1052,6 @@
                 financeTitle2: "Libertad Financiera",
                 financeDesc: "En Zashome no solo te damos acceso a una plataforma tecnológica de vanguardia; te capacitamos para entender los números de tu negocio, optimizar tus márgenes y escalar tus ingresos de manera constante.",
 
-                // Finance Media (Image or Video)
                 financeMediaType: "image",
                 financeMediaUrl: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80",
 
@@ -1066,6 +1111,7 @@
             const drawerOverlay = document.getElementById('config-drawer-overlay');
             const drawer = document.getElementById('config-drawer');
             const closeDrawerBtn = document.getElementById('close-drawer-btn');
+            const saveToast = document.getElementById('save-toast');
 
             const pickerTeal = document.getElementById('picker-teal');
             const pickerGold = document.getElementById('picker-gold');
@@ -1074,6 +1120,7 @@
 
             // Stripe Pickers
             const pickerStripeAnnouncement = document.getElementById('picker-stripe-announcement');
+            const pickerStripeNavbar = document.getElementById('picker-stripe-navbar');
             const pickerStripeHero = document.getElementById('picker-stripe-hero');
             const pickerStripeFinances = document.getElementById('picker-stripe-finances');
             const pickerStripeModel = document.getElementById('picker-stripe-model');
@@ -1106,6 +1153,7 @@
             const inputFooterTagline = document.getElementById('input-footer-tagline');
 
             const fileLogo = document.getElementById('file-logo');
+            const saveLocalBtn = document.getElementById('save-local-btn');
             const downloadBtn = document.getElementById('download-html-btn');
             const resetBtn = document.getElementById('reset-theme-btn');
             const toggleInlineBtn = document.getElementById('toggle-inline-edit');
@@ -1118,6 +1166,8 @@
             const tbFontColor = document.getElementById('tb-font-color');
             const tbWidth = document.getElementById('tb-width');
             const tbHeight = document.getElementById('tb-height');
+            const tbOffsetX = document.getElementById('tb-offset-x');
+            const tbOffsetY = document.getElementById('tb-offset-y');
             const tbBgColor = document.getElementById('tb-bg-color');
             const tbBgImageFile = document.getElementById('tb-bg-image-file');
             const tbDeleteBtn = document.getElementById('tb-delete-btn');
@@ -1147,6 +1197,7 @@
 
                 // Section Stripe Backgrounds
                 document.documentElement.style.setProperty('--bg-announcement', state.stripeAnnouncement || state.colorTeal);
+                document.documentElement.style.setProperty('--bg-navbar', state.stripeNavbar || '#FFFFFF');
                 document.documentElement.style.setProperty('--bg-hero', state.stripeHero || state.colorBg);
                 document.documentElement.style.setProperty('--bg-finances', state.stripeFinances || state.colorBg);
                 document.documentElement.style.setProperty('--bg-model', state.stripeModel || '#020617');
@@ -1161,6 +1212,7 @@
                 if (pickerText) pickerText.value = state.colorText;
 
                 if (pickerStripeAnnouncement) pickerStripeAnnouncement.value = state.stripeAnnouncement;
+                if (pickerStripeNavbar) pickerStripeNavbar.value = state.stripeNavbar;
                 if (pickerStripeHero) pickerStripeHero.value = state.stripeHero;
                 if (pickerStripeFinances) pickerStripeFinances.value = state.stripeFinances;
                 if (pickerStripeModel) pickerStripeModel.value = state.stripeModel;
@@ -1194,7 +1246,7 @@
                     }
                 });
 
-                // Apply Custom Per-Element Styles
+                // Apply Custom Per-Element Styles (Size, Width, Height, Offsets, Colors, Background Images)
                 if (state.elementStyles) {
                     Object.keys(state.elementStyles).forEach(selector => {
                         const el = document.querySelector(selector);
@@ -1205,6 +1257,7 @@
                             if (style.width) el.style.width = style.width;
                             if (style.height) el.style.height = style.height;
                             if (style.backgroundColor) el.style.backgroundColor = style.backgroundColor;
+                            if (style.transform) el.style.transform = style.transform;
                             if (style.backgroundImage) {
                                 el.style.backgroundImage = `url(${style.backgroundImage})`;
                                 el.style.backgroundSize = 'cover';
@@ -1243,11 +1296,23 @@
                 // Update Logos
                 const logoImgs = [document.getElementById('nav-logo-img'), document.getElementById('footer-logo-img')];
                 logoImgs.forEach(img => { if (img) img.src = state.logoUrl; });
+            }
 
-                // Save to LocalStorage
+            function saveToLocalStorage() {
                 try {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-                } catch(e) {}
+                    showSaveToast();
+                } catch(e) { console.error('LocalStorage save error:', e); }
+            }
+
+            function showSaveToast() {
+                if (!saveToast) return;
+                saveToast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-5');
+                saveToast.classList.add('opacity-100', 'translate-y-0');
+                setTimeout(() => {
+                    saveToast.classList.remove('opacity-100', 'translate-y-0');
+                    saveToast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-5');
+                }, 2500);
             }
 
             function renderMediaBlock(prefix, type, url) {
@@ -1344,6 +1409,7 @@
             pickerText.addEventListener('input', (e) => { state.colorText = e.target.value; applyStateToDOM(); });
 
             pickerStripeAnnouncement.addEventListener('input', (e) => { state.stripeAnnouncement = e.target.value; applyStateToDOM(); });
+            pickerStripeNavbar.addEventListener('input', (e) => { state.stripeNavbar = e.target.value; applyStateToDOM(); });
             pickerStripeHero.addEventListener('input', (e) => { state.stripeHero = e.target.value; applyStateToDOM(); });
             pickerStripeFinances.addEventListener('input', (e) => { state.stripeFinances = e.target.value; applyStateToDOM(); });
             pickerStripeModel.addEventListener('input', (e) => { state.stripeModel = e.target.value; applyStateToDOM(); });
@@ -1388,7 +1454,7 @@
             handleFileUpload(fileBen2Img, (res) => { state.ben2Icon = res; applyStateToDOM(); });
             handleFileUpload(fileLogo, (res) => { state.logoUrl = res; applyStateToDOM(); });
 
-            // Freely Draggable Toolbar Feature (Bug Fixed)
+            // Freely Draggable Toolbar Feature (Bug Fixed & Verified)
             let isDraggingToolbar = false;
             let dragOffsetX = 0, dragOffsetY = 0;
 
@@ -1410,7 +1476,8 @@
                 isDraggingToolbar = false;
             });
 
-            tbCloseBtn.addEventListener('click', () => {
+            tbCloseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 formatToolbar.classList.add('hidden');
             });
 
@@ -1437,6 +1504,10 @@
 
                 const currentBgColor = el.style.backgroundColor || window.getComputedStyle(el).backgroundColor;
                 tbBgColor.value = rgbToHex(currentBgColor) || '#0F2C35';
+
+                // Offsets
+                tbOffsetX.value = 0;
+                tbOffsetY.value = 0;
             }
 
             function rgbToHex(rgb) {
@@ -1477,6 +1548,16 @@
                 saveElementStyle(selector, 'height', `${e.target.value}px`);
             });
 
+            function updateOffset() {
+                if (!activeSelectedElement) return;
+                const x = tbOffsetX.value || 0;
+                const y = tbOffsetY.value || 0;
+                const selector = getElementSelector(activeSelectedElement);
+                saveElementStyle(selector, 'transform', `translate(${x}px, ${y}px)`);
+            }
+            tbOffsetX.addEventListener('input', updateOffset);
+            tbOffsetY.addEventListener('input', updateOffset);
+
             tbBgColor.addEventListener('input', (e) => {
                 if (!activeSelectedElement) return;
                 const selector = getElementSelector(activeSelectedElement);
@@ -1503,10 +1584,10 @@
                 }
             });
 
-            // Interactive Click-to-Edit Mode for 100% of elements
+            // Interactive Click-to-Edit Mode
             toggleInlineBtn.addEventListener('click', () => {
                 isInlineEditing = !isInlineEditing;
-                toggleInlineBtn.innerText = `✏️ Modo "Clic para Editar / Eliminar Elementos": ${isInlineEditing ? 'ON' : 'OFF'}`;
+                toggleInlineBtn.innerText = `✏️ Modo "Clic para Editar / Mover / Eliminar": ${isInlineEditing ? 'ON' : 'OFF'}`;
                 toggleInlineBtn.className = isInlineEditing
                     ? "w-full text-xs bg-emerald-500 text-slate-950 font-black py-2 rounded-xl shadow transition-all text-center"
                     : "w-full text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 py-2 rounded-xl border border-amber-500/30 font-bold transition-all text-center";
@@ -1520,6 +1601,7 @@
 
                     if (isInlineEditing) {
                         el.classList.add('editable-highlight');
+                        document.body.classList.add('layout-guides-active');
                         el.onclick = function(evt) {
                             evt.stopPropagation();
                             showFormattingToolbarForElement(el);
@@ -1535,11 +1617,17 @@
                         }
                     } else {
                         el.classList.remove('editable-highlight');
+                        document.body.classList.remove('layout-guides-active');
                         el.contentEditable = false;
                         el.onclick = null;
                         formatToolbar.classList.add('hidden');
                     }
                 });
+            });
+
+            // Save In-Place (to LocalStorage)
+            saveLocalBtn.addEventListener('click', () => {
+                saveToLocalStorage();
             });
 
             // Reset Configuration
@@ -1568,6 +1656,7 @@
             --font-main: ${state.fontFamily};
 
             --bg-announcement: ${state.stripeAnnouncement || state.colorTeal};
+            --bg-navbar: ${state.stripeNavbar || '#FFFFFF'};
             --bg-hero: ${state.stripeHero || state.colorBg};
             --bg-finances: ${state.stripeFinances || state.colorBg};
             --bg-model: ${state.stripeModel || '#020617'};
@@ -1579,13 +1668,11 @@
 
                 const cloneDoc = document.documentElement.cloneNode(true);
 
-                // Embed compiled CSS variables
                 const customVarsTag = cloneDoc.querySelector('#custom-theme-vars');
                 if (customVarsTag) {
                     customVarsTag.innerHTML = customVarsTag.innerHTML.replace(/:root\s*\{[^}]*\}/s, compiledCss);
                 }
 
-                // Bake state directly into the script tag so it works standalone everywhere
                 const customizerScript = cloneDoc.querySelector('#customizer-logic');
                 if (customizerScript) {
                     const jsonStateString = JSON.stringify(state, null, 2);
@@ -1606,8 +1693,6 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-
-                alert('¡Código fuente guardado exitosamente! El archivo VentaZAshome.html se ha descargado con todas tus franjas de color y posiciones personalizadas.');
             });
 
             configBtn.addEventListener('click', openDrawer);
