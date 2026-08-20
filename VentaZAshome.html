@@ -89,7 +89,41 @@
             background-position: center;
         }
 
+
         .editable-highlight {
+            outline: 2px dashed #FFAB00 !important;
+            outline-offset: 4px;
+            cursor: pointer;
+            border-radius: 6px;
+            position: relative;
+            transition: outline 0.2s, box-shadow 0.2s;
+        }
+
+        /* Active Selected Element Glowing Ring */
+        .currently-selected-element {
+            outline: 3px solid #FFAB00 !important;
+            box-shadow: 0 0 25px rgba(255, 171, 0, 0.75) !important;
+            outline-offset: 6px !important;
+            z-index: 30 !important;
+        }
+
+        /* Ensure Inner Images / Videos / Iframes scale 100% with outer container when resized */
+        .custom-media-box, .custom-card-container, #hero-media-container, #finance-media-container {
+            overflow: hidden !important;
+        }
+
+        .custom-media-box img, .custom-media-box video, .custom-media-box iframe,
+        .custom-card-container img, .custom-card-container video, .custom-card-container iframe,
+        #hero-media-container img, #hero-media-container video, #hero-media-container iframe,
+        #finance-media-container img, #finance-media-container video, #finance-media-container iframe {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            object-fit: cover !important;
+        }
+
+        .editable-highlight-old {
             outline: 2px dashed var(--color-gold) !important;
             outline-offset: 4px;
             cursor: pointer;
@@ -1496,12 +1530,26 @@
 
             // Contextual Formatting Toolbar Activation
             function showFormattingToolbarForElement(el) {
+                // Clear active selected highlight class from previous elements
+                document.querySelectorAll('.currently-selected-element').forEach(item => item.classList.remove('currently-selected-element'));
+
                 activeSelectedElement = el;
+                el.classList.add('currently-selected-element');
+
                 const selector = getElementSelector(el);
                 const rect = el.getBoundingClientRect();
 
-                formatToolbar.style.top = `${Math.max(10, rect.top - 60)}px`;
-                formatToolbar.style.left = `${Math.max(10, rect.left)}px`;
+                // Position toolbar directly BELOW the bottom edge of the selected element
+                let topPos = rect.bottom + 12;
+                let leftPos = Math.max(10, rect.left);
+
+                // If placing below goes off screen, clamp or place at bottom
+                if (topPos + 80 > window.innerHeight) {
+                    topPos = Math.max(10, rect.top - 70);
+                }
+
+                formatToolbar.style.top = `${topPos}px`;
+                formatToolbar.style.left = `${leftPos}px`;
                 formatToolbar.classList.remove('hidden');
 
                 const currentFontSize = parseInt(window.getComputedStyle(el).fontSize) || 16;
@@ -1769,6 +1817,29 @@
             configBtn.addEventListener('click', openDrawer);
             closeDrawerBtn.addEventListener('click', closeDrawer);
             drawerOverlay.addEventListener('click', closeDrawer);
+
+
+            // Click on Blank Space / Outside to Auto-Close Formatting Toolbar
+            document.addEventListener('click', (e) => {
+                if (!isInlineEditing) return;
+
+                // If click is inside toolbar or on an editable target or config button, do nothing
+                if (e.target.closest('#formatting-toolbar') ||
+                    e.target.closest('#config-drawer') ||
+                    e.target.closest('#config-toggle-btn') ||
+                    e.target.closest('.editable-highlight') ||
+                    e.target.closest('.editable-text') ||
+                    e.target.closest('.custom-card-container') ||
+                    e.target.closest('.custom-media-box') ||
+                    e.target.closest('.custom-button-box')) {
+                    return;
+                }
+
+                // Clicked blank space: Close toolbar and remove active highlight
+                formatToolbar.classList.add('hidden');
+                document.querySelectorAll('.currently-selected-element').forEach(item => item.classList.remove('currently-selected-element'));
+                activeSelectedElement = null;
+            });
 
             loadSavedConfig();
         })();
