@@ -1365,23 +1365,22 @@
 
             function getElementSelector(el) {
                 if (el.id) return `#${el.id}`;
-                if (el.getAttribute('data-key')) return `[data-key="${el.getAttribute('data-key')}"]`;
-
                 let path = [];
-                while (el && el.nodeType === Node.ELEMENT_NODE) {
-                    let selector = el.nodeName.toLowerCase();
-                    if (el.id) {
-                        path.unshift(`#${el.id}`);
+                let current = el;
+                while (current && current.nodeType === Node.ELEMENT_NODE && current !== document.body) {
+                    if (current.id) {
+                        path.unshift(`#${current.id}`);
                         break;
                     } else {
-                        let sibling = el, nth = 1;
+                        let selector = current.nodeName.toLowerCase();
+                        let sibling = current, nth = 1;
                         while (sibling = sibling.previousElementSibling) {
                             if (sibling.nodeName.toLowerCase() === selector) nth++;
                         }
-                        if (nth !== 1) selector += `:nth-of-type(${nth})`;
+                        selector += `:nth-of-type(${nth})`;
+                        path.unshift(selector);
                     }
-                    path.unshift(selector);
-                    el = el.parentNode;
+                    current = current.parentNode;
                 }
                 return path.join(' > ');
             }
@@ -1478,12 +1477,18 @@
 
             tbCloseBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 formatToolbar.classList.add('hidden');
+                activeSelectedElement = null;
+            });
+            tbCloseBtn.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
             });
 
             // Contextual Formatting Toolbar Activation
             function showFormattingToolbarForElement(el) {
                 activeSelectedElement = el;
+                const selector = getElementSelector(el);
                 const rect = el.getBoundingClientRect();
 
                 formatToolbar.style.top = `${Math.max(10, rect.top - 60)}px`;
@@ -1505,9 +1510,15 @@
                 const currentBgColor = el.style.backgroundColor || window.getComputedStyle(el).backgroundColor;
                 tbBgColor.value = rgbToHex(currentBgColor) || '#0F2C35';
 
-                // Offsets
-                tbOffsetX.value = 0;
-                tbOffsetY.value = 0;
+                // Load existing offsets from state if present
+                let transformVal = el.style.transform || '';
+                if (state.elementStyles && state.elementStyles[selector] && state.elementStyles[selector].transform) {
+                    transformVal = state.elementStyles[selector].transform;
+                }
+                const matchX = transformVal.match(/translate\(\s*(-?\d+)px/);
+                const matchY = transformVal.match(/translate\([^,]+,\s*(-?\d+)px/);
+                tbOffsetX.value = matchX ? matchX[1] : 0;
+                tbOffsetY.value = matchY ? matchY[1] : 0;
             }
 
             function rgbToHex(rgb) {
