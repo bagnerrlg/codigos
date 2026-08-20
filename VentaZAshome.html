@@ -97,6 +97,15 @@
             position: relative;
         }
 
+
+        .drag-target-active {
+            cursor: move !important;
+            resize: both !important;
+            overflow: auto !important;
+            position: relative !important;
+            user-select: none !important;
+        }
+
         /* Safe Margin Guidelines during Editing Mode */
         .layout-guides-active {
             outline: 1px dashed rgba(255, 171, 0, 0.3) !important;
@@ -248,7 +257,7 @@
         <div class="h-4 w-px bg-slate-700"></div>
 
         <!-- Close Toolbar Button -->
-        <button id="tb-close-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white p-1 rounded-full text-xs font-bold w-6 h-6 flex items-center justify-center border border-slate-700" title="Cerrar Barra">
+        <button id="tb-close-btn" onclick="event.stopPropagation(); document.getElementById('formatting-toolbar').classList.add('hidden');" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white p-1 rounded-full text-xs font-bold w-6 h-6 flex items-center justify-center border border-slate-700" title="Cerrar Barra">
             ✕
         </button>
     </div>
@@ -341,7 +350,7 @@
                 <!-- Right Column: Animated Visual -->
                 <div class="lg:col-span-5 relative">
                     <div class="relative mx-auto max-w-md rounded-3xl overflow-hidden shadow-2xl gold-border-card p-2 animate-floatSlow custom-card-container">
-                        <div id="hero-media-container" class="relative rounded-2xl overflow-hidden bg-slate-900 min-h-[320px] flex items-center justify-center">
+                        <div id="hero-media-container" class="custom-media-box relative rounded-2xl overflow-hidden bg-slate-900 min-h-[320px] flex items-center justify-center">
                             <img id="hero-img-visual" src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80" alt="Emprendedores Aprendiendo Finanzas" class="custom-media-box w-full h-80 object-cover opacity-90 hover:scale-105 transition-transform duration-700">
                             <video id="hero-video-visual" src="" autoplay loop muted playsinline class="custom-media-box hidden w-full h-80 object-cover"></video>
                             <iframe id="hero-iframe-visual" src="" class="custom-media-box hidden w-full h-80" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
@@ -382,7 +391,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
                 <div class="relative order-2 md:order-1">
-                    <div id="finance-media-container" class="rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 group min-h-[384px] flex items-center justify-center bg-slate-900 custom-card-container">
+                    <div id="finance-media-container" class="custom-media-box rounded-3xl overflow-hidden shadow-2xl border border-slate-700/80 group min-h-[384px] flex items-center justify-center bg-slate-900 custom-card-container">
                         <img id="finance-img-visual" src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80" alt="Finanzas y Crecimiento" class="custom-media-box w-full h-96 object-cover group-hover:scale-105 transition-transform duration-500">
                         <video id="finance-video-visual" src="" autoplay loop muted playsinline class="custom-media-box hidden w-full h-96 object-cover"></video>
                         <iframe id="finance-iframe-visual" src="" class="custom-media-box hidden w-full h-96" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
@@ -1595,10 +1604,39 @@
                 }
             });
 
-            // Interactive Click-to-Edit Mode
+            // Interactive Click-to-Edit Mode & Direct Mouse Drag-and-Drop / Resize
+            let activeDraggingElement = null;
+            let startMouseX = 0, startMouseY = 0;
+            let initialTranslateX = 0, initialTranslateY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                if (activeDraggingElement && isInlineEditing) {
+                    const dx = e.clientX - startMouseX;
+                    const dy = e.clientY - startMouseY;
+                    const newX = initialTranslateX + dx;
+                    const newY = initialTranslateY + dy;
+
+                    activeDraggingElement.style.transform = `translate(${newX}px, ${newY}px)`;
+                }
+            });
+
+            document.addEventListener('mouseup', (e) => {
+                if (activeDraggingElement && isInlineEditing) {
+                    const selector = getElementSelector(activeDraggingElement);
+                    saveElementStyle(selector, 'transform', activeDraggingElement.style.transform);
+                    if (activeDraggingElement.style.width) {
+                        saveElementStyle(selector, 'width', activeDraggingElement.style.width);
+                    }
+                    if (activeDraggingElement.style.height) {
+                        saveElementStyle(selector, 'height', activeDraggingElement.style.height);
+                    }
+                    activeDraggingElement = null;
+                }
+            });
+
             toggleInlineBtn.addEventListener('click', () => {
                 isInlineEditing = !isInlineEditing;
-                toggleInlineBtn.innerText = `✏️ Modo "Clic para Editar / Mover / Eliminar": ${isInlineEditing ? 'ON' : 'OFF'}`;
+                toggleInlineBtn.innerText = `✏️ Modo "Arrastrar / Editar / Eliminar": ${isInlineEditing ? 'ON' : 'OFF'}`;
                 toggleInlineBtn.className = isInlineEditing
                     ? "w-full text-xs bg-emerald-500 text-slate-950 font-black py-2 rounded-xl shadow transition-all text-center"
                     : "w-full text-xs bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 py-2 rounded-xl border border-amber-500/30 font-bold transition-all text-center";
@@ -1611,12 +1649,33 @@
                     }
 
                     if (isInlineEditing) {
-                        el.classList.add('editable-highlight');
+                        el.classList.add('editable-highlight', 'drag-target-active');
                         document.body.classList.add('layout-guides-active');
-                        el.onclick = function(evt) {
+
+                        el.ondragstart = function(e) { e.preventDefault(); return false; };
+                        el.onmousedown = function(evt) {
+                            if (evt.target.id === 'tb-close-btn' || evt.target.closest('#formatting-toolbar')) return;
                             evt.stopPropagation();
+
+                            if (el.classList.contains('editable-text') && document.activeElement === el) {
+                                showFormattingToolbarForElement(el);
+                                return;
+                            }
+
+                            activeDraggingElement = el;
+                            startMouseX = evt.clientX;
+                            startMouseY = evt.clientY;
+
+                            let transformVal = el.style.transform || '';
+                            const matchX = transformVal.match(/translate\(\s*(-?\d+(\.\d+)?)px/);
+                            const matchY = transformVal.match(/translate\([^,]+,\s*(-?\d+(\.\d+)?)px/);
+
+                            initialTranslateX = matchX ? parseFloat(matchX[1]) : 0;
+                            initialTranslateY = matchY ? parseFloat(matchY[1]) : 0;
+
                             showFormattingToolbarForElement(el);
                         };
+
                         if (el.classList.contains('editable-text')) {
                             el.onblur = function() {
                                 const key = el.getAttribute('data-key');
@@ -1627,10 +1686,11 @@
                             };
                         }
                     } else {
-                        el.classList.remove('editable-highlight');
+                        el.classList.remove('editable-highlight', 'drag-target-active');
                         document.body.classList.remove('layout-guides-active');
                         el.contentEditable = false;
-                        el.onclick = null;
+                        el.onmousedown = null;
+                        el.style.resize = 'none';
                         formatToolbar.classList.add('hidden');
                     }
                 });
