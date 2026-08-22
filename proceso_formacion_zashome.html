@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flujo de Formación Zashome</title>
+  <!-- Google Fonts & Canvas Confetti CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --primary-teal: #136371;
+      --teal-dark: #005C53;
+      --teal-light: #1E8294;
+      --gold-main: #FFAB00;
+      --gold-dark: #F1A80A;
+      --gold-glow: rgba(255, 171, 0, 0.45);
+      --green-success: #3CB052;
+      --green-dark: #2A8B3D;
+      --green-glow: rgba(60, 176, 82, 0.4);
+      --red-accent: #EE3E38;
+      --bg-gradient: linear-gradient(135deg, #F0F7F8 0%, #E2EFF1 50%, #D8EAEB 100%);
+      --text-main: #1C2D37;
+      --text-muted: #5C707D;
+      --transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', 'Montserrat', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    header.header {
+      text-align: center;
+      max-width: 900px;
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    .header-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(19, 99, 113, 0.1);
+      color: var(--primary-teal);
+      padding: 6px 18px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .header h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--primary-teal);
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 1.05rem;
+      color: var(--teal-dark);
+      font-weight: 600;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* RESET & STATS ROW */
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1100px;
+      margin-bottom: 30px;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(8px);
+      padding: 12px 24px;
+      border-radius: 50px;
+      border: 1px solid rgba(19, 99, 113, 0.15);
+      box-shadow: 0 4px 15px rgba(19, 99, 113, 0.05);
+    }
+
+    .global-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      color: var(--primary-teal);
+    }
+
+    .status-badge {
+      background: var(--primary-teal);
+      color: #FFF;
+      padding: 4px 14px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+    }
+
+    .btn-reset {
+      background: transparent;
+      border: 1px solid rgba(19, 99, 113, 0.25);
+      color: var(--primary-teal);
+      padding: 8px 18px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+    }
+
+    .btn-reset:hover {
+      background: rgba(238, 62, 56, 0.1);
+      color: var(--red-accent);
+      border-color: var(--red-accent);
+    }
+
+    /* MAIN FLOW PATH CONTAINER */
+    .flow-wrapper {
+      width: 100%;
+      max-width: 1150px;
+      margin-bottom: 50px;
+    }
+
+    .flow-path {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0px 0px;
+      position: relative;
+    }
+
+    /* STEP NODE (NO RECTANGULAR CARD BOX) */
+    .flow-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 180px;
+      padding: 15px 10px;
+      position: relative;
+      transition: var(--transition);
+      user-select: none;
+      z-index: 2;
+    }
+
+    /* Floating Icon (No frame / background card) */
+    .node-icon {
+      width: 76px;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      position: relative;
+      transition: var(--transition);
+      color: var(--text-muted);
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.08));
+    }
+
+    .node-icon svg {
+      width: 58px;
+      height: 58px;
+      stroke-width: 1.8;
+      transition: var(--transition);
+    }
+
+    /* Node Number Badge */
+    .node-number {
+      position: absolute;
+      top: -4px;
+      right: 12px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #CBD5E1;
+      color: #475569;
+      font-size: 0.85rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      transition: var(--transition);
+      z-index: 3;
+    }
+
+    /* Node Text */
+    .node-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.25;
+      margin-bottom: 8px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Embedded Node Action Progress Button */
+    .node-action-btn {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 0.78rem;
+      padding: 8px 16px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      outline: none;
+    }
+
+    .node-action-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* STATUS STATES */
+    /* 1. COMPLETED */
+    .flow-node.completed .node-icon {
+      color: var(--green-success);
+      filter: drop-shadow(0 6px 12px var(--green-glow));
+      transform: scale(1.05);
+    }
+
+    .flow-node.completed .node-number {
+      background: var(--green-success);
+      color: #FFF;
+    }
+
+    .btn-completed {
+      background: rgba(60, 176, 82, 0.12);
+      color: var(--green-dark);
+      border: 1px solid rgba(60, 176, 82, 0.3);
+      cursor: default;
+    }
+
+    /* 2. ACTIVE (Current Step - Glowing & Animated) */
+    .flow-node.active .node-icon {
+      color: var(--gold-dark);
+      filter: drop-shadow(0 0 16px var(--gold-glow));
+      animation: iconFloat 2.2s infinite ease-in-out;
+    }
+
+    .flow-node.active .node-number {
+      background: var(--gold-main);
+      color: #000;
+      transform: scale(1.2);
+      box-shadow: 0 0 12px var(--gold-main);
+    }
+
+    .flow-node.active .node-title {
+      color: var(--primary-teal);
+      font-size: 0.92rem;
+    }
+
+    .btn-active-complete {
+      background: linear-gradient(135deg, var(--gold-main) 0%, var(--gold-dark) 100%);
+      color: #000;
+      box-shadow: 0 4px 16px var(--gold-glow);
+      animation: pulseBtn 2s infinite ease-in-out;
+    }
+
+    .btn-active-complete:hover {
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 6px 20px var(--gold-main);
+    }
+
+    @keyframes iconFloat {
+      0%, 100% { transform: translateY(0) scale(1.1); }
+      50% { transform: translateY(-8px) scale(1.15); }
+    }
+
+    @keyframes pulseBtn {
+      0%, 100% { box-shadow: 0 0 12px var(--gold-glow); }
+      50% { box-shadow: 0 0 24px var(--gold-glow); }
+    }
+
+    /* 3. PENDING */
+    .flow-node.pending {
+      opacity: 0.5;
+    }
+    .flow-node.pending:hover {
+      opacity: 0.8;
+    }
+
+    .btn-pending {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--text-muted);
+      cursor: default;
+      box-shadow: none;
+    }
+
+    /* FLOW CONNECTORS (CONNECTOR LINE & ARROW BETWEEN STEPS) */
+    .flow-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 40px;
+      position: relative;
+      z-index: 1;
+      margin-top: -30px;
+    }
+
+    .connector-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* Completed Connector: Solid static green line & arrow */
+    .flow-connector.completed line {
+      stroke: var(--green-success);
+      stroke-width: 3.5;
+      stroke-dasharray: none;
+    }
+    .flow-connector.completed polygon {
+      fill: var(--green-success);
+    }
+
+    /* Active Connector (leading to current active step): Moving flowing arrows! */
+    .flow-connector.active line {
+      stroke: var(--gold-main);
+      stroke-width: 4;
+      stroke-dasharray: 6 6;
+      animation: dashFlow 0.8s linear infinite;
+    }
+    .flow-connector.active polygon {
+      fill: var(--gold-main);
+      animation: arrowPulse 0.8s infinite alternate;
+    }
+
+    @keyframes dashFlow {
+      from { stroke-dashoffset: 24; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes arrowPulse {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(4px); }
+    }
+
+    /* Pending Connector */
+    .flow-connector.pending line {
+      stroke: #CBD5E1;
+      stroke-width: 2.5;
+      stroke-dasharray: 4 4;
+    }
+    .flow-connector.pending polygon {
+      fill: #CBD5E1;
+    }
+
+    /* TROPHY NODE (FINAL CERTIFICATE) */
+    .trophy-node {
+      width: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 15px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .trophy-icon-wrap {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold-main) 0%, var(--gold-dark) 100%);
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      box-shadow: 0 0 25px var(--gold-glow);
+      animation: floatTrophy 3s infinite ease-in-out;
+    }
+
+    .trophy-node.completed .trophy-icon-wrap {
+      background: linear-gradient(135deg, #3CB052 0%, #136371 100%);
+      color: var(--gold-main);
+      box-shadow: 0 0 35px var(--green-glow);
+    }
+
+    @keyframes floatTrophy {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .trophy-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: var(--primary-teal);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .trophy-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    /* BOTTOM BENEFITS & SLOGAN SECTION */
+    .bottom-section {
+      width: 100%;
+      max-width: 1150px;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-top: 10px;
+    }
+
+    .benefits-card {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 24px 30px;
+      box-shadow: 0 10px 30px rgba(19, 99, 113, 0.08);
+      border: 1px solid rgba(19, 99, 113, 0.1);
+    }
+
+    .benefits-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--primary-teal);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      text-align: center;
+    }
+
+    .benefit-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .benefit-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(19, 99, 113, 0.08);
+      color: var(--primary-teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .benefit-item:hover .benefit-icon {
+      background: var(--primary-teal);
+      color: #FFF;
+      transform: scale(1.1);
+    }
+
+    .benefit-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+
+    .slogan-card {
+      background: linear-gradient(135deg, #005C53 0%, #136371 100%);
+      border-radius: 20px;
+      padding: 24px;
+      color: #FFF;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0, 92, 83, 0.25);
+    }
+
+    .slogan-text {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      line-height: 1.35;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .slogan-sub {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--gold-main);
+      letter-spacing: 1.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* MODAL POPUP FOR DETAILS */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 30, 40, 0.65);
+      backdrop-filter: blur(6px);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      background: #FFF;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 500px;
+      padding: 32px;
+      position: relative;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+      transform: translateY(20px) scale(0.95);
+      transition: transform 0.3s ease;
+      text-align: center;
+    }
+
+    .modal-overlay.open .modal-box {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.05);
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--text-muted);
+      transition: var(--transition);
+    }
+
+    .modal-close:hover {
+      background: rgba(238, 62, 56, 0.15);
+      color: var(--red-accent);
+    }
+
+    .modal-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      background: var(--primary-teal);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 0.85rem;
+      border-radius: 50px;
+      margin-bottom: 16px;
+    }
+
+    .modal-icon {
+      width: 80px;
+      height: 80px;
+      color: var(--primary-teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .modal-icon svg {
+      width: 64px;
+      height: 64px;
+    }
+
+    .modal-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .modal-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    /* RESPONSIVE DESIGN */
+    @media (max-width: 900px) {
+      .flow-node {
+        width: 140px;
+        padding: 10px 6px;
+      }
+      .node-icon {
+        width: 60px;
+        height: 60px;
+      }
+      .node-icon svg {
+        width: 44px;
+        height: 44px;
+      }
+      .flow-connector {
+        width: 35px;
+      }
+      .bottom-section {
+        grid-template-columns: 1fr;
+      }
+      .benefits-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .flow-path {
+        flex-direction: column;
+        gap: 15px;
+      }
+      .flow-connector {
+        transform: rotate(90deg);
+        margin-top: 0;
+        height: 30px;
+      }
+      .flow-node {
+        width: 100%;
+        max-width: 260px;
+      }
+      .benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .header h1 {
+        font-size: 1.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-tag">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Ruta de Crecimiento Interactiva
+    </div>
+    <h1>FLUJO DE FORMACIÓN ZASHOME</h1>
+    <p>Avanza paso a paso en tu flujo de capacitación para activar tu certificación.</p>
+  </header>
+
+  <!-- TOP ACTIONS & STATS -->
+  <div class="top-actions">
+    <div class="global-status">
+      <span>Estado del Flujo:</span>
+      <span class="status-badge" id="global-status-text">Paso 1 de 11</span>
+    </div>
+    <button class="btn-reset" onclick="resetProgress()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Reiniciar Progreso
+    </button>
+  </div>
+
+  <!-- MAIN FLOW PATH -->
+  <main class="flow-wrapper">
+    <div class="flow-path" id="flow-path">
+      <!-- Steps & Flow Connectors Rendered dynamically by JS -->
+    </div>
+  </main>
+
+  <!-- BOTTOM SECTION (BENEFICIOS Y SLOGAN) -->
+  <section class="bottom-section">
+    <div class="benefits-card">
+      <div class="benefits-title">BENEFICIOS AL COMPLETAR LA CÁTEDRA</div>
+      <div class="benefits-grid">
+        <div class="benefit-item">
+          <div class="benefit-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+          </div>
+          <span class="benefit-label">Certificación Zashome</span>
+        </div>
+
+        <div class="benefit-item">
+          <div class="benefit-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <span class="benefit-label">Acceso a plataforma</span>
+        </div>
+
+        <div class="benefit-item">
+          <div class="benefit-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <span class="benefit-label">Herramientas de crecimiento</span>
+        </div>
+
+        <div class="benefit-item">
+          <div class="benefit-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+          </div>
+          <span class="benefit-label">Acompañamiento directo</span>
+        </div>
+
+        <div class="benefit-item">
+          <div class="benefit-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><circle cx="19" cy="11" r="2"/></svg>
+          </div>
+          <span class="benefit-label">Comunidad Zashome</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="slogan-card">
+      <div class="slogan-text">APRENDE HOY, APLICA MAÑANA, LOGRA RESULTADOS SIEMPRE.</div>
+      <div class="slogan-sub">
+        ZASHOME • EMPRENDE • APRENDE • CRECE
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#EE3E38" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP MODAL DETAIL -->
+  <div class="modal-overlay" id="step-modal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div class="modal-badge" id="modal-badge">Paso 1</div>
+      <div class="modal-icon" id="modal-icon"></div>
+      <h2 class="modal-title" id="modal-title">Título del Paso</h2>
+      <p class="modal-desc" id="modal-desc">Descripción detallada del paso.</p>
+
+      <div class="modal-actions">
+        <button class="node-action-btn btn-completed" style="padding:10px 20px; font-size:0.9rem;" onclick="closeModal()">Cerrar</button>
+        <button class="node-action-btn btn-active-complete" id="modal-btn-action" style="padding:10px 24px; font-size:0.9rem;" onclick="handleModalAction()">Completar Paso</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DATA DEFINITION OF ALL 11 STEPS
+    const STEPS_DATA = [
+      {
+        id: 1,
+        title: "Formulario de datos",
+        desc: "Inicias tu camino completando tu información.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="18" rx="2"/><path d="M8 2h8v4H8z"/><path d="M9 11l2 2 4-4"/><path d="M9 17h6"/></svg>`
+      },
+      {
+        id: 2,
+        title: "Análisis de datos",
+        desc: "Validamos tu información para garantizar seguridad y cumplimiento.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="16" y1="16" x2="22" y2="22"/><path d="M7 11h7"/><path d="M7 8h4"/><path d="M7 14h5"/></svg>`
+      },
+      {
+        id: 3,
+        title: "Test de conocimientos",
+        desc: "Evaluamos tu nivel para ofrecerte la mejor experiencia.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/><path d="M12 6v3"/></svg>`
+      },
+      {
+        id: 4,
+        title: "Video 1 – Catálogo Famesa",
+        desc: "Conoce nuestros productos y cómo leer fichas técnicas.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><polygon points="10 8 16 12 10 16 10 8"/></svg>`
+      },
+      {
+        id: 5,
+        title: "Presentación Matriz BCG",
+        desc: "Aprende a analizar y tomar decisiones estratégicas.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/><polygon points="7.5 5.5 8.2 7 9.8 7.2 8.6 8.3 8.9 9.9 7.5 9.1 6.1 9.9 6.4 8.3 5.2 7.2 6.8 7"/><path d="M15.5 6.5a1.5 1.5 0 0 1 1.5 1.5c0 1.5-1.5 1.5-1.5 2.5"/><circle cx="15.5" cy="11.5" r="0.5" fill="currentColor"/><path d="M6 16.5h3v2H6z"/><path d="M15 15l3 3m0-3l-3 3"/></svg>`
+      },
+      {
+        id: 6,
+        title: "Video Publicidad",
+        desc: "Descubre cómo crear publicaciones que generan impacto.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`
+      },
+      {
+        id: 7,
+        title: "Inversión y Ganancias",
+        desc: "Define tu plan, establece metas y proyecta tus ganancias.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 3v3"/><path d="M21 12h-3"/><path d="M19.5 4.5l-3.5 3.5"/></svg>`
+      },
+      {
+        id: 8,
+        title: "Gestión de clientes",
+        desc: "Aprende a gestionar, seguir y fidelizar clientes.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
+      },
+      {
+        id: 9,
+        title: "Plataforma Zashome",
+        desc: "Explora y domina las herramientas para hacer crecer tu negocio.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7 8h10"/><path d="M7 12h6"/></svg>`
+      },
+      {
+        id: 10,
+        title: "Video Resultados",
+        desc: "Mide, analiza y optimiza tus resultados para crecer constantemente.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><rect x="5" y="14" width="3" height="6" rx="1"/><rect x="10" y="10" width="3" height="10" rx="1"/><rect x="15" y="5" width="3" height="15" rx="1"/><path d="M4 11l5-5 4 4 6-6"/><polyline points="15 4 19 4 19 8"/></svg>`
+      },
+      {
+        id: 11,
+        title: "Examen Final Zashome",
+        desc: "Demuestra lo aprendido y obtén tu certificación.",
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/><circle cx="12" cy="18" r="1.5" fill="currentColor"/></svg>`
+      }
+    ];
+
+    const STORAGE_KEY = 'zashome_formacion_current_step';
+    let currentStep = parseInt(localStorage.getItem(STORAGE_KEY)) || 1;
+    let modalStepId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderFlowPath();
+      updateGlobalStatus();
+
+      document.getElementById('step-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'step-modal') closeModal();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
+    });
+
+    // RENDER THE CONNECTED FLOW PATH
+    function renderFlowPath() {
+      const container = document.getElementById('flow-path');
+      container.innerHTML = '';
+
+      STEPS_DATA.forEach((step, index) => {
+        let status = 'pending';
+        if (step.id < currentStep) {
+          status = 'completed';
+        } else if (step.id === currentStep) {
+          status = 'active';
+        }
+
+        // 1. STEP NODE (Floating Icon - No rectangular card border)
+        const node = document.createElement('div');
+        node.className = `flow-node ${status}`;
+
+        let actionBtnHtml = '';
+        if (status === 'completed') {
+          actionBtnHtml = `<button class="node-action-btn btn-completed" onclick="openStepModal(${step.id})">Completado ✓</button>`;
+        } else if (status === 'active') {
+          actionBtnHtml = `<button class="node-action-btn btn-active-complete" onclick="completeStep(${step.id})">Completar Paso ✓</button>`;
+        } else {
+          actionBtnHtml = `<button class="node-action-btn btn-pending" onclick="openStepModal(${step.id})">Pendiente</button>`;
+        }
+
+        node.innerHTML = `
+          <div class="node-number">${status === 'completed' ? '✓' : step.id}</div>
+          <div class="node-icon" onclick="openStepModal(${step.id})">
+            ${step.icon}
+          </div>
+          <div class="node-title" onclick="openStepModal(${step.id})">${step.title}</div>
+          ${actionBtnHtml}
+        `;
+
+        container.appendChild(node);
+
+        // 2. FLOW CONNECTOR (ARROWS / LINES BETWEEN NODES)
+        if (index < STEPS_DATA.length - 1) {
+          const connector = document.createElement('div');
+
+          let connectorStatus = 'pending';
+          if (step.id < currentStep - 1) {
+            connectorStatus = 'completed'; // Solid green static arrows
+          } else if (step.id === currentStep - 1) {
+            connectorStatus = 'active'; // Flowing moving arrows leading to current step
+          }
+
+          connector.className = `flow-connector ${connectorStatus}`;
+          connector.innerHTML = `
+            <svg class="connector-svg" viewBox="0 0 60 20" preserveAspectRatio="none">
+              <line x1="0" y1="10" x2="48" y2="10"/>
+              <polygon points="48,5 58,10 48,15"/>
+            </svg>
+          `;
+          container.appendChild(connector);
+        }
+      });
+
+      // 3. TROPHY CONNECTOR & NODE AT THE END
+      const lastStepId = STEPS_DATA[STEPS_DATA.length - 1].id;
+      const trophyConnector = document.createElement('div');
+      let trophyConnectorStatus = 'pending';
+      if (currentStep > 11) {
+        trophyConnectorStatus = 'completed';
+      } else if (currentStep === 11) {
+        trophyConnectorStatus = 'active';
+      }
+      trophyConnector.className = `flow-connector ${trophyConnectorStatus}`;
+      trophyConnector.innerHTML = `
+        <svg class="connector-svg" viewBox="0 0 60 20" preserveAspectRatio="none">
+          <line x1="0" y1="10" x2="48" y2="10"/>
+          <polygon points="48,5 58,10 48,15"/>
+        </svg>
+      `;
+      container.appendChild(trophyConnector);
+
+      const trophyNode = document.createElement('div');
+      const isGraduated = currentStep > 11;
+      trophyNode.className = `trophy-node ${isGraduated ? 'completed' : ''}`;
+      trophyNode.onclick = openTrophyModal;
+      trophyNode.innerHTML = `
+        <div class="trophy-icon-wrap">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>
+        </div>
+        <div class="trophy-title">Certificado</div>
+        <div class="trophy-subtitle">Meta Final</div>
+      `;
+      container.appendChild(trophyNode);
+    }
+
+    function updateGlobalStatus() {
+      const badge = document.getElementById('global-status-text');
+      if (currentStep > 11) {
+        badge.innerText = '¡Cátedra Completada Exitosamente! 🎉';
+        badge.style.background = 'var(--green-success)';
+      } else {
+        badge.innerText = `Paso Activo: ${currentStep} de 11`;
+        badge.style.background = 'var(--primary-teal)';
+      }
+    }
+
+    // COMPLETE STEP DIRECTLY FROM NODE
+    function completeStep(stepId) {
+      if (stepId === currentStep && currentStep <= 11) {
+        currentStep++;
+        localStorage.setItem(STORAGE_KEY, currentStep);
+
+        triggerConfetti();
+
+        renderFlowPath();
+        updateGlobalStatus();
+
+        if (currentStep > 11) {
+          triggerBigConfetti();
+          setTimeout(openTrophyModal, 600);
+        }
+      }
+    }
+
+    function resetProgress() {
+      if (confirm('¿Deseas reiniciar tu progreso en el flujo de formación Zashome?')) {
+        currentStep = 1;
+        localStorage.setItem(STORAGE_KEY, currentStep);
+        renderFlowPath();
+        updateGlobalStatus();
+      }
+    }
+
+    // MODAL DIALOGS
+    function openStepModal(stepId) {
+      modalStepId = stepId;
+      const step = STEPS_DATA.find(s => s.id === stepId);
+      if (!step) return;
+
+      document.getElementById('modal-badge').innerText = `Paso ${step.id} de 11`;
+      document.getElementById('modal-icon').innerHTML = step.icon;
+      document.getElementById('modal-title').innerText = step.title;
+      document.getElementById('modal-desc').innerText = step.desc;
+
+      const actionBtn = document.getElementById('modal-btn-action');
+
+      if (stepId < currentStep) {
+        actionBtn.innerText = 'Paso Completado ✓';
+        actionBtn.className = 'node-action-btn btn-completed';
+        actionBtn.onclick = closeModal;
+      } else if (stepId === currentStep) {
+        actionBtn.innerText = 'Completar Paso Ahora ✓';
+        actionBtn.className = 'node-action-btn btn-active-complete';
+        actionBtn.onclick = () => {
+          completeStep(stepId);
+          closeModal();
+        };
+      } else {
+        actionBtn.innerText = 'Paso Pendiente';
+        actionBtn.className = 'node-action-btn btn-pending';
+        actionBtn.onclick = closeModal;
+      }
+
+      document.getElementById('step-modal').classList.add('open');
+    }
+
+    function openTrophyModal() {
+      document.getElementById('modal-badge').innerText = `¡Certificación Oficial!`;
+      document.getElementById('modal-icon').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>`;
+      document.getElementById('modal-title').innerText = `¡CERTIFICADO ZASHOME!`;
+      document.getElementById('modal-desc').innerText = `¡Felicidades! Has completado exitosamente el flujo de Formación Zashome. Ya formas parte de la comunidad de empresarios que aprenden, emprenden y crecen.`;
+
+      const actionBtn = document.getElementById('modal-btn-action');
+      actionBtn.innerText = 'Celebrar de nuevo 🎉';
+      actionBtn.className = 'node-action-btn btn-active-complete';
+      actionBtn.onclick = () => {
+        triggerBigConfetti();
+      };
+
+      document.getElementById('step-modal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('step-modal').classList.remove('open');
+    }
+
+    // CONFETTI ANIMATIONS
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 65,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#136371', '#FFAB00', '#3CB052', '#005C53']
+        });
+      }
+    }
+
+    function triggerBigConfetti() {
+      if (typeof confetti === 'function') {
+        const duration = 2.5 * 1000;
+        const animationEnd = Date.now() + duration;
+
+        const interval = setInterval(() => {
+          const timeLeft = animationEnd - Date.now();
+          if (timeLeft <= 0) return clearInterval(interval);
+          confetti({
+            particleCount: 50,
+            startVelocity: 30,
+            spread: 360,
+            origin: { x: Math.random(), y: Math.random() - 0.2 },
+            colors: ['#FFAB00', '#136371', '#3CB052', '#EE3E38', '#FFFFFF']
+          });
+        }, 250);
+      }
+    }
+  </script>
+</body>
+</html>
