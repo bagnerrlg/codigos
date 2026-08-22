@@ -794,73 +794,73 @@
   </div>
 
   <script>
-    // DATA DEFINITION OF ALL 11 STEPS
+    // DATA DEFINITION OF ALL 11 STEPS WITH VIBRANT MULTI-COLOR CUSTOM SVGS
     const STEPS_DATA = [
       {
         id: 1,
         title: "Formulario de datos",
         desc: "Inicias tu camino completando tu información.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="18" rx="2"/><path d="M8 2h8v4H8z"/><path d="M9 11l2 2 4-4"/><path d="M9 17h6"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="8" width="44" height="52" rx="6" fill="#136371"/><rect x="14" y="14" width="36" height="42" rx="3" fill="#FFFFFF"/><rect x="22" y="4" width="20" height="8" rx="2" fill="#005C53"/><circle cx="32" cy="8" r="2" fill="#FFAB00"/><path d="M20 24H32" stroke="#136371" stroke-width="3" stroke-linecap="round"/><path d="M20 32H38" stroke="#5C707D" stroke-width="2.5" stroke-linecap="round"/><path d="M20 40H34" stroke="#5C707D" stroke-width="2.5" stroke-linecap="round"/><path d="M20 48H28" stroke="#5C707D" stroke-width="2.5" stroke-linecap="round"/><circle cx="42" cy="24" r="5" fill="#3CB052"/><path d="M39.5 24L41.5 26L45 22.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="40" r="5" fill="#3CB052"/><path d="M39.5 40L41.5 42L45 38.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
       },
       {
         id: 2,
         title: "Análisis de datos",
         desc: "Validamos tu información para garantizar seguridad y cumplimiento.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><line x1="16" y1="16" x2="22" y2="22"/><path d="M7 11h7"/><path d="M7 8h4"/><path d="M7 14h5"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="6" width="36" height="50" rx="4" fill="#FFFFFF" stroke="#005C53" stroke-width="3"/><path d="M18 16H36" stroke="#136371" stroke-width="3" stroke-linecap="round"/><path d="M18 24H32" stroke="#5C707D" stroke-width="2.5" stroke-linecap="round"/><path d="M18 32H28" stroke="#5C707D" stroke-width="2.5" stroke-linecap="round"/><path d="M18 40H34" stroke="#5C707D" stroke-width="2.5" stroke-linecap="round"/><rect x="18" y="46" width="4" height="4" fill="#136371"/><rect x="25" y="44" width="4" height="6" fill="#FFAB00"/><rect x="32" y="42" width="4" height="8" fill="#3CB052"/><circle cx="42" cy="38" r="14" fill="#136371" fill-opacity="0.15" stroke="#136371" stroke-width="4"/><line x1="52" y1="48" x2="60" y2="56" stroke="#005C53" stroke-width="5" stroke-linecap="round"/><path d="M39 34L41 38L45 40L41 42L39 46L37 42L33 40L37 38Z" fill="#FFAB00"/></svg>`
       },
       {
         id: 3,
         title: "Test de conocimientos",
         desc: "Evaluamos tu nivel para ofrecerte la mejor experiencia.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/><path d="M12 6v3"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="26" r="20" fill="#FFAB00" fill-opacity="0.2"/><path d="M32 8C20.95 8 12 16.95 12 28C12 34.6 15.2 40.45 20 44V50C20 51.1 20.9 52 22 52H42C43.1 52 44 51.1 44 50V44C48.8 40.45 52 34.6 52 28C52 16.95 43.05 8 32 8Z" fill="#FFAB00"/><path d="M26 28C26 24.69 28.69 22 32 22C35.31 22 38 24.69 38 28" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/><path d="M22 52H42V56C42 57.1 43.1 58 42 58H22C20.9 58 20 57.1 20 56V52Z" fill="#136371"/><line x1="24" y1="56" x2="40" y2="56" stroke="#005C53" stroke-width="2"/><path d="M28 58H36V60C36 61.1 35.1 62 34 62H30C28.9 62 28 61.1 28 60V58Z" fill="#005C53"/><path d="M26 34L30 38L38 30" stroke="#005C53" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
       },
       {
         id: 4,
         title: "Video 1 – Catálogo Famesa",
         desc: "Conoce nuestros productos y cómo leer fichas técnicas.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><polygon points="10 8 16 12 10 16 10 8"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="10" width="52" height="38" rx="8" fill="#EE3E38"/><rect x="10" y="14" width="44" height="30" rx="4" fill="#1C2D37"/><path d="M24 48L20 56H44L40 48" fill="#136371"/><rect x="18" y="56" width="28" height="4" rx="2" fill="#005C53"/><polygon points="27,21 43,29 27,37" fill="#FFAB00"/><circle cx="50" cy="14" r="6" fill="#3CB052"/><path d="M48 14L49.5 15.5L52.5 12.5" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
       },
       {
         id: 5,
         title: "Presentación Matriz BCG",
         desc: "Aprende a analizar y tomar decisiones estratégicas.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/><polygon points="7.5 5.5 8.2 7 9.8 7.2 8.6 8.3 8.9 9.9 7.5 9.1 6.1 9.9 6.4 8.3 5.2 7.2 6.8 7"/><path d="M15.5 6.5a1.5 1.5 0 0 1 1.5 1.5c0 1.5-1.5 1.5-1.5 2.5"/><circle cx="15.5" cy="11.5" r="0.5" fill="currentColor"/><path d="M6 16.5h3v2H6z"/><path d="M15 15l3 3m0-3l-3 3"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="52" height="52" rx="6" fill="#FFFFFF" stroke="#136371" stroke-width="3"/><line x1="32" y1="6" x2="32" y2="58" stroke="#136371" stroke-width="3"/><line x1="6" y1="32" x2="58" y2="32" stroke="#136371" stroke-width="3"/><rect x="9" y="9" width="20" height="20" rx="3" fill="#FFAB00" fill-opacity="0.3"/><polygon points="19,11 21.5,16 27,16.8 23,20.7 24,26 19,23.3 14,26 15,20.7 11,16.8 16.5,16" fill="#FFAB00"/><rect x="35" y="9" width="20" height="20" rx="3" fill="#EE3E38" fill-opacity="0.25"/><text x="45" y="25" fill="#EE3E38" font-size="16" font-weight="900" font-family="Montserrat" text-anchor="middle">?</text><rect x="9" y="35" width="20" height="20" rx="3" fill="#3CB052" fill-opacity="0.25"/><text x="19" y="51" fill="#3CB052" font-size="16" font-weight="900" font-family="Montserrat" text-anchor="middle">$</text><rect x="35" y="35" width="20" height="20" rx="3" fill="#136371" fill-opacity="0.25"/><path d="M40 40L50 50M50 40L40 50" stroke="#136371" stroke-width="3" stroke-linecap="round"/></svg>`
       },
       {
         id: 6,
         title: "Video Publicidad",
         desc: "Descubre cómo crear publicaciones que generan impacto.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 24V40H20L36 50V14L20 24H12Z" fill="#136371" stroke="#005C53" stroke-width="2.5" stroke-linejoin="round"/><path d="M20 40V52C20 54.2 21.8 56 24 56H26C28.2 56 30 54.2 30 52V46" fill="#005C53"/><ellipse cx="36" cy="32" rx="4" ry="18" fill="#EE3E38"/><path d="M44 22C47.5 25 49.5 28.3 49.5 32C49.5 35.7 47.5 39 44 42" stroke="#FFAB00" stroke-width="3.5" stroke-linecap="round"/><path d="M52 15C57.5 19.5 61 25.3 61 32C61 38.7 57.5 44.5 52 49" stroke="#FFAB00" stroke-width="3.5" stroke-linecap="round"/><circle cx="10" cy="18" r="3" fill="#3CB052"/></svg>`
       },
       {
         id: 7,
         title: "Inversión y Ganancias",
         desc: "Define tu plan, establece metas y proyecta tus ganancias.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 3v3"/><path d="M21 12h-3"/><path d="M19.5 4.5l-3.5 3.5"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="34" r="24" fill="#EE3E38" fill-opacity="0.15" stroke="#EE3E38" stroke-width="3"/><circle cx="30" cy="34" r="16" fill="#FFFFFF" stroke="#136371" stroke-width="3"/><circle cx="30" cy="34" r="8" fill="#EE3E38"/><circle cx="30" cy="34" r="3" fill="#FFAB00"/><path d="M54 10L32 32" stroke="#005C53" stroke-width="4" stroke-linecap="round"/><path d="M54 10L44 12M54 10L52 20" stroke="#FFAB00" stroke-width="3.5" stroke-linecap="round"/><polygon points="56,8 60,4 62,10" fill="#EE3E38"/><circle cx="14" cy="14" r="10" fill="#3CB052"/><text x="14" y="19" fill="#FFFFFF" font-size="13" font-weight="800" font-family="Montserrat" text-anchor="middle">$</text></svg>`
       },
       {
         id: 8,
         title: "Gestión de clientes",
         desc: "Aprende a gestionar, seguir y fidelizar clientes.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="20" r="10" fill="#136371"/><path d="M16 46C16 37.16 23.16 30 32 30C40.84 30 48 37.16 48 46V50H16V46Z" fill="#136371"/><circle cx="14" cy="26" r="7" fill="#FFAB00"/><path d="M4 50C4 43.37 9.37 38 16 38C17.8 38 19.5 38.4 21 39.1C18.5 41.8 17 45.4 17 49.3V50H4Z" fill="#FFAB00"/><circle cx="50" cy="26" r="7" fill="#3CB052"/><path d="M60 50C60 43.37 54.63 38 48 38C46.2 38 44.5 38.4 43 39.1C45.5 41.8 47 45.4 47 49.3V50H60Z" fill="#3CB052"/><circle cx="32" cy="54" r="5" fill="#EE3E38"/><path d="M30 54L31.5 55.5L34 53" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
       },
       {
         id: 9,
         title: "Plataforma Zashome",
         desc: "Explora y domina las herramientas para hacer crecer tu negocio.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7 8h10"/><path d="M7 12h6"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="48" height="34" rx="4" fill="#136371"/><rect x="12" y="12" width="40" height="26" rx="2" fill="#F0F7F8"/><path d="M4 46C4 43.8 5.8 42 8 42H56C58.2 42 60 43.8 60 46V48H4V46Z" fill="#005C53"/><rect x="26" y="44" width="12" height="2" rx="1" fill="#FFAB00"/><rect x="16" y="22" width="6" height="12" rx="1" fill="#136371"/><rect x="25" y="16" width="6" height="18" rx="1" fill="#FFAB00"/><rect x="34" y="26" width="6" height="8" rx="1" fill="#EE3E38"/><path d="M16 20L25 15L34 22L42 14" stroke="#3CB052" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="14" r="2.5" fill="#3CB052"/></svg>`
       },
       {
         id: 10,
         title: "Video Resultados",
         desc: "Mide, analiza y optimiza tus resultados para crecer constantemente.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><rect x="5" y="14" width="3" height="6" rx="1"/><rect x="10" y="10" width="3" height="10" rx="1"/><rect x="15" y="5" width="3" height="15" rx="1"/><path d="M4 11l5-5 4 4 6-6"/><polyline points="15 4 19 4 19 8"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 52H56" stroke="#005C53" stroke-width="3.5" stroke-linecap="round"/><rect x="12" y="36" width="10" height="16" rx="2" fill="#136371"/><rect x="27" y="24" width="10" height="28" rx="2" fill="#FFAB00"/><rect x="42" y="12" width="10" height="40" rx="2" fill="#3CB052"/><path d="M10 32L24 20L36 26L52 8" stroke="#EE3E38" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><polygon points="44,8 54,6 52,16" fill="#EE3E38"/><circle cx="52" cy="6" r="3" fill="#FFAB00"/></svg>`
       },
       {
         id: 11,
         title: "Examen Final Zashome",
         desc: "Demuestra lo aprendido y obtén tu certificación.",
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/><circle cx="12" cy="18" r="1.5" fill="currentColor"/></svg>`
+        icon: `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="32,8 60,20 32,32 4,20" fill="#136371"/><polygon points="32,8 60,20 32,32 4,20" stroke="#005C53" stroke-width="2"/><path d="M16 26V38C16 43.5 23.2 48 32 48C40.8 48 48 43.5 48 38V26" fill="#005C53"/><path d="M50 21V36" stroke="#FFAB00" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="38" r="3.5" fill="#FFAB00"/><rect x="14" y="48" width="36" height="10" rx="4" fill="#FFFFFF" stroke="#136371" stroke-width="2"/><rect x="28" y="46" width="8" height="14" rx="2" fill="#EE3E38"/><circle cx="32" cy="53" r="2" fill="#FFAB00"/></svg>`
       }
     ];
 
